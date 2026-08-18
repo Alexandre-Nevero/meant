@@ -169,7 +169,7 @@ export default function Pair() {
 
   return (
     <div className="m-app">
-      <p className="m-sentence">{pairing.code}</p>
+      <p className="m-meta">{pairing.code}</p>
       <p className="m-meta">
         Paste this into the extension. It expires at{' '}
         {new Date(pairing.expiresAt).toLocaleTimeString()}.
