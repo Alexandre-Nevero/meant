@@ -7,12 +7,12 @@ export async function apiBase() {
   return DEFAULT_API_BASE
 }
 
-export async function post(path, body) {
+export async function post(path, body, { method = 'POST', queue: shouldQueue = true } = {}) {
   const base = await apiBase()
   const { token } = await chrome.storage.local.get('token')
   try {
     const res = await fetch(base + path, {
-      method: 'POST',
+      method,
       headers: {
         'content-type': 'application/json',
         ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -21,9 +21,11 @@ export async function post(path, body) {
     })
     return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) }
   } catch {
-    const { queue = [] } = await chrome.storage.local.get('queue')
-    queue.push({ path, body, at: new Date().toISOString() })
-    await chrome.storage.local.set({ queue })
-    return { ok: false, queued: true }
+    if (shouldQueue) {
+      const { queue = [] } = await chrome.storage.local.get('queue')
+      queue.push({ method, path, body, at: new Date().toISOString() })
+      await chrome.storage.local.set({ queue })
+    }
+    return { ok: false, offline: true, queued: shouldQueue }
   }
 }

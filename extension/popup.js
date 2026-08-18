@@ -37,8 +37,8 @@ async function claim(value) {
   const code = value.trim().toUpperCase()
   if (code.length !== 6) return unpaired('A code is six characters.')
 
-  const res = await post('/api/pair/claim', { code })
-  if (res.queued) return unpaired('No connection. Try again when you are back online.')
+  const res = await post('/api/pair/claim', { code }, { queue: false })
+  if (res.offline) return unpaired('No connection. Try again when you are back online.')
   if (!res.ok) return unpaired('That code is wrong, expired, or already used.')
 
   await chrome.storage.local.set({ token: res.data.token, deviceId: res.data.deviceId })

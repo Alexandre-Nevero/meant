@@ -96,7 +96,7 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 | TASK-002 | Next.js shell + Clerk + empty dashboard | T2 | 001 | `app/layout.tsx`, `app/page.tsx`, `app/dashboard/`, `proxy.ts` | done |
 | TASK-003 | Pairing API + page | T3 | 002 | `app/api/pair/**`, `app/pair/` | done |
 | TASK-004 | Extension skeleton + pairing | T4 | 003 | `extension/manifest.json`, `popup.*`, `api.js` | done |
-| TASK-005 | Session start/stop | T5 | 004 | `extension/sw.js`, `app/api/sessions/**` | ready |
+| TASK-005 | Session start/stop | T5 | 004 | `extension/sw.js`, `extension/api.js`, `app/api/sessions/**` | ready |
 | TASK-006 | Attention recording | T6 | 005 | `extension/sw.js`, `app/api/events/` | blocked |
 | TASK-007 | Blocking + block page | T7 | 005 | `extension/sw.js`, `blocked.*`, `blocklists.js`, manifest | blocked |
 | TASK-008 | Review page + outcome | T8 | 006 | `app/review/`, `app/api/sessions/[id]/outcome/` | blocked |
@@ -145,7 +145,7 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 - `POST /api/sessions` — body `{ intention, plannedMinutes, blocklist, startedAt }` → `{ sessionId }`. An empty intention is valid and is stored as `''` (US-01, A2).
 - `PATCH /api/sessions/:id` — body `{ endedAt, endReason }`, where `endReason ∈ {stopped, elapsed, superseded, recovered}`. Verify the session belongs to the token's device.
 - `sw.js` holds session state in `chrome.storage.local` under one key:
-  `{ sessionId, startedAt, plannedMinutes, currentDomain, currentSince, queue: [] }` — **INV-1: nothing else, nowhere else.**
+  `{ sessionId, intention, startedAt, plannedMinutes, currentDomain, currentSince }` — **INV-1: nothing else, nowhere else.**
 - On startup, `sw.js` checks for an open session and closes it with `recovered` (E2).
 **Done when (US-01):** start then stop writes one session row with correct timestamps; killing the worker from `chrome://serviceworker-internals` mid-session and returning does not lose it (T4).
 
@@ -156,6 +156,7 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 - One shared handler, `attribute(nextDomain | null)`: computes `now − currentSince`, pushes `{ kind, domain, seconds, at }` onto the queue, sets `currentDomain`/`currentSince`. `kind` is `away` when the browser is unfocused (`windowId === chrome.windows.WINDOW_ID_NONE`) for more than 60 seconds, otherwise `attention`.
 - `domain` is `new URL(tab.url).hostname` — **INV-2**. Nothing else from the URL is read, stored, or logged.
 - The alarm flushes the queue via `POST /api/events` and ends the session when `plannedMinutes` has elapsed.
+- The flush is the only writer that shrinks the queue, and it must re-read the queue immediately before writing it back — `chrome.storage.local` read-modify-write is not atomic, and an alarm handler and an open popup can both call `post()` while offline.
 - `POST /api/events` — body `{ sessionId, events: [...] }`. Rejects any event whose `domain` contains `/`, `?`, or `#`. This is INV-2 enforced at the boundary rather than trusted at the source.
 **Done when (US-03):** three tabs of roughly a minute each produce three `attention` rows with sane seconds; going offline mid-session loses nothing (T6).
 
@@ -210,10 +211,11 @@ Errors are `{ error: string }` with 400 (bad body), 401 (bad or missing credenti
 |---|---|---|
 | `token` | `string` | TASK-004 |
 | `apiBase` | `string` | TASK-004 |
-| `session` | `{ sessionId, startedAt, plannedMinutes, currentDomain, currentSince, ruleIds: number[] }` \| `null` | TASK-005, 007 |
-| `queue` | `Array<{ path, body, at }>` | TASK-004 |
+| `deviceId` | `string` | TASK-004 |
+| `session` | `{ sessionId, intention, startedAt, plannedMinutes, currentDomain, currentSince, ruleIds: number[] }` \| `null` | TASK-005, 007 |
+| `queue` | `Array<{ method, path, body, at }>` | TASK-004 |
 
-Four keys. `session` is the whole of INV-1 — if elapsed time is ever read from anywhere else, the rule is broken. `queue` holds queued `post()` calls, not raw events — TASK-006's flush replays these records verbatim.
+Five keys. `session` is the whole of INV-1 — if elapsed time is ever read from anywhere else, the rule is broken. `queue` holds queued `post()` calls, not raw events — TASK-006's flush replays these records verbatim.
 
 ### 7.3 Event kinds
 
