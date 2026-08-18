@@ -94,9 +94,9 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 |---|---|---|---|---|---|
 | TASK-001 | Provision and schema | T1 | — | `lib/schema.sql`, env | done |
 | TASK-002 | Next.js shell + Clerk + empty dashboard | T2 | 001 | `app/layout.tsx`, `app/page.tsx`, `app/dashboard/`, `proxy.ts` | done |
-| TASK-003 | Pairing API + page | T3 | 002 | `app/api/pair/**`, `app/pair/` | ready |
-| TASK-004 | Extension skeleton + pairing | T4 | 003 | `extension/manifest.json`, `popup.*`, `api.js` | blocked |
-| TASK-005 | Session start/stop | T5 | 004 | `extension/sw.js`, `app/api/sessions/**` | blocked |
+| TASK-003 | Pairing API + page | T3 | 002 | `app/api/pair/**`, `app/pair/` | done |
+| TASK-004 | Extension skeleton + pairing | T4 | 003 | `extension/manifest.json`, `popup.*`, `api.js` | done |
+| TASK-005 | Session start/stop | T5 | 004 | `extension/sw.js`, `app/api/sessions/**` | ready |
 | TASK-006 | Attention recording | T6 | 005 | `extension/sw.js`, `app/api/events/` | blocked |
 | TASK-007 | Blocking + block page | T7 | 005 | `extension/sw.js`, `blocked.*`, `blocklists.js`, manifest | blocked |
 | TASK-008 | Review page + outcome | T8 | 006 | `app/review/`, `app/api/sessions/[id]/outcome/` | blocked |
@@ -211,9 +211,9 @@ Errors are `{ error: string }` with 400 (bad body), 401 (bad or missing credenti
 | `token` | `string` | TASK-004 |
 | `apiBase` | `string` | TASK-004 |
 | `session` | `{ sessionId, startedAt, plannedMinutes, currentDomain, currentSince, ruleIds: number[] }` \| `null` | TASK-005, 007 |
-| `queue` | `Array<{ kind, domain, seconds, at }>` | TASK-006 |
+| `queue` | `Array<{ path, body, at }>` | TASK-004 |
 
-Four keys. `session` is the whole of INV-1 — if elapsed time is ever read from anywhere else, the rule is broken.
+Four keys. `session` is the whole of INV-1 — if elapsed time is ever read from anywhere else, the rule is broken. `queue` holds queued `post()` calls, not raw events — TASK-006's flush replays these records verbatim.
 
 ### 7.3 Event kinds
 
@@ -263,6 +263,10 @@ Release needs T1, T2, T4, T7 plus the demo running twice (SDD §8.3).
 |---|---|---|---|
 | 2026-08-18 | TASK-001 | Neon + Clerk provisioned via `vercel integration add`; `lib/schema.sql` applied to live DB | `select tablename from pg_tables where schemaname='public'` → `device, pairing_code, session, event`; `select * from session` → 0 rows, no error |
 | 2026-08-18 | TASK-002 | Shell + Clerk auth + `proxy.ts` + empty dashboard landed | `npx tsc --noEmit` exit 0; `npm run build` exit 0; `curl -i -X POST localhost:3000/api/events` → `401`, `content-type: application/json`, `{"error":"unauthorized"}`, no `location:` header |
+| 2026-08-18 | TASK-003 | Pairing API + page landed, commits `2eb1524`, `1b78ac1`, `7bc5171` | `npx tsc --noEmit` exit 0; seeded code `TEST23` claimed once → `{"deviceId":"dfb60e84-fdae-41dc-95c7-af9df7d7b11f","token":"MIKL8..."}`; same code claimed again → `{"error":"unauthorized"}` (401), confirming the atomic claim rejects a double claim; unauthenticated `POST /api/pair` → 401; `/pair` served 200 HTML |
+| 2026-08-18 | TASK-004 | Extension skeleton + pairing landed, commit `b32cbb6` | `node --check extension/api.js` and `popup.js` both OK; `python3 -m json.tool` on `manifest.json` OK; `host_permissions` is `["http://localhost:3000/*"]` only, no wildcard; read-verified `queue.push({ path, body, at })` shape in `api.js` and that a thrown `fetch` (network failure only) is what reaches the queue, not a 401 response |
+
+Outstanding, human-only (not yet run — do not read as passing): signed-in `/pair` showing a real code; load-unpacked pairing flipping the popup to idle with a `device` row attributed to the real Clerk user; a devtools-offline `post()` queuing instead of throwing.
 
 Fact-only. Fill during the build; leave prediction out of it.
 
@@ -275,6 +279,8 @@ Fact-only. Fill during the build; leave prediction out of it.
 | 2026-08-18 | Created. SDD V4 corrected in §7.4 (redirect rules need per-domain host permissions). |
 | 2026-08-18 | Pairing code chosen over Clerk's Chrome-extension sync host: sync host requires Plasmo + `PLASMO_PUBLIC_CLERK_*` env vars + `host_permissions` on the Clerk Frontend API + registering the extension ID in `allowed_origins`, which contradicts the no-bundler build intent (B1). Pairing code is fully spec'd in §6 TASK-003 with zero toolchain. No spike run. |
 | 2026-08-18 | `middleware.ts` → `proxy.ts`: Next.js 16.3.1 renamed the file convention (nextjs.org/docs/app/api-reference/file-conventions/proxy, Clerk's Next.js docs follow suit). §3 and §6/TASK-002 updated. Same `clerkMiddleware()` export, root-level file, new name only. |
+| 2026-08-19 | Host permission for `http://localhost:3000/*` moved from TASK-007 to TASK-004, because MV3 blocks cross-origin fetch from extension pages without it, so pairing cannot work at all. INV-5 is intact — the ban is on `<all_urls>`, not on the extension's own backend. The production origin joins when a deployment exists. |
+| 2026-08-19 | The `queue` storage key holds `{ path, body, at }` records rather than raw events, because a generic `post()` cannot queue two shapes and an offline `POST /api/sessions` would otherwise have nowhere to go. TASK-006's flush replays records verbatim. |
 
 ---
 

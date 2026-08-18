@@ -107,7 +107,8 @@ Rehearse steps 4–7 twice. That is where the demo actually lives.
 
 | Task | Planned | Actual | Note |
 |---|---|---|---|
-| | | | |
+| T3 | 20 | not hand-timed | Built agent-assisted, not against the hand-timed clock this table assumes. No honest minute figure to record. |
+| T4 | 30 | not hand-timed | Same as T3 — agent-assisted build, clock not run. |
 
 ---
 
