@@ -1,0 +1,289 @@
+# Build Guide — Intent
+
+**Build steward:** Alexandre Andrei Nevero
+**Active phase:** Phase-1 — *the loop* (the only phase; see §4)
+**Deadline:** four hours, one sitting. The clock, cut line, and demo script live in [build-intent.md](build-intent.md); this file is the work itself.
+**Traces to:** [prd-intent.md](prd-intent.md) (`PRD-F#`, `US-##`) · [sdd-intent.md](sdd-intent.md) (`SDD-C#`, `V#`) · [flow-intent.md](flow-intent.md) (`EV#`, edge cases) · [sitemap-intent.md](sitemap-intent.md) (`S#`)
+
+> **How to use this file.** Read §1 and §2, then work §5 top to bottom. Every task states what "done" means in a way that can fail. Contracts are binding; the code that satisfies them is yours to write. When this file and any other doc disagree, this file is wrong — fix it here rather than diverging in code.
+
+---
+
+## 1. Planning inputs
+
+- **Core demo journey (US-01 → US-05):** declare an intention → sites blocked → attention recorded → review shows intended beside actual → answer *did you finish it* → ledger.
+- **Hard constraints:** four hours · five external services maximum, three allocated (Vercel, Neon, Clerk) · no OS permissions, no admin rights, no installer · hostname only.
+- **Risk register:**
+  - **R1 — MV3 service worker death (30s idle).** Highest risk in the build; mitigated by TASK-005's storage-only state rule. A single `setInterval` reintroduces it silently.
+  - **R2 — redirect rules need host permissions.** The block page is a redirect, so `host_permissions` must list the blocklist domains. Get this wrong and blocking appears to do nothing with no error.
+  - **R3 — pairing handshake.** Token crosses process boundaries once; if TASK-003/004 mismatch, everything after fails at once.
+  - **R4 — clock.** Mitigated by the cut line in `build-intent.md` §4, not by working faster.
+- **Quality commands:** `npx tsc --noEmit` (fast) · `npm run build` (full). No test framework in v1 — verification is the manual matrix in §8, which is honest about what it is.
+- **Browser E2E:** none. Manual, per §8.
+
+---
+
+## 2. Iron rules
+
+Six invariants. An agent that "improves" any of these has introduced a bug, not a refactor.
+
+| # | Rule | Why | Violated by |
+|---|---|---|---|
+| INV-1 | **No in-memory state in the service worker.** Session state lives in `chrome.storage.local`; elapsed time is always `now − storedTimestamp`, never accumulated | The worker dies after 30s idle (SDD §1) | `setInterval`, a module-level `let elapsed`, any counter |
+| INV-2 | **Hostname only.** No path, query string, or page title may enter a payload or a column | The product is unsafe on a work laptop otherwise (SDD V5) | Sending `tab.url` raw, adding a `title` column "for later" |
+| INV-3 | **Block rules die with their session.** Every rule added on start is removed on end, including on recovery paths | FLOW §7; a rule outliving its session is release-blocking | Early `return` before rule cleanup, cleanup only on the happy path |
+| INV-4 | **No fourth external service.** Three of five are allocated | PRD §7 | Adding analytics, error tracking, a state library's cloud, a UI kit's CDN |
+| INV-5 | **Host permissions are per blocked domain, never `<all_urls>`.** | SDD V4, as corrected in §7.4 | Wildcarding the manifest to make a redirect work |
+| INV-6 | **Every DB query filters on `user_id`; another user's row 404s.** | SDD V3 | `where id = $1` with no ownership clause |
+
+---
+
+## 3. Repo layout
+
+```
+/
+├─ app/
+│  ├─ layout.tsx                       S1 shell, Clerk provider
+│  ├─ page.tsx                         S1 landing / sign-in, redirects to /dashboard when signed in
+│  ├─ dashboard/page.tsx               S3 ledger
+│  ├─ pair/page.tsx                    S2 pairing code
+│  ├─ review/[sessionId]/page.tsx      S4 review + outcome
+│  └─ api/
+│     ├─ pair/route.ts                 POST  mint code            (Clerk session)
+│     ├─ pair/claim/route.ts           POST  claim code → token   (public + code)
+│     ├─ events/route.ts               POST  batched events       (device token)
+│     └─ sessions/
+│        ├─ route.ts                   POST  start session        (device token)
+│        └─ [id]/
+│           ├─ route.ts                PATCH end session          (device token)
+│           └─ outcome/route.ts        PATCH answer outcome       (Clerk session)
+├─ lib/
+│  ├─ db.ts                            Neon client, single export
+│  ├─ device-auth.ts                   Bearer token → device row, or null
+│  └─ schema.sql                       SDD §3.1, applied by hand
+├─ proxy.ts                            Clerk; device-token routes excluded (Next 16: middleware.ts → proxy.ts)
+├─ extension/
+│  ├─ manifest.json                    MV3
+│  ├─ sw.js                            service worker (SDD-C1)
+│  ├─ popup.html / popup.js            S5 / S6 / S7 (SDD-C2)
+│  ├─ blocked.html / blocked.js        S8 (SDD-C3)
+│  ├─ blocklists.js                    three hardcoded arrays
+│  └─ api.js                           fetch wrapper: base URL, token header, offline queue
+└─ docs/
+```
+
+Twenty-one files. If a file appears that is not on this list, it needs a reason.
+
+---
+
+## 4. Phase table
+
+| Phase | Goal | Entry | Exit | Status |
+|---|---|---|---|---|
+| Phase-1 — the loop | The demo journey runs end to end | Providers provisioned (TASK-001) | §8 T1, T2, T4, T7 pass and the demo runs twice consecutively | active |
+
+FMD's guidance for a solo short build is that one phase is usually the whole build, so the task ledger stays inline in §5 rather than in a separate `docs/plans/` file. A second phase opens only if v1 ships and the loop survives two weeks of real use.
+
+---
+
+## 5. Task ledger
+
+`TASK-###` are stable. `T#` is the matching slot in [build-intent.md](build-intent.md) §2.
+
+| ID | Task | Slot | Depends on | Write scope | Status |
+|---|---|---|---|---|---|
+| TASK-001 | Provision and schema | T1 | — | `lib/schema.sql`, env | done |
+| TASK-002 | Next.js shell + Clerk + empty dashboard | T2 | 001 | `app/layout.tsx`, `app/page.tsx`, `app/dashboard/`, `proxy.ts` | done |
+| TASK-003 | Pairing API + page | T3 | 002 | `app/api/pair/**`, `app/pair/` | ready |
+| TASK-004 | Extension skeleton + pairing | T4 | 003 | `extension/manifest.json`, `popup.*`, `api.js` | blocked |
+| TASK-005 | Session start/stop | T5 | 004 | `extension/sw.js`, `app/api/sessions/**` | blocked |
+| TASK-006 | Attention recording | T6 | 005 | `extension/sw.js`, `app/api/events/` | blocked |
+| TASK-007 | Blocking + block page | T7 | 005 | `extension/sw.js`, `blocked.*`, `blocklists.js`, manifest | blocked |
+| TASK-008 | Review page + outcome | T8 | 006 | `app/review/`, `app/api/sessions/[id]/outcome/` | blocked |
+| TASK-009 | Dashboard ledger | T9 | 008 | `app/dashboard/` | blocked |
+| TASK-010 | Verification + rehearsal | T10 | all | — | blocked |
+
+---
+
+## 6. Build units
+
+### TASK-001 · Provision and schema
+**Files:** `lib/schema.sql`, `.env.local` (pulled, never committed)
+**Do:** `vercel link` → add Neon and Clerk from the Vercel Marketplace → `vercel env pull` → apply `lib/schema.sql` (verbatim from SDD §3.1) to the Neon branch.
+**Contract:** `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` present locally. Four tables exist: `device`, `pairing_code`, `session`, `event`.
+**Stack currency:** take the Clerk App Router setup and the Neon client snippet from their current docs at this moment. Do not write either from memory; both change.
+**Done when:** a scratch query against `session` returns zero rows without erroring.
+
+### TASK-002 · Shell, auth, empty dashboard
+**Files:** `app/layout.tsx`, `app/page.tsx`, `app/dashboard/page.tsx`, `proxy.ts`, `lib/db.ts`
+**Contract:**
+- `proxy.ts` (Next 16 renamed `middleware.ts` → `proxy.ts`, root file, same `clerkMiddleware()` export) protects everything **except** `/`, `/api/pair/claim`, `/api/sessions/*`, `/api/events`. Those four are device-token routes and must never see a Clerk redirect — a redirect returns HTML to a `fetch()` and produces a JSON parse error that reads like a bug three tasks later. Note: bare `clerkMiddleware()` establishes auth context but does not itself redirect; protection for `/dashboard` today is enforced in-page via `auth()` + `redirect('/')`. TASK-003/008's Clerk-authenticated routes (`/pair`, `POST /api/pair`, `PATCH .../outcome`) each need their own `auth()`/`auth.protect()` guard — the proxy does not gate them for free.
+- `lib/db.ts` exports exactly one thing: a query function. No ORM, no schema DSL.
+- `app/page.tsx` redirects to `/dashboard` when signed in.
+**Done when (US-06 partial):** sign in from `/` lands on `/dashboard`, which renders its empty state.
+
+### TASK-003 · Pairing
+**Files:** `app/api/pair/route.ts`, `app/api/pair/claim/route.ts`, `app/pair/page.tsx`
+**Contract:**
+- `POST /api/pair` — Clerk session. Inserts a `pairing_code` row: 6 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, `expires_at = now() + 10 min`. Returns `{ code, expiresAt }`.
+- `POST /api/pair/claim` — body `{ code }`. Claim atomically: `update pairing_code set claimed_at = now() where code = $1 and claimed_at is null and expires_at > now()` and **check the affected row count**; zero rows → 401. On success insert `device` with `token_hash = sha256(token)` and return `{ deviceId, token }`. The plaintext token is returned here and nowhere else, ever.
+- `app/pair/page.tsx` calls `/api/pair` on load and displays the code and its expiry.
+**Done when (US-06):** a valid code returns a token and writes a `device` row; the same code claimed twice returns 401 the second time.
+
+### TASK-004 · Extension skeleton and pairing
+**Files:** `extension/manifest.json`, `extension/popup.html`, `extension/popup.js`, `extension/api.js`
+**Contract:**
+- `manifest.json`: `manifest_version: 3`, `permissions: ["declarativeNetRequest", "tabs", "storage", "alarms"]`, `background.service_worker: "sw.js"`, `action.default_popup: "popup.html"`. Host permissions and `web_accessible_resources` are added in TASK-007, not here.
+- `api.js` exports `post(path, body)`: prefixes the API base URL, attaches `Authorization: Bearer <token>` from `chrome.storage.local`, and on network failure pushes the payload onto a `queue` array in storage instead of throwing (E3).
+- `popup.js` renders one of three states from storage: unpaired (S7) → paired-idle (S5) → running (S6). No framework, no bundler (build-intent B1).
+**Done when:** pasting a code into the unpaired popup stores a token and flips the popup to the idle state.
+
+### TASK-005 · Session start and stop
+**Files:** `extension/sw.js`, `app/api/sessions/route.ts`, `app/api/sessions/[id]/route.ts`, `lib/device-auth.ts`
+**Contract:**
+- `lib/device-auth.ts` exports `deviceFromRequest(req)`: reads the Bearer token, hashes it, returns the `device` row or `null`. Every device-token route calls it first and returns 401 on null, **before** reading the body.
+- `POST /api/sessions` — body `{ intention, plannedMinutes, blocklist, startedAt }` → `{ sessionId }`. An empty intention is valid and is stored as `''` (US-01, A2).
+- `PATCH /api/sessions/:id` — body `{ endedAt, endReason }`, where `endReason ∈ {stopped, elapsed, superseded, recovered}`. Verify the session belongs to the token's device.
+- `sw.js` holds session state in `chrome.storage.local` under one key:
+  `{ sessionId, startedAt, plannedMinutes, currentDomain, currentSince, queue: [] }` — **INV-1: nothing else, nowhere else.**
+- On startup, `sw.js` checks for an open session and closes it with `recovered` (E2).
+**Done when (US-01):** start then stop writes one session row with correct timestamps; killing the worker from `chrome://serviceworker-internals` mid-session and returning does not lose it (T4).
+
+### TASK-006 · Attention recording
+**Files:** `extension/sw.js`, `app/api/events/route.ts`
+**Contract:**
+- Listeners: `tabs.onActivated`, `tabs.onUpdated` (only when `changeInfo.url` is set), `windows.onFocusChanged`, `alarms.onAlarm` (30s — the minimum period).
+- One shared handler, `attribute(nextDomain | null)`: computes `now − currentSince`, pushes `{ kind, domain, seconds, at }` onto the queue, sets `currentDomain`/`currentSince`. `kind` is `away` when the browser is unfocused (`windowId === chrome.windows.WINDOW_ID_NONE`) for more than 60 seconds, otherwise `attention`.
+- `domain` is `new URL(tab.url).hostname` — **INV-2**. Nothing else from the URL is read, stored, or logged.
+- The alarm flushes the queue via `POST /api/events` and ends the session when `plannedMinutes` has elapsed.
+- `POST /api/events` — body `{ sessionId, events: [...] }`. Rejects any event whose `domain` contains `/`, `?`, or `#`. This is INV-2 enforced at the boundary rather than trusted at the source.
+**Done when (US-03):** three tabs of roughly a minute each produce three `attention` rows with sane seconds; going offline mid-session loses nothing (T6).
+
+### TASK-007 · Blocking and the block page
+**Files:** `extension/sw.js`, `extension/blocklists.js`, `extension/blocked.html`, `extension/blocked.js`, `extension/manifest.json`
+**Contract:**
+- `blocklists.js` exports three named arrays of hostnames. Hardcoded (build-intent §3).
+- **Manifest additions, and the reason for them:** a `redirect` action is an *unsafe* rule and requires host permissions for the request URL, and the redirect target must be listed in `web_accessible_resources` — verified against the Chrome docs, 2026-08-18. So `host_permissions` lists every domain that appears in any blocklist (`"*://*.youtube.com/*"`, …) and nothing more (**INV-5**), and `blocked.html` is web-accessible for those same matches.
+- On start: `declarativeNetRequest.updateDynamicRules({ addRules })`, one rule per blocked domain, `condition.requestDomains`, `action.type: "redirect"` to `extensionPath: "/blocked.html"`. Rule ids are recorded in storage.
+- On end, **including every recovery and error path (INV-3):** `updateDynamicRules({ removeRuleIds })` using the recorded ids.
+- `blocked.js` reads the current session from storage and shows the intention and remaining time. No bypass control exists (SDD-C3).
+**Done when (US-02):** a blocked domain redirects to a page showing your own intention during a session, and loads normally after it ends (T1, T2).
+
+### TASK-008 · Review and outcome
+**Files:** `app/review/[sessionId]/page.tsx`, `app/api/sessions/[id]/outcome/route.ts`
+**Contract:**
+- Server component: one `group by domain, kind` over `event`, ordered by seconds descending; `away` shown as its own row (FLOW Q1 provisional); `block_hit` shown as a count.
+- Ownership: the session's `user_id` must equal the Clerk user's, else 404 (**INV-6**).
+- `PATCH /api/sessions/:id/outcome` — Clerk session, body `{ outcome: 'yes' | 'no' }`, sets `answered_at`. The extension never writes an outcome.
+- Dismissing without answering leaves `unanswered` — deliberate; it is how A3 gets tested (E5).
+- `sw.js` opens `chrome.tabs.create({ url: <appUrl>/review/<id> })` on session end.
+**Done when (US-04):** the review opens by itself at session end, shows intention beside per-domain seconds, and answering persists.
+
+### TASK-009 · Dashboard ledger
+**Files:** `app/dashboard/page.tsx`
+**Contract:** sessions descending by `started_at` — intention, duration, top domain, outcome. Completion rate over answered sessions is the one headline number. **Total hours is not displayed as a headline anywhere** (PRD-F5). Empty state explains what will appear.
+**Done when (US-05):** three sessions visible with outcomes and a completion rate.
+
+### TASK-010 · Verification and rehearsal
+Run §8. Rehearse the demo script (build-intent §5) twice with no reload. Record what was cut in build-intent §7.
+
+---
+
+## 7. Shared contracts
+
+### 7.1 API
+
+| Method | Route | Auth | Request | Response |
+|---|---|---|---|---|
+| POST | `/api/pair` | Clerk | — | `{ code, expiresAt }` |
+| POST | `/api/pair/claim` | code | `{ code }` | `{ deviceId, token }` \| 401 |
+| POST | `/api/sessions` | Bearer | `{ intention, plannedMinutes, blocklist, startedAt }` | `{ sessionId }` |
+| PATCH | `/api/sessions/:id` | Bearer | `{ endedAt, endReason }` | `{ ok }` |
+| POST | `/api/events` | Bearer | `{ sessionId, events: [{ kind, domain, seconds, at }] }` | `{ accepted }` |
+| PATCH | `/api/sessions/:id/outcome` | Clerk | `{ outcome }` | `{ ok }` |
+
+Errors are `{ error: string }` with 400 (bad body), 401 (bad or missing credential), 404 (not yours / not found). No 403 anywhere — SDD V3.
+
+### 7.2 `chrome.storage.local` keys
+
+| Key | Shape | Written by |
+|---|---|---|
+| `token` | `string` | TASK-004 |
+| `apiBase` | `string` | TASK-004 |
+| `session` | `{ sessionId, startedAt, plannedMinutes, currentDomain, currentSince, ruleIds: number[] }` \| `null` | TASK-005, 007 |
+| `queue` | `Array<{ kind, domain, seconds, at }>` | TASK-006 |
+
+Four keys. `session` is the whole of INV-1 — if elapsed time is ever read from anywhere else, the rule is broken.
+
+### 7.3 Event kinds
+
+`attention` (domain, seconds) · `away` (no domain, seconds) · `block_hit` (domain, no seconds). Three. Adding a fourth means adding a metric to PRD §8 first.
+
+### 7.4 Correction to SDD V4
+
+SDD V4 said no host permissions. That is wrong for a redirect-based block page: unsafe rules require host access for the request URL, and the redirect target must be web-accessible. The corrected rule is INV-5 — per-domain host permissions matching the hardcoded blocklists, never `<all_urls>`. SDD §5 has been amended.
+
+---
+
+## 8. Verification map
+
+| Case (SDD §8.1) | Proved by | Blocking? |
+|---|---|---|
+| T1 start installs rules | TASK-007 | **yes** |
+| T2 stop removes every rule | TASK-007 | **yes — INV-3** |
+| T3 attribution across tab switches | TASK-006 | no |
+| T4 worker death loses nothing | TASK-005 | **yes — INV-1** |
+| T5 browser close recovers | TASK-005 | no |
+| T6 offline queueing | TASK-004 (`api.js`) | no |
+| T7 cross-account isolation | TASK-008 | **yes — INV-6** |
+| T8 expired pairing code | TASK-003 | no |
+
+Release needs T1, T2, T4, T7 plus the demo running twice (SDD §8.3).
+
+---
+
+## 9. Do not
+
+| Don't | Instead | Why |
+|---|---|---|
+| `setInterval` / accumulate elapsed time | Compute from `startedAt` | INV-1 — worker dies at 30s |
+| `webRequest` blocking | `declarativeNetRequest` | Not available to MV3 for blocking |
+| `<all_urls>` host permission | Per-domain, from the blocklists | INV-5, and it is what makes the extension reviewable |
+| Store `tab.url` or `tab.title` | `new URL(url).hostname` | INV-2 |
+| Add Redux/Zustand/Prisma/an ORM/a UI kit | `chrome.storage.local`, raw SQL, plain CSS | Four hours; INV-4 |
+| Add error tracking or analytics "quickly" | The `event` table already answers every metric | INV-4 |
+| Show total hours on the dashboard | Completion rate | PRD-F5 — hours are the metric this product demotes |
+| Force an answer on the review | Allow dismissal, record `unanswered` | E5 — forcing it destroys the A3 signal |
+
+---
+
+## 10. Run evidence
+
+| When | Task | Event | Evidence |
+|---|---|---|---|
+| 2026-08-18 | TASK-001 | Neon + Clerk provisioned via `vercel integration add`; `lib/schema.sql` applied to live DB | `select tablename from pg_tables where schemaname='public'` → `device, pairing_code, session, event`; `select * from session` → 0 rows, no error |
+| 2026-08-18 | TASK-002 | Shell + Clerk auth + `proxy.ts` + empty dashboard landed | `npx tsc --noEmit` exit 0; `npm run build` exit 0; `curl -i -X POST localhost:3000/api/events` → `401`, `content-type: application/json`, `{"error":"unauthorized"}`, no `location:` header |
+
+Fact-only. Fill during the build; leave prediction out of it.
+
+---
+
+## 11. Change log
+
+| Date | Change |
+|---|---|
+| 2026-08-18 | Created. SDD V4 corrected in §7.4 (redirect rules need per-domain host permissions). |
+| 2026-08-18 | Pairing code chosen over Clerk's Chrome-extension sync host: sync host requires Plasmo + `PLASMO_PUBLIC_CLERK_*` env vars + `host_permissions` on the Clerk Frontend API + registering the extension ID in `allowed_origins`, which contradicts the no-bundler build intent (B1). Pairing code is fully spec'd in §6 TASK-003 with zero toolchain. No spike run. |
+| 2026-08-18 | `middleware.ts` → `proxy.ts`: Next.js 16.3.1 renamed the file convention (nextjs.org/docs/app/api-reference/file-conventions/proxy, Clerk's Next.js docs follow suit). §3 and §6/TASK-002 updated. Same `clerkMiddleware()` export, root-level file, new name only. |
+
+---
+
+## Self-Check
+
+- [x] Every `TASK-###` names files, a contract, and a done-when that can fail
+- [x] Every done-when traces to a `US-##` or an SDD §8.1 case
+- [x] The six invariants appear before any task, and each is attributed to the doc it came from
+- [x] Shared contracts appear once; no task restates an endpoint shape
+- [x] The one correction to an upstream doc is stated, not silently applied
+- [x] No file appears in a task that is absent from §3
+- [x] Registered in `docs/index.md`
