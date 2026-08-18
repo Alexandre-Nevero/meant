@@ -1,0 +1,9 @@
+.DS_Store
+Thumbs.db
+*.log
+.vercel
+.env*
+node_modules/
+.next/
+.env*.local
+.superpowers/
