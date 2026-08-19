@@ -1,6 +1,36 @@
 import { post } from './api.js'
+import { BLOCKLISTS } from './blocklists.js'
 
 const TICK = 'meant-tick'
+const RULE_ID_BASE = 1000
+
+async function installRules(listName) {
+  const domains = BLOCKLISTS[listName] ?? []
+  if (domains.length === 0) return []
+
+  const existing = await chrome.declarativeNetRequest.getDynamicRules()
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: existing.map((r) => r.id),
+    addRules: domains.map((domain, i) => ({
+      id: RULE_ID_BASE + i,
+      priority: 1,
+      action: {
+        type: 'redirect',
+        redirect: { url: chrome.runtime.getURL(`blocked.html?d=${encodeURIComponent(domain)}`) },
+      },
+      condition: { requestDomains: [domain], resourceTypes: ['main_frame'] },
+    })),
+  })
+  return domains.map((_, i) => RULE_ID_BASE + i)
+}
+
+async function removeAllRules() {
+  const existing = await chrome.declarativeNetRequest.getDynamicRules()
+  if (existing.length === 0) return
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: existing.map((r) => r.id),
+  })
+}
 
 export async function getSession() {
   const { session } = await chrome.storage.local.get('session')
@@ -38,6 +68,15 @@ export async function startSession({ intention, plannedMinutes, blocklist }) {
     },
   })
   await chrome.alarms.create(TICK, { periodInMinutes: 0.5 })
+
+  try {
+    const ruleIds = await installRules(blocklist)
+    const stored = await getSession()
+    await chrome.storage.local.set({ session: { ...stored, ruleIds } })
+  } catch (error) {
+    await endSession('stopped')
+    return { ok: false, error: String(error) }
+  }
   return { ok: true }
 }
 
@@ -52,6 +91,7 @@ export async function endSession(endReason) {
       endReason,
     }, { method: 'PATCH' })
   } finally {
+    await removeAllRules()
     await chrome.alarms.clear(TICK)
     await chrome.storage.local.set({ session: null })
   }
@@ -196,7 +236,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true
 })
 
+chrome.runtime.onInstalled.addListener(async () => {
+  await removeAllRules()
+})
+
 chrome.runtime.onStartup.addListener(async () => {
   const session = await getSession()
   if (session) await endSession('recovered')
+  else await removeAllRules()
 })
