@@ -1,4 +1,4 @@
-import { post } from './api.js'
+import { post, apiBase } from './api.js'
 import { BLOCKLISTS } from './blocklists.js'
 
 const TICK = 'meant-tick'
@@ -95,6 +95,16 @@ export async function endSession(endReason) {
     await chrome.alarms.clear(TICK)
     await chrome.storage.local.set({ session: null })
   }
+
+  if (endReason === 'stopped' || endReason === 'elapsed') {
+    try {
+      const base = await apiBase()
+      await chrome.tabs.create({ url: `${base}/review/${session.sessionId}` })
+    } catch {
+      // A failed tab open must not make a cleanly ended session look failed.
+    }
+  }
+
   return { ok: true }
 }
 
