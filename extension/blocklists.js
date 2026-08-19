@@ -3,5 +3,3 @@ export const BLOCKLISTS = {
   video: ['youtube.com', 'twitch.tv', 'netflix.com'],
   news: ['news.ycombinator.com', 'bbc.co.uk', 'cnn.com', 'theguardian.com'],
 }
-
-export const ALL_DOMAINS = Object.values(BLOCKLISTS).flat()

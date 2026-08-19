@@ -4,8 +4,8 @@ import { BLOCKLISTS } from './blocklists.js'
 const TICK = 'meant-tick'
 const RULE_ID_BASE = 1000
 
-async function installRules(listName) {
-  const domains = BLOCKLISTS[listName] ?? []
+async function installRules(listNames) {
+  const domains = [...new Set((listNames ?? []).flatMap((name) => BLOCKLISTS[name] ?? []))]
   if (domains.length === 0) return []
 
   const existing = await chrome.declarativeNetRequest.getDynamicRules()
@@ -186,7 +186,7 @@ export async function flush() {
   const events = queue.filter((r) => r.path === '/api/events')
   const others = queue.filter((r) => r.path !== '/api/events')
 
-  const sent = []
+  const sentAt = new Set()
   if (events.length > 0) {
     const bySession = new Map()
     for (const record of events) {
@@ -196,17 +196,19 @@ export async function flush() {
     }
     for (const [sessionId, batch] of bySession) {
       const res = await post('/api/events', { sessionId, events: batch }, { queue: false })
-      if (res.ok) sent.push(...events.filter((r) => r.body.sessionId === sessionId))
+      if (res.ok) {
+        for (const r of events) if (r.body.sessionId === sessionId) sentAt.add(r.at)
+      }
     }
   }
 
   for (const record of others) {
     const res = await post(record.path, record.body, { method: record.method, queue: false })
-    if (res.ok) sent.push(record)
+    if (res.ok) sentAt.add(record.at)
   }
 
   const { queue: current = [] } = await chrome.storage.local.get('queue')
-  await chrome.storage.local.set({ queue: current.filter((r) => !sent.includes(r)) })
+  await chrome.storage.local.set({ queue: current.filter((r) => !sentAt.has(r.at)) })
 }
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -220,8 +222,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (session.plannedMinutes != null) {
     const elapsedMs = Date.now() - new Date(session.startedAt).getTime()
     if (elapsedMs >= session.plannedMinutes * 60_000) {
-      await attribute(null)
-      await flush()
       await endSession('elapsed')
     }
   }

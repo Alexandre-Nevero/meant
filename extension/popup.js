@@ -71,7 +71,7 @@ function idle() {
       type: 'start',
       intention: field.value,
       plannedMinutes: duration.value ? Number(duration.value) : null,
-      blocklist: list.value,
+      blocklist: [list.value],
     })
     if (!res?.ok) {
       start.disabled = false
