@@ -20,6 +20,7 @@
 - **NO test framework** (build.md §1). Verification is real command output and real browser observation. Do not add a test runner.
 - **Class vocabulary**, fixed, shared with a parallel design session: `.m-app`, `.m-mark[data-state]` (idle|running|drifting|ended|empty), `.m-sentence` (the user's intention, and nothing else), `.m-meta`, `.m-field`, `.m-btn[data-variant]` (primary|quiet), `.m-empty`. Never invent or rename one. No `style` attribute, no hardcoded color, no CSS file — `design/**` and `app/globals.css` are another session's lane.
 - **User text is text** — `textContent`, never `innerHTML`.
+- **Never paste a credential into a report or a doc.** Device tokens, connection strings, and Clerk keys are redacted to their shape (`token: <32-byte base64url string>`), never their value. Build 2 leaked a token fragment into `docs/build.md` this way.
 - **Storage keys** are exactly `token`, `apiBase`, `deviceId`, `session`, `queue`. The session shape is `{ sessionId, intention, startedAt, plannedMinutes, currentDomain, currentSince, unfocusedSince, ruleIds }`.
 - **Blocklists** (PRD Q1, decided): social = x.com, twitter.com, facebook.com, instagram.com, reddit.com, linkedin.com, tiktok.com · video = youtube.com, twitch.tv, netflix.com · news = news.ycombinator.com, bbc.co.uk, cnn.com, theguardian.com.
 
