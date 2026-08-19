@@ -47,7 +47,9 @@ Six invariants. An agent that "improves" any of these has introduced a bug, not 
 │  ├─ page.tsx                         S1 landing / sign-in, redirects to /dashboard when signed in
 │  ├─ dashboard/page.tsx               S3 ledger
 │  ├─ pair/page.tsx                    S2 pairing code
-│  ├─ review/[sessionId]/page.tsx      S4 review + outcome
+│  ├─ review/[sessionId]/
+│  │  ├─ page.tsx                      S4 review + outcome
+│  │  └─ answer.tsx                    client boundary, the two answer buttons
 │  └─ api/
 │     ├─ pair/route.ts                 POST  mint code            (Clerk session)
 │     ├─ pair/claim/route.ts           POST  claim code → token   (public + code)
@@ -72,7 +74,7 @@ Six invariants. An agent that "improves" any of these has introduced a bug, not 
 └─ docs/
 ```
 
-Twenty-one files. If a file appears that is not on this list, it needs a reason.
+Twenty-two files. If a file appears that is not on this list, it needs a reason.
 
 ---
 
@@ -99,8 +101,8 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 | TASK-005 | Session start/stop | T5 | 004 | `extension/sw.js`, `extension/api.js`, `extension/popup.js`, `app/api/sessions/**` | done |
 | TASK-006 | Attention recording | T6 | 005 | `extension/sw.js`, `app/api/events/` | done |
 | TASK-007 | Blocking + block page | T7 | 005 | `extension/sw.js`, `blocked.*`, `blocklists.js`, manifest | done |
-| TASK-008 | Review page + outcome | T8 | 006 | `app/review/`, `app/api/sessions/[id]/outcome/` | ready |
-| TASK-009 | Dashboard ledger | T9 | 008 | `app/dashboard/` | blocked |
+| TASK-008 | Review page + outcome | T8 | 006 | `app/review/`, `app/api/sessions/[id]/outcome/` | done |
+| TASK-009 | Dashboard ledger | T9 | 008 | `app/dashboard/` | done |
 | TASK-010 | Verification + rehearsal | T10 | all | — | blocked |
 
 ---
@@ -278,6 +280,12 @@ Outstanding, human-only (not yet run — do not read as passing): signed-in `/pa
 
 Also outstanding, not human-only but not run this session for lack of a live dev server/DB: Task 1's Step 5–7 live-route checks (curl against `:3000`, seeding a pairing code, confirming row counts in Neon) and Task 1–5's end-to-end demo rehearsal. Only the static checks above (parse, grep, tsc, JSON shape) were actually executed.
 
+| 2026-08-19 | TASK-008 | Review page + outcome route landed, commit `c809425` | Dev server started locally for this check only: `curl -s -o /dev/null -w 'no-clerk-session:%{http_code}\n' -X PATCH localhost:3000/api/sessions/00000000-0000-0000-0000-000000000000/outcome -H 'content-type: application/json' -d '{"outcome":"yes"}'` → `no-clerk-session:401`, proving the route sits inside the Clerk matcher; seeded a foreign session (`user_someone_else`, device `hash_review_check`) via a direct Neon insert — id `313b9b93-7505-482e-b726-d467c7395c44` — left in place because the human browser 404 check (T7) has not run yet; read-verified the ownership `where … and user_id = ${userId}` clause and the UUID guard in `route.ts` and `page.tsx` |
+| 2026-08-19 | TASK-009 | Dashboard ledger landed, commit `73ab0d3` | `select outcome, count(*) from session group by outcome` against live Neon → `[{ outcome: 'unanswered', count: 1 }]` (only the seeded foreign row exists; no `yes`/`no` rows yet to check the rate arithmetic against, so `N of M` is unverified with real answered data — code path read-verified against the same `filter (where outcome = 'yes')` / `filter (where outcome in ('yes','no'))` shape used in the review page); `grep -niE 'total|hours|hrs' app/dashboard/page.tsx` → no match, printed `no hours figure in the ledger` |
+| 2026-08-19 | TASK-005/006/007 (Task 3 of this plan) | `sw.js` opens the review after session end, commit `3086472` | `node --check extension/sw.js` parses; `grep -nE 'setInterval\|setTimeout' extension/sw.js` → no match, printed `no timers in sw.js`; `grep -n -A4 'finally' extension/sw.js` → `removeAllRules()`, `chrome.alarms.clear`, `chrome.storage.local.set({ session: null })` are the only three statements in the `finally`; `chrome.tabs.create` is read-verified to sit after the `finally` block, gated on `endReason === 'stopped' \|\| 'elapsed'` — INV-3 intact |
+
+**Outstanding, release-blocking, not run by anyone this session — do not read any of these as passing:** T1 (rules install), T2 (every rule removed), T4 (worker death loses nothing), T7 (cross-account isolation, browser half — the foreign session above is seeded and waiting for it), and the full two-run demo rehearsal. No agent in this session has a browser or a Clerk session; all five require a human.
+
 Fact-only. Fill during the build; leave prediction out of it.
 
 ---
@@ -297,6 +305,10 @@ Fact-only. Fill during the build; leave prediction out of it.
 | 2026-08-19 | §5/§6 TASK-005 amended: write scope gains `extension/popup.js` (a session cannot start without a Start control). TASK-005, TASK-006, TASK-007 flipped to done and TASK-008 to ready — verified against the landed code in commits `a6b43cd`, `87a026a`, `239652a`, `3e0afbf`, `e5e9cd5`. |
 | 2026-08-19 | PRD Q1 answered: three blocklists, 14 domains total — social (x.com, twitter.com, facebook.com, instagram.com, reddit.com, linkedin.com, tiktok.com), video (youtube.com, twitch.tv, netflix.com), news (news.ycombinator.com, bbc.co.uk, cnn.com, theguardian.com). Hardcoded in `extension/blocklists.js`. |
 | 2026-08-19 | Known limitation: starting a session requires the network. `POST /api/sessions` mints the session id server-side, and `startSession` returns `{ ok: false, offline }` when that call fails — there is no offline path for session start (only for events/end, via the queue). |
+| 2026-08-19 | `app/review/[sessionId]/answer.tsx` joins §3's file list: the two answer buttons need a client boundary, and the page stays a server component. |
+| 2026-08-19 | `sw.js` opens the review for `stopped` and `elapsed` only — a `recovered` session ends during browser startup and a `superseded` one because another just began. The tab opens after cleanup, so INV-3 is untouched. |
+| 2026-08-19 | The review's gap label is total away time. §9's sample derives it from an on-task/drift split, but build-intent §3 cut categories, so that split cannot be computed honestly. `away` is a recorded event kind, not a judgment about a domain. |
+| 2026-08-19 | `You didn't say what you meant to do.` is invented copy for the empty-intention case, in design-toolkit §8's voice, flagged for the design session to ratify. US-01 makes empty intentions legal and A2 needs them counted. |
 
 ---
 

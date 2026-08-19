@@ -109,6 +109,11 @@ Rehearse steps 4–7 twice. That is where the demo actually lives.
 |---|---|---|---|
 | T3 | 20 | not hand-timed | Built agent-assisted, not against the hand-timed clock this table assumes. No honest minute figure to record. |
 | T4 | 30 | not hand-timed | Same as T3 — agent-assisted build, clock not run. |
+| T8 | 30 | not hand-timed | Review page, outcome route, and `answer.tsx` client boundary landed agent-assisted, commit `c809425`. No hand-timed minutes to report. |
+| T9 | 15 | not hand-timed | Dashboard ledger landed agent-assisted, commit `73ab0d3`. No hand-timed minutes to report. |
+| T10 | 20 | not hand-timed (partial) | Static/DB verification (401 check, foreign-session seed, outcome-count query, `sw.js` greps) run agent-assisted this hour; the four release-blocking checks (T1, T2, T4, T7) and the two-run demo rehearsal were not run by anyone — they need a browser and a Clerk session, which no agent in this session has. |
+
+Nothing else was cut this hour. The extension's review-on-end wiring (Task 3, commit `3086472`) shipped as scoped in the plan, no scope reduction — only `stopped`/`elapsed` open a tab, which was the plan's own design, not a cut made under clock pressure.
 
 ---
 
