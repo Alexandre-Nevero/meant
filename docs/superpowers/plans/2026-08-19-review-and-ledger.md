@@ -187,7 +187,7 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
 
       {session.outcome === 'unanswered' ? (
         <>
-          <p className="m-sentence">Did you?</p>
+          <p className="m-meta">Did you?</p>
           <Answer sessionId={session.id} />
         </>
       ) : (
@@ -320,9 +320,15 @@ export default async function Dashboard() {
         return (
           <div className="m-row" key={session.id}>
             <p className="m-mark" data-state="ended" />
-            <Link className="m-sentence" href={`/review/${session.id}`}>
-              {session.intention || 'No intention given'}
-            </Link>
+            {session.intention ? (
+              <Link className="m-sentence" href={`/review/${session.id}`}>
+                {session.intention}
+              </Link>
+            ) : (
+              <Link className="m-meta" href={`/review/${session.id}`}>
+                No intention given
+              </Link>
+            )}
             <span className="m-meta">{minutes == null ? 'running' : `${minutes} min`}</span>
             <span className="m-row-domain">{session.top_domain ?? '—'}</span>
             <span className="m-meta">
