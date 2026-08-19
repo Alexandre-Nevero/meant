@@ -45,6 +45,8 @@ export async function endSession(endReason) {
   const session = await getSession()
   if (!session) return { ok: false }
   try {
+    await attribute(null)
+    await flush()
     await post(`/api/sessions/${session.sessionId}`, {
       endedAt: new Date().toISOString(),
       endReason,
@@ -55,6 +57,135 @@ export async function endSession(endReason) {
   }
   return { ok: true }
 }
+
+const AWAY_THRESHOLD_MS = 60_000
+
+async function enqueue(session, event) {
+  const { queue = [] } = await chrome.storage.local.get('queue')
+  queue.push({
+    method: 'POST',
+    path: '/api/events',
+    body: { sessionId: session.sessionId, events: [event] },
+    at: new Date().toISOString(),
+  })
+  await chrome.storage.local.set({ queue })
+}
+
+export async function attribute(nextDomain) {
+  const session = await getSession()
+  if (!session) return
+
+  const now = Date.now()
+  const seconds = Math.round((now - session.currentSince) / 1000)
+  if (session.currentDomain && seconds > 0) {
+    await enqueue(session, {
+      kind: 'attention',
+      domain: session.currentDomain,
+      seconds,
+      at: new Date(now).toISOString(),
+    })
+  }
+  await chrome.storage.local.set({
+    session: { ...session, currentDomain: nextDomain, currentSince: now },
+  })
+}
+
+// A gap over 60s becomes `away` and resets the clock. A shorter gap is left alone,
+// so a quick alt-tab stays attributed to the domain that was open (US-03).
+async function settleFocus() {
+  const session = await getSession()
+  if (!session?.unfocusedSince) return
+
+  const now = Date.now()
+  const gap = now - session.unfocusedSince
+  if (gap > AWAY_THRESHOLD_MS) {
+    await enqueue(session, {
+      kind: 'away',
+      domain: null,
+      seconds: Math.round(gap / 1000),
+      at: new Date(now).toISOString(),
+    })
+    await chrome.storage.local.set({
+      session: { ...session, unfocusedSince: null, currentSince: now },
+    })
+    return
+  }
+  await chrome.storage.local.set({ session: { ...session, unfocusedSince: null } })
+}
+
+chrome.tabs.onActivated.addListener(async () => {
+  await attribute(await activeDomain())
+})
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (!changeInfo.url || !tab.active) return
+  try {
+    await attribute(new URL(changeInfo.url).hostname || null)
+  } catch {
+    await attribute(null)
+  }
+})
+
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  const session = await getSession()
+  if (!session) return
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    if (!session.unfocusedSince) {
+      await chrome.storage.local.set({ session: { ...session, unfocusedSince: Date.now() } })
+    }
+    return
+  }
+  await settleFocus()
+  await attribute(await activeDomain())
+})
+
+export async function flush() {
+  const { queue = [] } = await chrome.storage.local.get('queue')
+  if (queue.length === 0) return
+
+  const events = queue.filter((r) => r.path === '/api/events')
+  const others = queue.filter((r) => r.path !== '/api/events')
+
+  const sent = []
+  if (events.length > 0) {
+    const bySession = new Map()
+    for (const record of events) {
+      const list = bySession.get(record.body.sessionId) ?? []
+      list.push(...record.body.events)
+      bySession.set(record.body.sessionId, list)
+    }
+    for (const [sessionId, batch] of bySession) {
+      const res = await post('/api/events', { sessionId, events: batch }, { queue: false })
+      if (res.ok) sent.push(...events.filter((r) => r.body.sessionId === sessionId))
+    }
+  }
+
+  for (const record of others) {
+    const res = await post(record.path, record.body, { method: record.method, queue: false })
+    if (res.ok) sent.push(record)
+  }
+
+  const { queue: current = [] } = await chrome.storage.local.get('queue')
+  await chrome.storage.local.set({ queue: current.filter((r) => !sent.includes(r)) })
+}
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== TICK) return
+  const session = await getSession()
+  if (!session) return
+
+  await settleFocus()
+  await flush()
+
+  if (session.plannedMinutes != null) {
+    const elapsedMs = Date.now() - new Date(session.startedAt).getTime()
+    if (elapsedMs >= session.plannedMinutes * 60_000) {
+      await attribute(null)
+      await flush()
+      await endSession('elapsed')
+    }
+  }
+})
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   ;(async () => {
