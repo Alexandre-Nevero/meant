@@ -3,7 +3,24 @@
   "name": "MEANT",
   "version": "0.1.0",
   "permissions": ["declarativeNetRequest", "tabs", "storage", "alarms"],
-  "host_permissions": ["http://localhost:3000/*"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "*://*.x.com/*", "*://*.twitter.com/*", "*://*.facebook.com/*", "*://*.instagram.com/*",
+    "*://*.reddit.com/*", "*://*.linkedin.com/*", "*://*.tiktok.com/*",
+    "*://*.youtube.com/*", "*://*.twitch.tv/*", "*://*.netflix.com/*",
+    "*://*.news.ycombinator.com/*", "*://*.bbc.co.uk/*", "*://*.cnn.com/*", "*://*.theguardian.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html"],
+      "matches": [
+        "*://*.x.com/*", "*://*.twitter.com/*", "*://*.facebook.com/*", "*://*.instagram.com/*",
+        "*://*.reddit.com/*", "*://*.linkedin.com/*", "*://*.tiktok.com/*",
+        "*://*.youtube.com/*", "*://*.twitch.tv/*", "*://*.netflix.com/*",
+        "*://*.news.ycombinator.com/*", "*://*.bbc.co.uk/*", "*://*.cnn.com/*", "*://*.theguardian.com/*"
+      ]
+    }
+  ],
   "background": { "service_worker": "sw.js", "type": "module" },
   "action": { "default_popup": "popup.html" }
 }
