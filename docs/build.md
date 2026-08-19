@@ -96,10 +96,10 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 | TASK-002 | Next.js shell + Clerk + empty dashboard | T2 | 001 | `app/layout.tsx`, `app/page.tsx`, `app/dashboard/`, `proxy.ts` | done |
 | TASK-003 | Pairing API + page | T3 | 002 | `app/api/pair/**`, `app/pair/` | done |
 | TASK-004 | Extension skeleton + pairing | T4 | 003 | `extension/manifest.json`, `popup.*`, `api.js` | done |
-| TASK-005 | Session start/stop | T5 | 004 | `extension/sw.js`, `extension/api.js`, `app/api/sessions/**` | ready |
-| TASK-006 | Attention recording | T6 | 005 | `extension/sw.js`, `app/api/events/` | blocked |
-| TASK-007 | Blocking + block page | T7 | 005 | `extension/sw.js`, `blocked.*`, `blocklists.js`, manifest | blocked |
-| TASK-008 | Review page + outcome | T8 | 006 | `app/review/`, `app/api/sessions/[id]/outcome/` | blocked |
+| TASK-005 | Session start/stop | T5 | 004 | `extension/sw.js`, `extension/api.js`, `extension/popup.js`, `app/api/sessions/**` | done |
+| TASK-006 | Attention recording | T6 | 005 | `extension/sw.js`, `app/api/events/` | done |
+| TASK-007 | Blocking + block page | T7 | 005 | `extension/sw.js`, `blocked.*`, `blocklists.js`, manifest | done |
+| TASK-008 | Review page + outcome | T8 | 006 | `app/review/`, `app/api/sessions/[id]/outcome/` | ready |
 | TASK-009 | Dashboard ledger | T9 | 008 | `app/dashboard/` | blocked |
 | TASK-010 | Verification + rehearsal | T10 | all | — | blocked |
 
@@ -139,13 +139,14 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 **Done when:** pasting a code into the unpaired popup stores a token and flips the popup to the idle state.
 
 ### TASK-005 · Session start and stop
-**Files:** `extension/sw.js`, `app/api/sessions/route.ts`, `app/api/sessions/[id]/route.ts`, `lib/device-auth.ts`
+**Files:** `extension/sw.js`, `extension/popup.js`, `app/api/sessions/route.ts`, `app/api/sessions/[id]/route.ts`, `lib/device-auth.ts`
 **Contract:**
 - `lib/device-auth.ts` exports `deviceFromRequest(req)`: reads the Bearer token, hashes it, returns the `device` row or `null`. Every device-token route calls it first and returns 401 on null, **before** reading the body.
 - `POST /api/sessions` — body `{ intention, plannedMinutes, blocklist, startedAt }` → `{ sessionId }`. An empty intention is valid and is stored as `''` (US-01, A2).
 - `PATCH /api/sessions/:id` — body `{ endedAt, endReason }`, where `endReason ∈ {stopped, elapsed, superseded, recovered}`. Verify the session belongs to the token's device.
 - `sw.js` holds session state in `chrome.storage.local` under one key:
-  `{ sessionId, intention, startedAt, plannedMinutes, currentDomain, currentSince }` — **INV-1: nothing else, nowhere else.**
+  `{ sessionId, intention, startedAt, plannedMinutes, currentDomain, currentSince, unfocusedSince, ruleIds }` — **INV-1: nothing else, nowhere else.**
+- `popup.js`'s idle state gains the intention field, duration select, and blocklist choice, and dispatches `{ type: 'start', intention, plannedMinutes, blocklist }`; the running state gains a Stop control dispatching `{ type: 'stop' }` — a session cannot start without a Start control.
 - On startup, `sw.js` checks for an open session and closes it with `recovered` (E2).
 **Done when (US-01):** start then stop writes one session row with correct timestamps; killing the worker from `chrome://serviceworker-internals` mid-session and returning does not lose it (T4).
 
@@ -155,7 +156,7 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 - Listeners: `tabs.onActivated`, `tabs.onUpdated` (only when `changeInfo.url` is set), `windows.onFocusChanged`, `alarms.onAlarm` (30s — the minimum period).
 - One shared handler, `attribute(nextDomain | null)`: computes `now − currentSince`, pushes `{ kind, domain, seconds, at }` onto the queue, sets `currentDomain`/`currentSince`. `kind` is `away` when the browser is unfocused (`windowId === chrome.windows.WINDOW_ID_NONE`) for more than 60 seconds, otherwise `attention`.
 - `domain` is `new URL(tab.url).hostname` — **INV-2**. Nothing else from the URL is read, stored, or logged.
-- The alarm flushes the queue via `POST /api/events` and ends the session when `plannedMinutes` has elapsed.
+- Events buffer in the existing top-level `queue` key as `/api/events` records (`{ method, path, body, at }`, same shape TASK-004 defined) — there is no sixth storage key. The alarm flushes the queue: it coalesces every buffered event record for a session into one `POST /api/events` request, replays any other queued record (e.g. a queued session start) in order, and ends the session when `plannedMinutes` has elapsed.
 - The flush is the only writer that shrinks the queue, and it must re-read the queue immediately before writing it back — `chrome.storage.local` read-modify-write is not atomic, and an alarm handler and an open popup can both call `post()` while offline.
 - `POST /api/events` — body `{ sessionId, events: [...] }`. Rejects any event whose `domain` contains `/`, `?`, or `#`. This is INV-2 enforced at the boundary rather than trusted at the source.
 **Done when (US-03):** three tabs of roughly a minute each produce three `attention` rows with sane seconds; going offline mid-session loses nothing (T6).
@@ -165,7 +166,7 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 **Contract:**
 - `blocklists.js` exports three named arrays of hostnames. Hardcoded (build-intent §3).
 - **Manifest additions, and the reason for them:** a `redirect` action is an *unsafe* rule and requires host permissions for the request URL, and the redirect target must be listed in `web_accessible_resources` — verified against the Chrome docs, 2026-08-18. So `host_permissions` lists every domain that appears in any blocklist (`"*://*.youtube.com/*"`, …) and nothing more (**INV-5**), and `blocked.html` is web-accessible for those same matches.
-- On start: `declarativeNetRequest.updateDynamicRules({ addRules })`, one rule per blocked domain, `condition.requestDomains`, `action.type: "redirect"` to `extensionPath: "/blocked.html"`. Rule ids are recorded in storage.
+- On start: `declarativeNetRequest.updateDynamicRules({ addRules })`, one rule per blocked domain, `condition.requestDomains`, `action.type: "redirect"` to `redirect.url = chrome.runtime.getURL('blocked.html?d=<hostname>')` — not `extensionPath`, so the block page can record `block_hit` (EV5) with the attempted hostname: `redirect.url` is documented to take a full URL, `extensionPath`'s query-string support is not. Hostname only, so INV-2 holds. Rule ids are recorded in storage.
 - On end, **including every recovery and error path (INV-3):** `updateDynamicRules({ removeRuleIds })` using the recorded ids.
 - `blocked.js` reads the current session from storage and shows the intention and remaining time. No bypass control exists (SDD-C3).
 **Done when (US-02):** a blocked domain redirects to a page showing your own intention during a session, and loads normally after it ends (T1, T2).
@@ -212,10 +213,10 @@ Errors are `{ error: string }` with 400 (bad body), 401 (bad or missing credenti
 | `token` | `string` | TASK-004 |
 | `apiBase` | `string` | TASK-004 |
 | `deviceId` | `string` | TASK-004 |
-| `session` | `{ sessionId, intention, startedAt, plannedMinutes, currentDomain, currentSince, ruleIds: number[] }` \| `null` | TASK-005, 007 |
+| `session` | `{ sessionId, intention, startedAt, plannedMinutes, currentDomain, currentSince, unfocusedSince: number \| null, ruleIds: number[] }` \| `null` | TASK-005, 006, 007 |
 | `queue` | `Array<{ method, path, body, at }>` | TASK-004 |
 
-Five keys. `session` is the whole of INV-1 — if elapsed time is ever read from anywhere else, the rule is broken. `queue` holds queued `post()` calls, not raw events — TASK-006's flush replays these records verbatim.
+Five keys. `session` is the whole of INV-1 — if elapsed time is ever read from anywhere else, the rule is broken. `unfocusedSince` was added by TASK-006: focus loss has to be timed without discarding the domain the time belongs to. `queue` holds queued `post()` calls, not raw events — TASK-006's flush replays these records verbatim.
 
 ### 7.3 Event kinds
 
@@ -268,7 +269,14 @@ Release needs T1, T2, T4, T7 plus the demo running twice (SDD §8.3).
 | 2026-08-19 | TASK-003 | Pairing API + page landed, commits `2eb1524`, `1b78ac1`, `7bc5171` | `npx tsc --noEmit` exit 0; seeded code `TEST23` claimed once → response included a `deviceId` and a `token` field (values not recorded here — plaintext token is never persisted anywhere, SDD V1); same code claimed again → `{"error":"unauthorized"}` (401), confirming the atomic claim rejects a double claim; unauthenticated `POST /api/pair` → 401; `/pair` served 200 HTML |
 | 2026-08-19 | TASK-004 | Extension skeleton + pairing landed, commit `b32cbb6` | `node --check extension/api.js` and `popup.js` both OK; `python3 -m json.tool` on `manifest.json` OK; `host_permissions` is `["http://localhost:3000/*"]` only, no wildcard; read-verified `queue.push({ method, path, body, at })` shape in `api.js` and that a thrown `fetch` (network failure only) is what reaches the queue, not a 401 response |
 
-Outstanding, human-only (not yet run — do not read as passing): signed-in `/pair` showing a real code; load-unpacked pairing flipping the popup to idle with a `device` row attributed to the real Clerk user; a devtools-offline `post()` queuing instead of throwing.
+| 2026-08-19 | TASK-005 | Device auth + `POST /api/sessions` + `PATCH /api/sessions/:id` landed, commit `a6b43cd` | `npx tsc --noEmit` exit 0 (re-run 2026-08-19, still exit 0); read-verified `deviceFromRequest` is called and its null case returns 401 before `req.json()` in all three routes; read-verified `PATCH .../:id`'s `where` clause carries `device_id` and `user_id` together with `ended_at is null`, so a foreign or already-ended session 404s |
+| 2026-08-19 | TASK-005 | `sw.js` start/stop + `popup.js` idle/running controls landed, commit `239652a` | `node --check extension/sw.js && node --check extension/popup.js` — both parse; `grep -nE 'setInterval\|setTimeout\|^let \|^var ' extension/sw.js` → no match, only the "sw.js clean" fallback line printed, confirming no timer or module-level mutable state in the worker (INV-1) |
+| 2026-08-19 | TASK-006 | `POST /api/events` route landed, commit `a6b43cd`; attribution/away/flush landed in `sw.js`, commit `3e0afbf` | read-verified the route rejects the whole batch (400, no insert) on any event whose `domain` matches `/[/?#]/`; `grep -c 'chrome.storage.local.get' extension/sw.js` → 4 reads, confirming state is re-read rather than trusted from a stale variable; `node --check extension/sw.js` parses; queue/flush code read-verified to coalesce per-session and replay non-event records in order |
+| 2026-08-19 | TASK-007 | Blocklists, block page, manifest landed, commit `87a026a`; rule install/removal wired into `sw.js`, commit `e5e9cd5` | `node --check extension/blocklists.js && node --check extension/blocked.js` — both parse; `python3 -c "import json; ..."` → 15 host permissions (14 blocklist domains + localhost), `"all_urls" in json.dumps(m)` → `False`; `grep -n 'removeAllRules' extension/sw.js` → appears in `endSession`'s `finally`, in `onInstalled`, and in `onStartup`'s else branch — not only on the happy path (INV-3) |
+
+Outstanding, human-only (not yet run — do not read as passing): signed-in `/pair` showing a real code; load-unpacked pairing flipping the popup to idle with a `device` row attributed to the real Clerk user; a devtools-offline `post()` queuing instead of throwing; **T1** start installs rules in a real browser; **T2** stop removes every rule in a real browser; **T3** attribution across real tab switches; **T4** killing the worker mid-session from `chrome://serviceworker-internals` and confirming nothing is lost; **T6** offline queueing observed in devtools. None of these were run this session — no dev server or loaded extension was live — and none are recorded as passing.
+
+Also outstanding, not human-only but not run this session for lack of a live dev server/DB: Task 1's Step 5–7 live-route checks (curl against `:3000`, seeding a pairing code, confirming row counts in Neon) and Task 1–5's end-to-end demo rehearsal. Only the static checks above (parse, grep, tsc, JSON shape) were actually executed.
 
 Fact-only. Fill during the build; leave prediction out of it.
 
@@ -283,6 +291,12 @@ Fact-only. Fill during the build; leave prediction out of it.
 | 2026-08-18 | `middleware.ts` → `proxy.ts`: Next.js 16.3.1 renamed the file convention (nextjs.org/docs/app/api-reference/file-conventions/proxy, Clerk's Next.js docs follow suit). §3 and §6/TASK-002 updated. Same `clerkMiddleware()` export, root-level file, new name only. |
 | 2026-08-19 | Host permission for `http://localhost:3000/*` moved from TASK-007 to TASK-004, because MV3 blocks cross-origin fetch from extension pages without it, so pairing cannot work at all. INV-5 is intact — the ban is on `<all_urls>`, not on the extension's own backend. The production origin joins when a deployment exists. |
 | 2026-08-19 | The `queue` storage key holds `{ method, path, body, at }` records rather than raw events, because a generic `post()` cannot queue two shapes and an offline `POST /api/sessions` would otherwise have nowhere to go. TASK-006's flush replays records verbatim. |
+| 2026-08-19 | §7.2 amended: `session` gains `unfocusedSince: number \| null`. Focus loss has to be timed without discarding the domain the time belongs to. |
+| 2026-08-19 | §6 TASK-007 amended: the redirect target is `redirect.url = chrome.runtime.getURL('blocked.html?d=<hostname>')`, not `extensionPath`, so `blocked.js` can record `block_hit` (EV5) with the attempted hostname — `redirect.url` takes a full URL, `extensionPath`'s query-string support is not documented. Hostname only, INV-2 intact. |
+| 2026-08-19 | §6 TASK-006 amended: events buffer in the existing top-level `queue` as `/api/events` records; the flush coalesces every event record for a session into one request and replays the rest in order. No sixth storage key. |
+| 2026-08-19 | §5/§6 TASK-005 amended: write scope gains `extension/popup.js` (a session cannot start without a Start control). TASK-005, TASK-006, TASK-007 flipped to done and TASK-008 to ready — verified against the landed code in commits `a6b43cd`, `87a026a`, `239652a`, `3e0afbf`, `e5e9cd5`. |
+| 2026-08-19 | PRD Q1 answered: three blocklists, 14 domains total — social (x.com, twitter.com, facebook.com, instagram.com, reddit.com, linkedin.com, tiktok.com), video (youtube.com, twitch.tv, netflix.com), news (news.ycombinator.com, bbc.co.uk, cnn.com, theguardian.com). Hardcoded in `extension/blocklists.js`. |
+| 2026-08-19 | Known limitation: starting a session requires the network. `POST /api/sessions` mints the session id server-side, and `startSession` returns `{ ok: false, offline }` when that call fails — there is no offline path for session start (only for events/end, via the queue). |
 
 ---
 

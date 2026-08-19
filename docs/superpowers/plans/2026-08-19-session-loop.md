@@ -875,31 +875,31 @@ git commit -m "feat: block rules install on start and die with the session"
 **Files:**
 - Modify: `docs/build.md` (§5, §6 TASK-005/006/007, §7.2, §10, §11)
 
-- [ ] **Step 1: Amend §7.2's session shape**
+- [x] **Step 1: Amend §7.2's session shape**
 
 Add `unfocusedSince: number | null` to the `session` row, and say why in one clause: focus loss has to be timed without discarding the domain the time belongs to.
 
-- [ ] **Step 2: Amend §6 TASK-007**
+- [x] **Step 2: Amend §6 TASK-007**
 
 The redirect target is `redirect.url` = `chrome.runtime.getURL('blocked.html?d=<hostname>')`, not `extensionPath`, so the block page can record `block_hit` (EV5) with the attempted hostname. `redirect.url` is documented to take a full URL; `extensionPath`'s query-string support is not. Hostname only, so INV-2 holds.
 
-- [ ] **Step 3: Amend §6 TASK-006**
+- [x] **Step 3: Amend §6 TASK-006**
 
 Events buffer in the existing top-level `queue` as `/api/events` records; the flush coalesces every event record for a session into one request and replays the rest in order.
 
-- [ ] **Step 4: Amend §5 and §6 TASK-005**
+- [x] **Step 4: Amend §5 and §6 TASK-005**
 
 TASK-005's write scope adds `extension/popup.js` — a session cannot start without a Start control. Flip TASK-005, TASK-006, TASK-007 to done and TASK-008 to ready once Tasks 1–5 are verified.
 
-- [ ] **Step 5: Add the §11 rows and answer PRD Q1**
+- [x] **Step 5: Add the §11 rows and answer PRD Q1**
 
 One row per amendment above, plus one recording the three blocklists as the answer to PRD Q1 (social / video / news, 14 domains), and one recording the known limitation: starting a session requires the network, because the server mints the session id.
 
-- [ ] **Step 6: Fill §10 with evidence that was actually produced**
+- [x] **Step 6: Fill §10 with evidence that was actually produced**
 
 Fact-only. The browser checks (T1, T2, T3, T4, T6) are human-only — record them as outstanding, never as passing, until a human runs them.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs/build.md
