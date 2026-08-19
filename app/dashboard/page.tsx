@@ -45,7 +45,7 @@ export default async function Dashboard() {
         const minutes = durationMinutes(session.started_at, session.ended_at)
         return (
           <div className="m-row" key={session.id}>
-            <p className="m-mark" data-state="ended" />
+            <p className="m-mark" data-state={minutes == null ? 'running' : 'ended'} />
             {session.intention ? (
               <Link className="m-sentence" href={`/review/${session.id}`}>
                 {session.intention}
