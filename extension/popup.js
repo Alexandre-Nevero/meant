@@ -39,7 +39,7 @@ async function claim(value) {
 
   const res = await post('/api/pair/claim', { code }, { queue: false })
   if (res.offline) return unpaired('No connection. Try again when you are back online.')
-  if (!res.ok) return unpaired('That code is wrong, expired, or already used.')
+  if (!res.ok || !res.data?.token) return unpaired('That code is wrong, expired, or already used.')
 
   await chrome.storage.local.set({ token: res.data.token, deviceId: res.data.deviceId })
   render()
