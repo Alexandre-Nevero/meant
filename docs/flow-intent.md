@@ -1,11 +1,14 @@
 # User Flow
 
-**Project:** Intent
+**Project:** MEANT
 **Date:** 2026-08-18
-**Version:** 0.1
+**Version:** 0.2
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
+**Last reconciled:** 2026-08-28
 **Upstream:** [prd-intent.md](prd-intent.md), [sitemap-intent.md](sitemap-intent.md)
+
+> **Amendment 0.2 (2026-08-28).** UF1 gains the plan, the judge, and the companion. Eight events added. Four edge cases added, all of them about the new dependency failing or the new permission being declined — the paths most likely to be skipped and most certain to happen.
 
 ---
 
@@ -13,43 +16,57 @@
 
 | ID | Flow | Frequency | Serves |
 |---|---|---|---|
-| UF1 | Run a session, end to end | Several times a day — *the product* | PRD-F1..F5 |
+| UF1 | Run a session, end to end | Several times a day — *the product* | PRD-F1..F5, F8..F12 |
 | UF2 | First run: sign in and pair | Once | PRD-F6 |
 | UF3 | Review a past session from the ledger | Occasional | PRD-F5 |
+| **UF4** | **Enable deep judging and grant page access** | **Once, and only if the user chooses to** | **PRD-F9, SDD §5.2** |
 
 ---
 
 ## 2. Primary Flow — UF1
 
 ```
-Popup: type "finish the supplier report", pick a blocklist, Start
+Popup: type "finish the client proposal", pick a blocklist, Start
    │
+   ├─▶ session row created            (EV1)      ◀── returns in <200ms
    ├─▶ block rules installed          (EV2)
-   ├─▶ session row created            (EV1)
+   ├─▶ companion opens, facing the work
    │
+   ├┈┈▶ plan requested, fire-and-forget          (EV8)
+   │      └┈▶ 1–5 steps appear ~3s in           (EV9)   ◀── nothing waited for this
    ▼
-Work happens. Nothing is asked of the user.
-   │   active tab / URL changes ──▶ time attributed to the previous domain   (EV3)
-   │   browser unfocused > 60s  ──▶ time attributed to "away"                (EV4)
-   │   blocked domain opened    ──▶ block page shows the intention           (EV5)
+Work happens. Nothing is asked of the user. Nothing is celebrated.
+   │   active tab / URL changes ──▶ time attributed to previous domain      (EV3)
+   │                            └─▶ memory hit?  verdict, no model call     (EV11)
+   │                                memory miss? judge, then cache it       (EV11)
+   │   verdict = drifts, above the floor, past 60s
+   │                            ──▶ companion turns to face you             (EV12)
+   │   you come back                                                        (EV13)
+   │   a step looks done        ──▶ companion marks it, silently            (EV14)
+   │   you un-mark it           ──▶ correction stored as a label            (EV15)
+   │   browser unfocused > 60s  ──▶ time attributed to "away"               (EV4)
+   │   blocked domain opened    ──▶ block page shows the intention          (EV5)
    │
    ▼
 Stop (or the chosen duration elapses)
    │
    ├─▶ block rules removed
+   ├─▶ companion closes
    ├─▶ session closed                 (EV6)
    ▼
 Review tab opens automatically
-   "You said: finish the supplier report"
+   "You said: finish the client proposal"
+   ✓ outline the scope   ✓ write the pricing section   ○ send it
    claude.ai 41m · docs.google.com 12m · news site 9m · away 6m
-   2 blocked attempts
-   Did you finish it?   [ Yes ]  [ No ]
+   2 blocked attempts · drifted twice, back within 90s both times
+   The coach speaks: what it saw, and one suggestion with a button      (EV16, EV17)
+   Did you finish it?   [ Yes ]  [ Not yet ]
    │
    ▼                                  (EV7)
 Dashboard: 3 sessions, 2 completed
 ```
 
-**The whole product is this one screen at the end.** Everything before it exists to make that screen true.
+**The whole product is this one screen at the end.** Everything before it — the plan, the blocking, the judging, the companion — exists to make that screen true. None of it counts on its own: checked steps never enter the ledger (I8), and the coach says the same things whether the answer is Yes or Not yet (I3).
 
 ---
 
@@ -63,7 +80,11 @@ Dashboard: 3 sessions, 2 completed
 | 4 | Type an intention and press Start (S5) | ~10s |
 | 5 | **First value:** the review at the end of the first session (S4) | one session later |
 
-First value is one session away, not one week away. This is the strongest argument for having cut calibration from v1 — calibration's first value is weeks away, and nobody would still be here.
+First value is one session away, not one week away.
+
+**Nothing in onboarding asks for broad page access.** The judge runs on tier T-A from the first session, and the offer to read pages arrives later, from the companion, with evidence behind it (UF4). Putting "read and change all your data on all websites" in front of a non-technical buyer before they have seen a single review would kill the funnel at step 1.
+
+**Second value, and the reason they stay, is weeks away by design:** memory. Calibration was cut from 0.1 for exactly this reason and returns at 0.2 as PRD-F11 — but it is deliberately not the first thing anyone sees, and the coach stays silent about patterns until the evidence threshold clears (I6).
 
 ---
 
@@ -71,8 +92,8 @@ First value is one session away, not one week away. This is the strongest argume
 
 ### UF1 · Run a session
 Preconditions: paired device, signed-in account.
-Success: a session row with an intention, a set of attention rows summing to roughly the session duration, and an outcome that is `yes` or `no`.
-Failure modes: see §5.
+Success: a session row with an intention, a plan (or an honest `failed`), attention rows summing to roughly the session duration, judgments for the domains visited, and an outcome that is `yes` or `no`.
+Failure modes: see §5. Note that E9 through E12 all degrade the session rather than ending it — a session that produced no verdicts is still a valid session.
 
 ### UF2 · First run
 Preconditions: extension installed.
@@ -81,6 +102,12 @@ Failure: an expired or mistyped code leaves the extension unpaired with a stated
 
 ### UF3 · Review a past session
 Entry from the dashboard. Identical to S4 in every respect except that the outcome may already be answered, in which case it is shown and can be changed.
+
+### UF4 · Enable deep judging
+Preconditions: a paired, signed-in user who has run at least one session on tier T-A, so the offer arrives with evidence behind it rather than as a cold demand.
+Entry: the companion, or the review, after the judge has been uncertain often enough to be worth improving.
+Success: `chrome.permissions.request()` is granted and subsequent judgments run on tier T-B.
+Failure: declined. The product continues on T-A permanently and never asks again (E10). This is a success state for the user and must not be instrumented as a funnel drop.
 
 ---
 
@@ -96,6 +123,10 @@ Entry from the dashboard. Identical to S4 in every respect except that the outco
 | E6 | Session runs past midnight or for 8 hours | Recorded as one session; no auto-split in v1 | Simpler, and rare enough to accept |
 | E7 | A blocked site is opened before the session starts and stays open | The tab is not closed retroactively; only new navigations are blocked | Closing tabs a user opened is more hostile than v1 has earned |
 | E8 | Device token revoked or invalid | Extension returns to unpaired and stops recording; queued events are kept | Silent data loss is worse than a visible stop |
+| **E9** | AI Gateway unreachable, or over the V8 daily ceiling | No plan, no new verdicts, companion present but never turning, coach silent. Blocking, attention, review, ledger and the outcome question all work | The product must survive its own fourth service. This is the K4 escape hatch and it is tested (T10), not hoped for |
+| **E10** | User declines or revokes broad page access | Judge falls back to tier T-A (hostname + title). No error, no nag, no repeat prompt, ever | Declining is a supported permanent state, not a funnel to be re-entered. A privacy product that nags for permission is lying about itself |
+| **E11** | A verdict arrives after the user has already changed tabs again | Discarded, not shown | Signalling drift on a tab someone already left is the worst false positive available — it proves the thing is not watching, only guessing |
+| **E12** | Plan generation fails or returns nothing | `plan_state = failed`. Session unaffected; review shows no plan rather than an empty one | The plan is scaffolding. Its absence must never look like a defect in the session |
 
 ---
 
@@ -109,17 +140,30 @@ Entry from the dashboard. Identical to S4 in every respect except that the outco
 | EV4 | `away_recorded` | Browser unfocused > 60s | M4, A1 |
 | EV5 | `block_hit` | A blocked navigation is intercepted | A4, the review |
 | EV6 | `session_ended` | Stop, duration elapsed, or recovery from E2 | M1 |
-| EV7 | `outcome_answered` | Yes / No pressed on the review | M3, A3, the ledger |
+| EV7 | `outcome_answered` | Yes / Not yet pressed on the review | M3, A3, the ledger |
+| **EV8** | `plan_requested` | Just after the session row is created | M6, N7 |
+| **EV9** | `plan_ready` | Steps returned and rendered | M6, N7 |
+| **EV10** | `plan_edited` | A step is edited or removed | **M6** — the honest measure of A7 |
+| **EV11** | `judgment_recorded` | A tab is classified, by model or by memory | **M7, M9** — carries `source`, so cost and cache-hit rate are one query |
+| **EV12** | `drift_signalled` | The companion turns | M7 (denominator: judgments actually shown), N8 |
+| **EV13** | `return_detected` | Attention comes back after a signalled drift | **M10** — and the thing the coach celebrates |
+| **EV14** | `task_marked` | The companion marks a step done | M6 |
+| **EV15** | `task_corrected` | The user un-marks, or says "that was work" | **M7** — every one of these is a training label |
+| **EV16** | `suggestion_offered` | The coach proposes an executable action | I5 |
+| **EV17** | `suggestion_accepted` | The button is pressed | PRD-F13 |
 
-Seven events. Every metric in PRD §8 is derivable from these; nothing here exists for curiosity.
+Seventeen events. Every metric in PRD §8 is derivable from these; nothing here exists for curiosity. EV11 and EV15 together are the whole of M7, which is the metric that decides whether the judge is allowed to keep speaking (K4).
 
 ---
 
 ## 7. Cross-Flow Rules
 
 - Only one session may be open at a time per account. Starting a second closes the first (EV6, flagged).
-- The product interrupts the user exactly once per session — the review tab. There are no other notifications in v1.
-- Block rules are owned by the session. There is no path in the code by which a rule outlives the session that installed it; this is the one invariant a bug in must be treated as release-blocking.
+- The product interrupts the user exactly once per session — the review tab. There are no other notifications in v1. **The companion turning is not an interruption and must never become one: no sound, no words, no colour change, no focus steal.**
+- Block rules are owned by the session. There is no path in the code by which a rule outlives the session that installed it; a bug here is release-blocking.
+- **Nothing waits on a model.** Start does not wait for the plan; a block does not wait for a verdict; a stale verdict is discarded (E11).
+- **Nothing good happens on screen during a session** (I2). Every positive event — a completed step, a return from drift — is recorded and shown only in the review.
+- **The companion's motion budget is three noticeable movements per 25 minutes, none in the first 60 seconds** (N8). Breathing and blinking are not movements.
 
 ---
 
@@ -128,13 +172,17 @@ Seven events. Every metric in PRD §8 is derivable from these; nothing here exis
 | # | Question | Blocks | Owner |
 |---|---|---|---|
 | Q1 | Is 60 seconds the right away threshold, or is it 30? | EV4 | Alexandre — decide from the first week's own data |
+| **Q2** | Does the companion turn back after a return (EV13), and is that itself a movement against the budget? Turning back is the natural counterpart to turning away, and it is also the closest thing to celebration that could survive I2 | EV12, EV13, N8, I2 | Alexandre |
+| **Q3** | Is a drift that the user resolves in under ~10 seconds worth signalling at all, or is the signal itself the interruption? | EV12, A9 | Alexandre — from the first week's own data |
 
 ---
 
 ## Self-Check
 
 - [x] Every `UF#` names its preconditions, success state, and failure modes
-- [x] Every `EV#` feeds a metric in PRD §8
+- [x] Every `EV#` feeds a metric in PRD §8, an invariant, or a kill criterion
+- [x] The edge case matrix covers the new dependency failing (E9) and the new permission being declined (E10)
+- [x] No flow puts a model between a user and a page
 - [x] The edge case matrix covers the service worker lifecycle, browser close, offline, and dismissal
 - [x] First value is reachable in one session
 - [x] Registered in `docs/index.md`

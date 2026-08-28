@@ -1,32 +1,37 @@
 # Product Requirements Document
 
-**Project:** Intent
+**Project:** MEANT
 **Date:** 2026-08-18
-**Version:** 0.1
+**Version:** 0.2
 **Cycle:** 1
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
+**Last reconciled:** 2026-08-28
 **Upstream:** [idea-intent.md](idea-intent.md)
 **Downstream:** [sitemap-intent.md](sitemap-intent.md), [flow-intent.md](flow-intent.md), [sdd-intent.md](sdd-intent.md)
+
+> **Amendment 0.2 (2026-08-28).** §3 gains six features and eight invariants. §6 is rewritten from "v1 contains no AI" to a full agent specification — that reversal is the largest single change in this document and its reason is recorded in §6.1. §7 allocates a fourth external service. §8 gains five metrics, two of which are about the agent being right and one about not going bankrupt.
 
 ---
 
 ## 1. Purpose and Value
 
-Intent closes the gap between what someone said they would finish and what their attention actually did. It is one browser extension plus one web app: declare the intention, protect it, record what happened, and answer one question at the end — did you finish it?
+MEANT closes the gap between what someone said they would finish and what their attention actually did. It is one browser extension plus one web app: declare the intention, turn it into a short plan, protect it, watch alongside, record what happened, and answer one question at the end — did you finish it?
 
-The number that accumulates is completed outcomes, not hours. Hours appear only as evidence inside a single session's review.
+The number that accumulates is completed outcomes, not hours. Hours appear only as evidence inside a single session's review. Checked tasks never accumulate at all (I8).
+
+**What makes it different, in one sentence a customer can repeat:** every AI accountability product asks whether you were focused; this one is inside the tab and already knows.
 
 ### 1.1 Foundation (reference copy — canonical in [idea-intent.md](idea-intent.md) §1)
 
 | # | Field | Answer |
 |---|---|---|
-| 1 | One line | A browser extension plus dashboard that makes you say what you intend to finish, blocks what you chose to avoid, records where your attention went, and ends by asking whether you finished it |
-| 2 | Problem event | 70 minutes, 14 tabs, no way to say whether the report moved |
-| 3 | Primary user | A browser-native worker — corporate administrator, coordinator, AI-assisted builder |
+| 1 | One line | Say what you mean to finish, get a short plan, block what you chose to avoid, be watched while you work, and answer whether you finished it |
+| 2 | Problem event | 70 minutes, 14 tabs, no way to say whether the proposal moved |
+| 3 | Primary user | A self-employed, non-technical browser-native worker. Own laptop, own card |
 | 4 | Pain moment | End of a work block, asked "did you finish it?", answering "I was working on it" |
-| 5 | Insight | For a browser-native worker the browser is the whole workstation, so one extension sees intention, enforcement, and attention at once — no OS permissions, no admin rights |
-| 6 | The one thing | The end-of-session review: intention beside actual attention, then did you finish it |
+| 5 | Insight | One extension sees intention, plan, enforcement, and attention at once — and can read the tab, which nothing else in the category can |
+| 6 | The one thing | The end-of-session review: intention and plan beside actual attention, then the question |
 
 ---
 
@@ -34,10 +39,10 @@ The number that accumulates is completed outcomes, not hours. Hours appear only 
 
 | Who | Context | What they need from v1 |
 |---|---|---|
-| **Primary — the browser-native worker** | Corporate laptop, Chrome or Edge, no admin rights, works in documents, email, and AI chat all day | To find out, at the end of a block, whether the block produced the thing it was for |
-| **Secondary — the builder** | Same behavior class, own machine, uses it daily | Enough friction-free daily use that A2 and A3 get tested for real |
+| **Primary — the self-employed browser-native worker** | Own laptop, Chrome or Edge, works in documents, email, client tools, and AI chat all day. Non-technical | To find out, at the end of a block, whether the block produced the thing it was for |
+| **Secondary — the builder** | Same behavior class, uses it daily | Enough friction-free daily use that A2, A3, A7, A8 and A9 get tested for real |
 
-**Not served in v1:** anyone whose work is mostly outside a browser (IDE, terminal, native design tools). v1 would see a fraction of their day and be confidently wrong about the rest.
+**Not served in v1:** anyone whose work is mostly outside a browser (IDE, terminal, native design tools). Anyone on a managed corporate endpoint where IT policy governs what may be installed — no longer the target since D10, and not designed for.
 
 ---
 
@@ -45,52 +50,104 @@ The number that accumulates is completed outcomes, not hours. Hours appear only 
 
 | ID | Feature | Priority | Serves | Notes |
 |---|---|---|---|---|
-| PRD-F1 | Declare an intention and start a session | Must | A2, IDEA §4 | One text field, optional duration. Nothing else. |
-| PRD-F2 | Block a chosen list of sites for the length of the session | Must | A4 | Dynamic MV3 rules, added on start, removed on end |
-| PRD-F3 | Record attention passively while the session runs | Must | A1, IDEA §1.6 | Seconds per domain, plus away time |
-| PRD-F4 | End-of-session review | Must | A3 — *this is the one thing* | Intention, time per domain, blocked attempts, then: did you finish it? |
-| PRD-F5 | History — the outcome ledger | Must | IDEA §1.6 | Sessions listed with their outcome. Completion rate is the headline; total hours is not shown as a headline anywhere |
+| PRD-F1 | Declare an intention and start a session | Must | A2, IDEA §4 | One text field, optional duration. Start is **instant** — nothing may block it |
+| PRD-F2 | Block a chosen list of sites for the length of the session | Must | A4 | Dynamic MV3 rules, added on start, removed on end. Fires locally with no model in the path |
+| PRD-F3 | Record attention passively while the session runs | Must | A1 | Seconds per domain, plus away time |
+| PRD-F4 | End-of-session review | Must | A3 — *this is the one thing* | Intention, plan, time per domain, drift-and-returns, blocked attempts, then: did you finish it? |
+| PRD-F5 | History — the outcome ledger | Must | IDEA §1.6 | Sessions with their outcome. Completion rate is the headline; no hours headline, no score, anywhere |
 | PRD-F6 | Account and device pairing | Must (infrastructure) | A5 | Sign in on the web app; paste a one-time code into the extension |
-| PRD-F7 | Edit the blocklist | Should | — | Three built-in lists plus add/remove a domain. Cut first if time runs out |
+| PRD-F7 | Edit the blocklist | Should | — | Three built-in lists plus add/remove a domain |
+| **PRD-F8** | **Task plan generated from the intention** | Must | A7, C10, C13, C14 | 1–5 steps, generated **after** the session starts. Editable, deletable. Gives the judge something concrete to judge against |
+| **PRD-F9** | **Attention judged against the current task** | Must | A8, C15 | Returns serves / drifts / unclear. **Two input tiers (SDD §5.2): T-A judges on hostname + title with no new permission; T-B adds page text behind an opt-in permission the user grants at the moment they enable it.** Gated by memory (I4). The differentiating feature |
+| **PRD-F10** | **The companion — presence during the session** | Must | A9, C11, C12 | Faces your work; turns to face you on drift. Marks tasks silently. Accepts one tap, never typing |
+| **PRD-F11** | **Memory — what it knows about you across sessions** | Must | Retention; also cost control (I4) | Domain classifications, drift patterns, estimate accuracy. Speaks only above an evidence threshold (I6) |
+| **PRD-F12** | **The coach — review conversation and suggestions** | Should | C9, C16 | The same creature, after the session. Celebrates the return, the completion, the answering. Suggests only what it can execute (I5) |
+| **PRD-F13** | **Personal blocklist derived from observed drift** | Should | Differentiation | "This site costs you 40 minutes a week, and only during writing sessions." Cannot be copied without the data |
 
-**Explicitly not features:** any ranking, score, streak, badge, or leaderboard. Calibration and rewards were cut in the 2026-08-18 design session and stay cut for v1 (IDEA §4).
+### 3.1 Invariants
+
+These are product rules, not preferences. Breaking one is a bug.
+
+| # | Invariant | Why | Source |
+|---|---|---|---|
+| **I1** | The companion's state is never a function of the outcome answer. `Yes` and `Not yet` leave it identical | A pet that suffers when you answer honestly is a machine for producing false yeses. A3 is the assumption everything rests on | C9; design toolkit's identical-buttons rule |
+| **I2** | No celebration during a session. Positive feedback exists only in the review | Two independent reasons: engagement-contingent reward undermines motivation, and celebration raises arousal, which impairs complex work | C9, C11, C12 |
+| **I3** | The coach responds to the evidence, never to the answer. It says the same things whether you answered `Yes` or `Not yet` | Keeps the outcome question safe to answer honestly while still allowing a coach to exist | Follows from I1 |
+| **I4** | Memory gates the judge. A domain already classified for this user's intention class is not re-judged | It is the accuracy story and the margin story in one feature | A11, M9 |
+| **I5** | The coach may only suggest actions the product can execute | Structurally prevents "have you tried the Pomodoro technique," the most commoditized output in 2026 | C15 |
+| **I6** | The coach states no pattern below the evidence threshold | A pattern from three sessions is astrology, and being wrong about *you* costs far more than being wrong about a tab | Q7 |
+| **I7** | Page text is read for judging and never stored, logged, or retained. Only `{domain, verdict, confidence}` persists | Replaces the old "never send" rule with one that actually holds under cloud inference. This is the anti-surveillance control | SDD V5 (amended) |
+| **I8** | Checked tasks never enter the ledger. Only the outcome answer counts | Sub-goal completion "could breed self-congratulation," which is a more sophisticated version of the exact pain this product exists to attack | C13 |
+
+**Explicitly not features:** any ranking, score, streak, badge, leaderboard, productivity percentage, or hours headline. Any conversation with the companion during a session. Any celebration of `Yes` over `Not yet`.
 
 ---
 
 ## 4. User Stories and Acceptance Criteria
 
 **US-01 — Declare (PRD-F1)**
-As a browser-native worker, I want to state what I intend to finish before I start, so the session has something to be judged against.
-- Given the extension popup is open and the device is paired, when I type an intention and press Start, then a session begins and its start time is recorded.
-- Given the intention field is empty, when I press Start, then the session starts anyway and is recorded with an empty intention. *(Deliberate: A2 is only testable if empty intentions are possible and counted.)*
+As a self-employed worker, I want to state what I intend to finish before I start.
+- Given the popup is open and paired, when I type an intention and press Start, then a session begins **within 200ms** and its start time is recorded.
+- Given I press Start, when the plan is still generating, then the session is already running and nothing is waiting on the model.
+- Given the intention field is empty, when I press Start, then the session starts and is recorded with an empty intention, and the companion states that it cannot judge drift without one.
 
 **US-02 — Protect (PRD-F2)**
-As someone who has just committed to a task, I want the sites I chose to be unreachable while I work.
-- Given a session is running with a blocklist, when I navigate to a blocked domain, then the request is blocked and a page shows my current intention and the time remaining.
-- Given a session ends by any means, when the session record is closed, then every dynamic block rule added by that session is removed.
+- Given a session is running with a blocklist, when I navigate to a blocked domain, then the request is blocked and a page shows my current intention and the time remaining. No model call is in this path.
+- Given a session ends by any means, when the record is closed, then every dynamic block rule added by that session is removed.
 
 **US-03 — Observe (PRD-F3)**
-As a user, I want the time to be recorded without me starting anything.
-- Given a session is running, when the active tab changes or its URL changes, then the elapsed time is attributed to the previously active domain.
-- Given the browser loses focus for more than 60 seconds, when focus returns, then that period is attributed to `away`, not to the last domain.
-- Given the extension service worker is terminated mid-session, when it wakes, then the session state is reconstructed from stored timestamps with no loss beyond the current interval.
+- Given a session is running, when the active tab changes, then elapsed time is attributed to the previous domain.
+- Given the browser loses focus for more than 60 seconds, when focus returns, then that period is attributed to `away`.
+- Given the service worker is terminated mid-session, when it wakes, then state is reconstructed from stored timestamps with no loss beyond the current interval.
 
 **US-04 — Review (PRD-F4)**
-As a user, I want the session to end with a comparison and one question.
-- Given a session ends, when the review opens, then it shows the intention, seconds per domain in descending order, away time, blocked attempts, and a yes/no question.
-- Given the review is open, when I answer, then the outcome is stored against the session and the review closes.
-- Given the review is open, when I dismiss it without answering, then the session is stored with outcome `unanswered` and counts against review completion in M3.
+- Given a session ends, when the review opens, then it shows the intention, the plan with what moved, seconds per domain in descending order, away time, drift-and-return count, blocked attempts, and a yes/no question.
+- Given the review is open, when I answer, then the outcome is stored and the review closes.
+- Given I dismiss the review without answering, then the session is stored with outcome `unanswered` and counts against M3.
 
 **US-05 — Ledger (PRD-F5)**
-As a user, I want to see whether I finish what I say I will.
-- Given at least one completed session, when I open the dashboard, then I see each session with its intention, duration, top domain, and outcome, plus a completion rate over all answered sessions.
-- Given zero sessions, when I open the dashboard, then I see an empty state that explains what will appear here.
+- Given at least one completed session, when I open the dashboard, then I see each session with its intention, duration, top domain, and outcome, plus a completion rate over answered sessions.
+- Given any state of the data, when I open the dashboard, then no total-hours figure and no percentage-focused score appears anywhere.
 
 **US-06 — Pair (PRD-F6)**
-As a new user, I want the extension connected to my account in under a minute.
-- Given I am signed in on the web app, when I open the pairing screen, then a short code is displayed with a stated expiry.
-- Given the extension is unpaired, when I paste a valid code, then the extension stores a token and every subsequent event is attributed to my account.
-- Given a code is expired or wrong, when I paste it, then the extension says so and stays unpaired.
+- Given I am signed in, when I open the pairing screen, then a short code is displayed with a stated expiry.
+- Given the extension is unpaired, when I paste a valid code, then it stores a token and subsequent events are attributed to my account.
+
+**US-07 — Plan (PRD-F8)**
+As someone about to start, I want the intention broken into steps so starting feels possible.
+- Given a session has started with a non-empty intention, when the plan returns, then 1–5 steps appear in the popup and the companion surface without interrupting anything.
+- Given a step is wrong, when I edit or delete it, then the change persists and the judge uses the amended plan from that point.
+- Given the model returns nothing or errors, when the session continues, then the session is unaffected and the review shows no plan rather than an empty one.
+
+**US-08 — Judge (PRD-F9)**
+As a user, I want the product to know whether where I am serves what I said.
+- Given a session is running with at least one open task, when the active tab changes to a domain memory has not classified, then the tab is judged and a verdict is recorded.
+- Given the domain is already classified for this intention class, when the tab changes, then **no model call is made** and the stored classification is used (I4).
+- Given a verdict is `drifts`, when confidence is below the precision floor (Q4), then the companion does not signal.
+- Given I have not granted page access, when a session runs, then judging still happens on hostname and title (tier T-A) and the product never nags me for the permission again.
+- Given I am offered page access, when the prompt appears, then it appears at the moment I enable deep judging — never at install — and the companion has already stated in one sentence what is read and that nothing is stored.
+- Given I grant page access and later revoke it in Chrome, when the next session starts, then the product falls back to tier T-A silently and nothing errors.
+
+**US-09 — Be witnessed (PRD-F10)**
+- Given a session is running and nothing is wrong, when I glance at the companion, then it is facing my work, breathing, and has not moved in a way I would notice.
+- Given a drift is detected above the floor, when the companion responds, then it turns to face me and does nothing else — no sound, no words, no colour change.
+- Given a session is running, when any positive event occurs (a task completed, a return from drift), then **nothing happens on screen until the review** (I2).
+- Given the first 60 seconds of a session, when anything at all is detected, then the companion does not move.
+
+**US-10 — Correct it (PRD-F9, PRD-F11)**
+As a user, I want to fix the agent when it is wrong, in one tap.
+- Given the companion has marked a task done, when I un-mark it, then the mark is reversed and the correction is stored as a label.
+- Given a tab was judged `drifts` and it was work, when I tap "that was work," then the session record is corrected and memory records the classification so it is not asked again.
+- Given any correction, when the review renders, then it reflects the corrected state, never the original verdict.
+
+**US-11 — Be known (PRD-F11)**
+- Given enough sessions to clear the evidence threshold, when I open the review or dashboard, then the coach states a pattern about me in one sentence.
+- Given fewer sessions than the threshold, when I open the review, then the coach states no pattern at all and does not hedge one.
+
+**US-12 — Be coached (PRD-F12, PRD-F13)**
+- Given a review is open, when the coach speaks, then it names what it observed, and its wording does not vary with whether I answered `Yes` or `Not yet` (I3).
+- Given the coach makes a suggestion, when it is shown, then it carries a button that performs it — and no suggestion is shown that the product cannot perform (I5).
+- Given a domain has accumulated drift across sessions, when the coach offers to add it to my personal blocklist, then accepting adds it and it takes effect on the next session.
 
 ---
 
@@ -98,19 +155,47 @@ As a new user, I want the extension connected to my account in under a minute.
 
 | Not building | Why | Revisit |
 |---|---|---|
-| Calibration (predicting a task's real duration from your own history) | Needs weeks of data before it can say anything true | v2, once the ledger has real sessions |
-| Rewards, streaks, scores | Extrinsic rewards on hours are the metric this product exists to demote; scoped narrowly or not at all | v2, and only on outcomes and estimate accuracy |
-| Desktop / OS-level tracking and app blocking | Admin rights the target user does not have; weeks of signing work the build does not have | When browser-only proves the loop |
+| Voice | A fifth service and a whole surface. Text at the review is enough to test the coach | After A9 and A10 hold |
+| Conversation during a session | Talking to your focus tool is premium procrastination, and unbounded tokens | Never during a session |
+| On-device inference | Chosen against in D14: two code paths is the thing that stops a build shipping. The Prompt API path (C8) stays open as an upgrade | v2, as a privacy upgrade, once one path works |
+| Desktop / OS-level tracking and app blocking | Outside the browser thesis | When browser-only proves the loop |
 | Scheduled sessions, Locked Mode | Commitment devices belong on a product people already use daily | v2+ |
-| Sync across devices and browsers, Firefox/Safari | One browser, one profile, one machine is enough to test every assumption | Later |
-| Any AI classification of activity | Would require sending browsing data off-device; contradicts §7 constraints | Only with a local model or explicit opt-in |
-| Team or manager views | Changes who the data serves, which changes the product | Never as currently framed |
+| Sync across devices and browsers, Firefox/Safari | One browser, one profile is enough to test every assumption | Later |
+| Team, manager, or coach-for-clients views | Changes who the data serves, which changes the product | Never as currently framed |
+| A productivity score of any kind | The single change that would make this employer-desirable | Never |
 
 ---
 
 ## 6. AI / Agent Specification
 
-**v1 contains no AI, no model calls, and no LLM.** Categorization is intention-relative and mechanical: a domain is *blocked*, *away*, or *other*, and the review shows raw domains for the user to interpret. This is a deliberate rejection of the "classify activity with an LLM" pattern — it would put browsing history in a prompt, which §7 forbids, and it would spend the build's most contested minutes on the least defensible feature.
+### 6.1 Why this section reversed
+
+Version 0.1 said: *"v1 contains no AI, no model calls, and no LLM,"* on the grounds that classification *"would put browsing history in a prompt, which §7 forbids."*
+
+That reasoning had one premise: judging requires exporting and retaining browsing data. The premise is now false in the way that matters. Text is sent for a single classification and is never stored, logged, or retained anywhere (I7, SDD V5 amended). What persists is a verdict, and a verdict is smaller than the hostname already stored.
+
+The reversal is also forced by the product itself: **the case that defines this product — the same hostname being work at 4pm and drift at 11am — is unanswerable without reading the tab.** Version 0.1 shipped a product that could not solve its own central example.
+
+### 6.2 The three model calls
+
+| Call | When | Input | Output | Bounded by |
+|---|---|---|---|---|
+| **Plan** | Once, just after a session starts | The intention sentence, plus memory of how this user words tasks | 1–5 short steps | One call per session |
+| **Judge** | On tab change, only for domains memory has not classified (I4) | Current task text + hostname + a hard-capped extract of visible page text | `serves` / `drifts` / `unclear`, plus confidence | Memory gating; text cap; never on the block path |
+| **Coach** | In the review only | Session record, plan, verdicts, corrections, and memory above the evidence threshold | Observations and executable suggestions | One session's context; review surface only |
+
+### 6.3 Rules the agent operates under
+
+- **Never in the latency path of a block.** Blocking is a local domain match. A model is never between a user and a page.
+- **Never persists what it reads.** I7. The `judgment` table has no text column, by design.
+- **Never speaks below the floor.** Drift is signalled only above the precision floor (Q6); patterns only above the evidence threshold (Q7).
+- **Never suggests what it cannot do.** I5.
+- **Never celebrates while you work.** I2.
+- **Wrong is correctable in one tap**, and every correction is a training label (US-10).
+
+### 6.4 What it is not
+
+Not a chatbot. Not a classifier of *you*. Not a health, clinical, or diagnostic instrument, despite an audience that overlaps heavily with undiagnosed ADHD (IDEA §9). It classifies one tab against one sentence the user wrote, and it reports what it saw.
 
 ---
 
@@ -121,18 +206,21 @@ As a new user, I want the extension connected to my account in under a minute.
 | What | Why | Integration budget |
 |---|---|---|
 | Vercel | Hosting for the web app and API | 1 of 5 |
-| Neon Postgres | Sessions, events, outcomes, pairing tokens | 2 of 5 |
+| Neon Postgres | Sessions, tasks, judgments, memory, outcomes, pairing | 2 of 5 |
 | Clerk | Sign-in on the web app | 3 of 5 |
-| Chrome / Edge (MV3) | The extension runtime; no store publication needed for v1 (loaded unpacked) | — |
+| **Vercel AI Gateway** | **All three model calls. Chosen for one integration, model fallback, observability, and zero data retention (I7)** | **4 of 5** |
+| Chrome / Edge (MV3) | The extension runtime | — |
+
+One slot remains. Spending it requires cutting something else. Voice would spend it; voice is out of scope (§5).
 
 **Constraints**
 
-- Four hours, one builder. Anything not on the critical path to the demo is cut.
-- Five external services maximum; two remain unallocated and should stay that way.
-- No OS permissions, no admin rights, no installer. If a feature needs one, it is not v1.
-- No screenshots, no keystrokes, no page content. URL, domain, title, and timestamps only.
+- No OS permissions, no admin rights, no installer.
+- `<all_urls>` never appears in `host_permissions`. Installed host permissions are per blocked domain only; broad access exists solely as `optional_host_permissions`, requested at runtime and declinable forever (SDD V4, §5.2). This constrains where the companion can live, and it is why the judge has two input tiers.
+- No screenshots, no keystrokes. Page text is read transiently for one classification and never stored (I7).
+- The model tier chosen inside the gateway is a **business-model decision**, not a quality decision. See M9.
 
-**Assumptions** — carried from [idea-intent.md](idea-intent.md) §6: A1 (work is in the browser), A2 (people will declare), A3 (outcome is binary), A4 (in-browser blocking is enough — untested in v1 by decision), A5 (sign-in does not kill the funnel), A6 (reads as different from Rize).
+**Assumptions** — carried from [idea-intent.md](idea-intent.md) §6: A1–A6 plus A7 (the plan is kept), A8 (the judge is accurate enough), A9 (a calm presence does not inhibit complex work — the riskiest), A10 (they pay), A11 (margin survives).
 
 ---
 
@@ -142,18 +230,26 @@ As a new user, I want the extension connected to my account in under a minute.
 |---|---|---|---|---|
 | M1 | Sessions started by the builder in the first two weeks | ≥ 10 with real intentions | Session records | K1 |
 | M2 | Share of sessions with a non-empty intention | ≥ 70% | Session records | A2, K2 |
-| M3 | Share of ended sessions with the outcome question answered | ≥ 50% | Session records | A3, K3 |
+| M3 | Share of ended sessions with the outcome answered | ≥ 50% | Session records | A3, K3 |
 | M4 | Away time as a share of session time | < 25% | Attention records | A1 |
+| **M5** | Install-to-first-session rate | ≥ 60% | Device + session records | A5 |
+| **M6** | Share of generated task sets surviving the session un-deleted | ≥ 60% | `task.removed_at` | A7 |
+| **M7** | Judge precision — 1 − (corrections ÷ judgments shown to the user) | ≥ the floor set in Q6 | `judgment.corrected_to` | A8, K4 |
+| **M8** | Free-to-paid conversion after 8 weeks | ≥ 3% | Billing | A10 |
+| **M9** | Inference cost per active user per month, as a share of subscription price | < 15% | Gateway spend ÷ active users | A11, K6 |
+| **M10** | Drift-return rate — share of drift events followed by a return within 2 minutes | reported, no target in v1 | `judgment` + attention | Feeds the review's celebration (§6.2 coach) |
 
-Every one of these is a `SELECT` against tables that already exist for the product to function. No analytics service is required, and none is in the integration budget.
+M1–M4, M6, M7 and M10 are `SELECT`s against tables the product needs anyway. M8 and M9 need billing and gateway spend, which arrive with the fourth service.
+
+**A9 is not on this list, and that is the point.** If a calm presence inhibits complex work, every metric here would improve while the user's actual output got worse. A9 can only be tested against something outside this data (Q9).
 
 ---
 
 ## 9. Implementation, Rollout, and Rollback
 
-- **Rollout:** extension loaded unpacked in Chrome or Edge; web app deployed to Vercel. No store review, no installer, no user beyond the builder and a handful of testers.
-- **Order of build:** see `build-intent.md`. The cut line is defined there — if time runs out, PRD-F7 goes first, then PRD-F2.
-- **Rollback:** the extension is removed from `chrome://extensions` and every dynamic block rule dies with it. There is nothing on the user's machine to uninstall and no OS state to restore. This is a direct consequence of the browser-only decision.
+- **Rollout:** extension loaded unpacked for the builder; Chrome Web Store for anyone else, on the assumption of a slow review track for a new developer account with `tabs` plus host permissions (C18). Plan weeks, not days.
+- **Order of build:** the review first, because everything else is evidence for it. Then declare, judge, plan, companion, correction, memory, personal blocklist, coach. `build-intent.md` describes the completed four-hour sitting and is a historical record, not the plan for this work; a new run-of-show is required.
+- **Rollback:** the extension is removed and every dynamic block rule dies with it. Turning the judge off degrades the product to the mechanical version (blocking, review, ledger), which must remain shippable on its own — that is the K4 escape hatch and it is a design requirement, not a hypothetical.
 
 ---
 
@@ -161,9 +257,15 @@ Every one of these is a `SELECT` against tables that already exist for the produ
 
 | # | Question | Blocks | Owner | Needed by |
 |---|---|---|---|---|
-| Q1 | Which three built-in blocklists ship, and with which domains? | PRD-F7 | Alexandre | Build hour 3 |
-| Q2 | Is away time shown as its own row in the review, or hidden? *(Provisional answer: shown — it is the honest half of A1.)* | PRD-F4 | Alexandre | Build hour 3 |
-| Q3 | Does a session have a fixed duration, or does it run until stopped? *(Provisional: optional duration; no duration means it runs until stopped.)* | PRD-F1 | Alexandre | Build hour 1 |
+| ~~Q1~~ | ~~Which three built-in blocklists ship?~~ **Three hardcoded lists; personal list is PRD-F13** | PRD-F7 | Alexandre | done |
+| ~~Q2~~ | ~~Is away time shown in the review?~~ **Shown — it is the honest half of A1** | PRD-F4 | Alexandre | done |
+| ~~Q3~~ | ~~Fixed duration or run until stopped?~~ **Optional duration; no duration runs until stopped** | PRD-F1 | Alexandre | done |
+| **Q4** | What is the precision floor below which the companion may not signal? | PRD-F9, M7, K4 | Alexandre | Before the companion signals |
+| **Q5** | How many sessions of evidence before the coach may state a pattern? | PRD-F11, I6 | Alexandre | Before the coach speaks |
+| **Q6** | Free/paid boundary. Provisional: free is mechanical (block, review, ledger); paid is the half that knows you (plan, judge, companion, memory, coach) | M8, A10 | Alexandre | Before pricing is shown |
+| **Q7** | What is the hard cap on page-text extract sent per judgment, in characters? | I7, M9 | Alexandre | Before tier T-B ships |
+| **Q9** | Does tier T-A (hostname + title) clear the precision floor on its own? If it does, tier T-B never ships and the broad-permission prompt disappears from the product entirely. **Measure T-A before building T-B** | PRD-F9, M7, funnel | Alexandre | Before any permission prompt is designed |
+| **Q8** | Does an empty intention disable the judge entirely, or does it judge against nothing? *(Provisional: disabled, and the companion says so)* | US-01, PRD-F9 | Alexandre | Before the judge ships |
 
 ---
 
@@ -171,8 +273,11 @@ Every one of these is a `SELECT` against tables that already exist for the produ
 
 - [x] Every `PRD-F#` traces to an `A#` or to IDEA §4
 - [x] Every user story has acceptance criteria that could fail
-- [x] §5 names what is not being built and why, not just what is
-- [x] §8 metrics are measurable from data the product already stores
+- [x] Every invariant in §3.1 names the claim or assumption it protects
+- [x] §5 names what is not being built and why
+- [x] §6 states plainly that it reversed §6 of v0.1, and why — rather than quietly replacing it
+- [x] §8 metrics are measurable from data the product stores, except M8/M9 which name their source
+- [x] §8 names the assumption its own metrics cannot test (A9)
 - [x] §7 records the integration budget and what is left
-- [x] No feature introduces a permission, an installer, or an external service beyond the four named
+- [x] §9 states that the product must remain shippable with the judge switched off
 - [x] Registered in `docs/index.md`
