@@ -10,6 +10,8 @@
 **Upstream:** [idea-intent.md](idea-intent.md)
 **Downstream:** [sitemap-intent.md](sitemap-intent.md), [flow-intent.md](flow-intent.md), [sdd-intent.md](sdd-intent.md)
 
+> **Amendment 0.2a (2026-08-28).** `../context.md` replaced the four-hour build constraint with a reproduction requirement. Three consequences land here, and none of them are about scope: **I9** makes the teaching tiers an architectural rule; **PRD-F14 and F15** were excusable at four hours and are not now; and §7 gains two constraints nobody had written down.
+>
 > **Amendment 0.2 (2026-08-28).** §3 gains six features and eight invariants. §6 is rewritten from "v1 contains no AI" to a full agent specification — that reversal is the largest single change in this document and its reason is recorded in §6.1. §7 allocates a fourth external service. §8 gains five metrics, two of which are about the agent being right and one about not going bankrupt.
 
 ---
@@ -44,6 +46,8 @@ The number that accumulates is completed outcomes, not hours. Hours appear only 
 
 **Not served in v1:** anyone whose work is mostly outside a browser (IDE, terminal, native design tools). Anyone on a managed corporate endpoint where IT policy governs what may be installed — no longer the target since D10, and not designed for.
 
+**A boundary that must not blur.** There are two populations in this project and only one of them is in this document. **MEANT's user** is the self-employed browser-native worker above. **The student** — the entrepreneur, solopreneur, SME operator or undergraduate who rebuilds MEANT from the manual — is the subject of `../context.md`, not of this PRD. A feature that exists to serve the student is a course feature and belongs there. The only place the student legitimately reaches into this document is §3.1 I9 and §7, where their constraints genuinely bind the architecture.
+
 ---
 
 ## 3. Features and Priorities
@@ -63,6 +67,8 @@ The number that accumulates is completed outcomes, not hours. Hours appear only 
 | **PRD-F11** | **Memory — what it knows about you across sessions** | Must | Retention; also cost control (I4) | Domain classifications, drift patterns, estimate accuracy. Speaks only above an evidence threshold (I6) |
 | **PRD-F12** | **The coach — review conversation and suggestions** | Should | C9, C16 | The same creature, after the session. Celebrates the return, the completion, the answering. Suggests only what it can execute (I5) |
 | **PRD-F13** | **Personal blocklist derived from observed drift** | Should | Differentiation | "This site costs you 40 minutes a week, and only during writing sessions." Cannot be copied without the data |
+| **PRD-F14** | **The judge's eval set and its reported accuracy** | Must | A8, M7, K4 | A seed set of labelled (intention, task, page) cases plus every user correction (EV15), scored on demand. **M7 and K4 are currently unmeasurable without it — a metric with no mechanism is a wish.** Was excusable at four hours; is not now |
+| **PRD-F15** | **Forget what you know about me, and delete my account** | Must | SDD §9.3 | Two levels: clear `memory` for this user, and delete the account with all its data. **Memory deliberately outlives the sessions that produced it, so the product created this obligation itself.** Flagged as a gap through 0.1 and 0.2 and excused by the clock both times |
 
 ### 3.1 Invariants
 
@@ -78,6 +84,7 @@ These are product rules, not preferences. Breaking one is a bug.
 | **I6** | The coach states no pattern below the evidence threshold | A pattern from three sessions is astrology, and being wrong about *you* costs far more than being wrong about a tab | Q7 |
 | **I7** | Page text is read for judging and never stored, logged, or retained. Only `{domain, verdict, confidence}` persists | Replaces the old "never send" rule with one that actually holds under cloud inference. This is the anti-surveillance control | SDD V5 (amended) |
 | **I8** | Checked tasks never enter the ledger. Only the outcome answer counts | Sub-goal completion "could breed self-congratulation," which is a more sophisticated version of the exact pain this product exists to attack | C13 |
+| **I9** | **Every feature above the mechanical loop is independently removable.** The product must run, ship, and be worth using with the judge off, the companion off, memory off, the coach off, or any combination | **This is the teaching tiers made structural.** A beginner rebuilds a subset and pastes the rest (`../context.md` §6); if the pieces do not detach, the subset does not run, and the manual cannot exist. It is also the K4 escape hatch generalised: any of these features may turn out to be wrong, and none of them may take the product down with it | `../context.md` §6, §7 rule 3; K4 |
 
 **Explicitly not features:** any ranking, score, streak, badge, leaderboard, productivity percentage, or hours headline. Any conversation with the companion during a session. Any celebration of `Yes` over `Not yet`.
 
@@ -155,9 +162,9 @@ As a user, I want to fix the agent when it is wrong, in one tap.
 
 | Not building | Why | Revisit |
 |---|---|---|
-| Voice | A fifth service and a whole surface. Text at the review is enough to test the coach | After A9 and A10 hold |
+| Voice | A fifth service and a whole surface. Text at the review is enough to test the coach. **Reason strengthened by `../context.md`:** every external service costs a *student* 10–15 minutes of provisioning out of a 4–8 hour budget, so the fifth slot is far more expensive than the integration budget alone suggests | After A9 and A10 hold |
 | Conversation during a session | Talking to your focus tool is premium procrastination, and unbounded tokens | Never during a session |
-| On-device inference | Chosen against in D14: two code paths is the thing that stops a build shipping. The Prompt API path (C8) stays open as an upgrade | v2, as a privacy upgrade, once one path works |
+| On-device inference | Chosen against in D14: two code paths is the thing that stops a build shipping. **Reason strengthened by `../context.md`:** that argument was about *our* build; it now applies to every student's build, on hardware Apex does not spec a RAM or disk floor for. The Prompt API path (C8) stays open as an upgrade | v2, as a privacy upgrade, once one path works |
 | Desktop / OS-level tracking and app blocking | Outside the browser thesis | When browser-only proves the loop |
 | Scheduled sessions, Locked Mode | Commitment devices belong on a product people already use daily | v2+ |
 | Sync across devices and browsers, Firefox/Safari | One browser, one profile is enough to test every assumption | Later |
@@ -219,6 +226,10 @@ One slot remains. Spending it requires cutting something else. Voice would spend
 - `<all_urls>` never appears in `host_permissions`. Installed host permissions are per blocked domain only; broad access exists solely as `optional_host_permissions`, requested at runtime and declinable forever (SDD V4, §5.2). This constrains where the companion can live, and it is why the judge has two input tiers.
 - No screenshots, no keystrokes. Page text is read transiently for one classification and never stored (I7).
 - The model tier chosen inside the gateway is a **business-model decision**, not a quality decision. See M9.
+- **Every external service costs a student 10–15 minutes of provisioning.** Four of five allocated is roughly 40–60 minutes of a 4–8 hour rebuild before a line of product code exists. The integration budget was a taste constraint at 0.1; it is now arithmetic (`../context.md` §5).
+- **This product will be filmed being built.** That is a design constraint, not a marketing one: every build step must produce a **visible** change on screen, because console output is bad television and worse teaching. Empty states and error states are seen *first* by every viewer rather than last. The moments worth watching must be visual — which is one more reason the companion's gaze, and not a log line, is the drift signal.
+- **Nothing on the rebuild path may require a Chrome Web Store review.** Review runs days to weeks (C18). The product must be real and working while loaded unpacked; publishing is an epilogue, never a step.
+- **Windows and macOS identically.** Apex states a macOS 13+ / Windows 10+ floor and no RAM or disk floor. Any macOS-only convenience is banned.
 
 **Assumptions** — carried from [idea-intent.md](idea-intent.md) §6: A1–A6 plus A7 (the plan is kept), A8 (the judge is accurate enough), A9 (a calm presence does not inhibit complex work — the riskiest), A10 (they pay), A11 (margin survives).
 
@@ -241,6 +252,8 @@ One slot remains. Spending it requires cutting something else. Voice would spend
 
 M1–M4, M6, M7 and M10 are `SELECT`s against tables the product needs anyway. M8 and M9 need billing and gateway spend, which arrive with the fourth service.
 
+**Reproduction rate is deliberately absent.** Whether a student rebuilds MEANT in 4–8 hours measures the *manual*, not the product. It belongs in `../context.md`, and putting it here would be the first step toward optimising the product for the course rather than for its user.
+
 **A9 is not on this list, and that is the point.** If a calm presence inhibits complex work, every metric here would improve while the user's actual output got worse. A9 can only be tested against something outside this data (Q9).
 
 ---
@@ -249,7 +262,17 @@ M1–M4, M6, M7 and M10 are `SELECT`s against tables the product needs anyway. M
 
 - **Rollout:** extension loaded unpacked for the builder; Chrome Web Store for anyone else, on the assumption of a slow review track for a new developer account with `tabs` plus host permissions (C18). Plan weeks, not days.
 - **Order of build:** the review first, because everything else is evidence for it. Then declare, judge, plan, companion, correction, memory, personal blocklist, coach. `build-intent.md` describes the completed four-hour sitting and is a historical record, not the plan for this work; a new run-of-show is required.
-- **Rollback:** the extension is removed and every dynamic block rule dies with it. Turning the judge off degrades the product to the mechanical version (blocking, review, ledger), which must remain shippable on its own — that is the K4 escape hatch and it is a design requirement, not a hypothetical.
+- **Rollback:** the extension is removed and every dynamic block rule dies with it.
+- **Four seams, not one (I9).** 0.2 required the product to stay shippable with the judge off. That is now the weakest of four required detachments:
+
+| Seam off | What remains | Who needs this seam |
+|---|---|---|
+| Judge | Blocking, attention, review, ledger | K4 — if the judge is wrong too often, it goes and the product lives |
+| Companion | Everything except in-session presence | K5 — if a calm presence inhibits complex work (A9), the witness goes and the coach survives |
+| Memory | Everything, judged fresh every time, coach silent on patterns | Cost control failure (K6), and a user who taps "forget what you know about me" (PRD-F15) |
+| Coach | Everything except the review's observations and suggestions | A student rebuilding the T1 subset (`../context.md` §6) |
+
+Each seam must be exercised, not asserted. A feature that cannot be switched off has not been built to spec.
 
 ---
 
@@ -264,6 +287,7 @@ M1–M4, M6, M7 and M10 are `SELECT`s against tables the product needs anyway. M
 | **Q5** | How many sessions of evidence before the coach may state a pattern? | PRD-F11, I6 | Alexandre | Before the coach speaks |
 | **Q6** | Free/paid boundary. Provisional: free is mechanical (block, review, ledger); paid is the half that knows you (plan, judge, companion, memory, coach) | M8, A10 | Alexandre | Before pricing is shown |
 | **Q7** | What is the hard cap on page-text extract sent per judgment, in characters? | I7, M9 | Alexandre | Before tier T-B ships |
+| **Q10** | How large must PRD-F14's seed eval set be before M7 means anything? A precision figure from twenty cases is the same astrology as a pattern from three sessions (I6) | PRD-F14, M7 | Alexandre | Before the judge's accuracy is shown to anyone |
 | **Q9** | Does tier T-A (hostname + title) clear the precision floor on its own? If it does, tier T-B never ships and the broad-permission prompt disappears from the product entirely. **Measure T-A before building T-B** | PRD-F9, M7, funnel | Alexandre | Before any permission prompt is designed |
 | **Q8** | Does an empty intention disable the judge entirely, or does it judge against nothing? *(Provisional: disabled, and the companion says so)* | US-01, PRD-F9 | Alexandre | Before the judge ships |
 
@@ -279,5 +303,7 @@ M1–M4, M6, M7 and M10 are `SELECT`s against tables the product needs anyway. M
 - [x] §8 metrics are measurable from data the product stores, except M8/M9 which name their source
 - [x] §8 names the assumption its own metrics cannot test (A9)
 - [x] §7 records the integration budget and what is left
-- [x] §9 states that the product must remain shippable with the judge switched off
+- [x] §9 states the four seams that must each be exercised, not asserted (I9)
+- [x] §2 states the boundary between MEANT's user and the course's student
+- [x] §8 states which measurement deliberately does not live here, and why
 - [x] Registered in `docs/index.md`

@@ -197,6 +197,22 @@ Candidates, ranked by how much they transfer to anything else built after this:
 
 ---
 
+## 9a. How we will know the manual and the video worked
+
+A2 and A3 have no success test yet, which is the same failure the PRD would have if `M7` existed without `PRD-F14`. Proposed, to be firmed up once C1 and C3 are answered:
+
+| # | Measure | Target | Why this one |
+|---|---|---|---|
+| R1 | Share of solo online students who reach a **deployed, working review screen** | ≥ 70% | The review is the product (`IDEA §1.6`). Anything short of it is an incomplete rebuild, however much code exists |
+| R2 | Median wall-clock time to R1 | 4–8 hours | The constraint this whole document exists to serve |
+| R3 | Questions asked per student | ≤ 2 | "Direct access to the Apex Human team" is a support cost. A manual that generates ten questions per student does not scale, whatever its completion rate |
+| R4 | Share who complete the "make it yours" chapter | ≥ 40% | The single measure that separates four audiences from one. A student who finishes MEANT and stops has built somebody else's product |
+| R5 | Steps where more than 10% of students stall | 0 | Any such step is a design defect in A2, not a student failure. §7 rule 1 exists to make these visible |
+
+**R1 and R2 are not product metrics and must never migrate into `PRD §8`.** They measure the manual. Mixing them would start optimising MEANT for the course rather than for its user.
+
+---
+
 ## 10. Explicitly out of scope for this document
 
 Pricing for the reference product itself, the manual's chapter structure, the video's format and length, and whether MEANT ships to the Chrome Web Store as a real product under our name. All downstream. This document exists to fix the constraint, not to plan the work.
@@ -227,4 +243,5 @@ Pricing for the reference product itself, the manual's chapter structure, the vi
 - [x] The rules in §7 are testable, not aspirations
 - [x] Names what the clock was hiding (§8)
 - [x] Records the builder's own goal as a constraint on method
+- [x] The course artifacts have their own success measures, kept out of the PRD (§9a)
 - [x] Open questions name what they block

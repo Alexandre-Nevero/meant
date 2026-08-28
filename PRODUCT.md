@@ -1,6 +1,7 @@
 # PRODUCT.md — MEANT
 
 > Derived from `docs/` (idea, prd, sitemap, flow, sdd), not from a fresh interview. Every line traces to a doc; nothing here is invented. Canonical product truth stays in `docs/`.
+> **Second audience:** this product is also the reference build for apexhuman.ai and will be filmed. That constrains design — see "Constraints" below. The course context itself lives in [context.md](context.md) and is not product truth.
 > **Reflects amendment 0.2 (2026-08-28).** Prior version described a product with no AI, an employed user, and no companion. All three changed.
 
 **Name:** MEANT. (Working name "Intent" retired 2026-08-18: "Intent — Focus" already ships on the App Store.)
@@ -52,6 +53,7 @@ Breaking one is a bug, not a preference.
 | I6 | No pattern is stated below the evidence threshold |
 | I7 | Page text is read for judging and never stored, logged, queued, or retained |
 | I8 | Checked steps never enter the ledger. Only the outcome answer counts |
+| I9 | Every feature above the mechanical loop is independently removable — judge, companion, memory, coach, in any combination |
 
 **Why I1, I2 and I8 exist rather than the obvious alternative:** rewarding focus was the first instinct and it is wrong twice over. Engagement-contingent reward undermines intrinsic motivation (d ≈ −0.40, 128 experiments). And celebration raises arousal, which impairs performance on novel or complex work — which is the only kind of work this audience does. Both citations are in IDEA §5, C9 and C11.
 
@@ -64,7 +66,10 @@ Breaking one is a bug, not a preference.
 - Hostname only, in storage. Page title and page text are read in flight for one classification and stored nowhere.
 - Nothing waits on a model. Not the session start, not a block, not a page load.
 - Four of five external services allocated. The fifth would buy voice, and voice is out of scope.
-- The product must remain shippable with the judge switched off. That is a design requirement, not a fallback.
+- The product must remain shippable with any of its four upper features switched off — judge, companion, memory, coach (I9). Each seam is exercised, not asserted.
+- **It will be filmed being built.** Every step must produce a *visible* change on screen; empty and error states are seen first by every viewer, not last; the moments worth watching must be visual rather than logged. This is why the drift signal is a gaze and not a notification.
+- **Every external service costs a rebuilding student 10–15 minutes.** The fifth integration slot is more expensive than the budget suggests.
+- Nothing on the build path may require a Chrome Web Store review. Unpacked must be genuinely usable.
 
 ---
 
@@ -87,7 +92,7 @@ Breaking one is a bug, not a preference.
 - **State is gaze and posture, never action.** Facing your work is the good state — it is a posture, not an event, which is how there can be a positive state without a reward. Turning to face you is the drift signal. One rotation. No sound, no words, no colour change.
 - **Motion budget:** three noticeable movements per 25-minute session, none in the first 60 seconds. Breathing and blinking do not count.
 - **It is a coach, not a pet.** This audience screen-shares with clients.
-- **It reads at 80–120px** in a side panel or a floating window, and gaze must read at that size.
+- **It reads at 80–120px** in a side panel or a floating window, and gaze must read at that size — and at video resolution, on a phone, for someone following a build along.
 - **One tap on it** says what it can see and where that goes. The companion is the consent surface, not the anaesthetic that makes being watched feel warm.
 - **Note for design:** the toolkit calls the mark *"a real chart, not a logo shaped like one."* A chart cannot have gaze. If the companion is the mark, the mark stops being a chart. Take that fork deliberately. `.m-mark[data-state]` already declares five states including `drifting`, which nothing in the code has ever set.
 
