@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500&family=Sometype+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #14120F; } a:hover { color: #57534E; }
+  </style>
+</helmet>
+<div style="width: 1000px; height: 820px; box-sizing: border-box; background: #F3F1EE; font-family: 'Public Sans', system-ui, sans-serif; color: #14120F; letter-spacing: -0.02em; padding: 72px 80px; display: flex; flex-direction: column; gap: 44px;">
+
+  <p style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 52px; line-height: 1.05; letter-spacing: -0.03em;">Eleven this month. Seven finished.</p>
+
+  <div style="display: flex; flex-direction: column; gap: 0;">
+    <sc-for list="{{rows}}" as="row" hint-placeholder-count="5">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 180px 96px; gap: 28px; align-items: center; padding: 20px 0; border-bottom: 0.5px solid #E2DFDB;">
+        <p style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 20px; line-height: 1.3; color: {{row.ink}};">{{row.intention}}</p>
+        <div style="display: flex; gap: 3px; height: 10px;">
+          <div style="flex: {{row.a}}; background: #C75B39; border-radius: 5px;"></div>
+          <div style="flex: {{row.b}}; background: #D68A6E; border-radius: 5px;"></div>
+          <div style="flex: {{row.c}}; border-radius: 5px; background: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px); border: 1px solid #C7C2BB;"></div>
+        </div>
+        <p style="margin: 0; font-size: 15px; text-align: right; color: {{row.ink}};">{{row.outcome}}</p>
+      </div>
+    </sc-for>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1000,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      rows: [
+        { intention: 'finish the client proposal', outcome: 'Not yet', ink: '#14120F', a: 41, b: 21, c: 6 },
+        { intention: 'reply to the vendor thread', outcome: 'Yes', ink: '#14120F', a: 14, b: 3, c: 1 },
+        { intention: 'read the Q3 brief properly', outcome: 'Yes', ink: '#14120F', a: 26, b: 5, c: 2 },
+        { intention: 'No intention given', outcome: 'Unanswered', ink: '#8B8681', a: 8, b: 6, c: 8 },
+        { intention: 'draft the handover notes', outcome: 'Not yet', ink: '#14120F', a: 19, b: 4, c: 4 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

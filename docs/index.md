@@ -72,7 +72,9 @@
 | `../context.md` | **Course and delivery context (new 2026-08-28).** Who the reference product is for, the two Apex Human delivery shapes, the honest 4–8 hour student budget, and the three-tier rule that assigns every part of the build. **It replaces the "four hours, one builder" constraint that `build-intent.md` has been silently exporting to every other document** |
 | `PRODUCT.md` | Product context for design tooling, derived from these docs |
 | `docs/design-toolkit.md` | The committed visual world as a specification. **Currently deleted in the working tree, and `design/` was never produced — so the mark, its five states, and the token set do not exist yet.** The companion (S9) is a design decision waiting on this, not on code |
-| `docs/metaprompt-design.md` | Paste-in prompt for the design session |
+| `docs/metaprompt-ui.md` | **Paste-in prompt for the UI/UX build (2026-09-01).** Supersedes the design and build metaprompts below, which describe the 0.1 product and will mislead a session that runs them |
+| `design/canvas/` | **The seven artboards, and visual truth.** They outrank `design-toolkit.md` and `tokens.css` when they disagree |
+| `docs/metaprompt-design.md` | **Stale.** Paste-in prompt for the 0.1 design session |
 | `docs/metaprompt-build.md` | Shared build contract: skills, invariants, parallelism, and the Coordination section that the design metaprompt points at |
 | `docs/metaprompt-build-1.md` | Hour 1: provision, schema, shell, and the extension-auth decision |
 | `docs/metaprompt-build-2.md` | Hour 2: the auth bridge and the extension skeleton |
@@ -81,7 +83,7 @@
 
 **Product name is now MEANT.** The `docs/*-intent.md` filenames are still stale; the "Project:" fields were corrected at 0.2. Renaming files is deferred so cross-links and git history stay intact.
 
-**The metaprompts describe the 0.1 build and are stale at 0.2.** They still instruct a session to ship a product with no AI. Rewrite them alongside the new run-of-show (§7), or delete them — do not run them as they stand.
+**The 0.1 metaprompts are stale and still instruct a session to ship a product with no AI.** `docs/metaprompt-ui.md` replaces them for interface work. The build metaprompts still need replacing or deleting; do not run them as they stand.
 
 ---
 
