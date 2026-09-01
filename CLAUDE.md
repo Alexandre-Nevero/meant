@@ -1,0 +1,41 @@
+# MEANT
+
+Browser extension plus web app. See `PRODUCT.md` for what it is, `context.md` for who
+it is for and why it must be rebuildable, `docs/` for canonical truth.
+
+## Design — read before touching any UI
+
+1. **`design/tokens.css` is the contract.** Import it. Use `var(--m-*)`.
+   **Never write a hex value in a component.** If a colour is missing, it belongs in
+   tokens first, or it does not belong.
+2. **`docs/design-toolkit.md` is the spec.** §2 the mark, §3 the companion, §6 motion,
+   §9 what to refuse, §10 how it is judged.
+3. **The design canvas is visual truth.** The artboards outrank both files above.
+   When they disagree, the canvas is right and the docs are stale — say so, do not
+   silently pick one.
+
+## Invariants that are design decisions
+
+- `Yes` and `Not yet` are identical in colour, weight, size, and motion.
+- No total-hours figure, no percentage, no score, on any surface.
+- The popup animates nothing. It is opened dozens of times a day.
+- Nothing good happens on screen during a session. Positive feedback lives in the review.
+- The companion never varies with the outcome answer.
+- Away is a hatch, never a solid grey.
+
+## Verifying UI
+
+Static code and a clean build are not evidence. Render it and look.
+
+```bash
+node ~/.agents/skills/impeccable/scripts/detect.mjs <files|url>   # anti-pattern floor
+node ~/.agents/skills/impeccable/scripts/detect.mjs --viewport 390x844 <url>
+~/.claude/skills/gstack/browse/dist/browse goto <url> && ... screenshot
+```
+
+## Skill routing
+
+- Visual world, new surface, or a redesign → `/impeccable`
+- Motion decisions → `/emil-design-eng`
+- Mockups and design exploration → `/design`
+- Product ideas → `/office-hours` · Bugs → `/investigate` · QA → `/qa` · Ship → `/ship`
