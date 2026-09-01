@@ -83,6 +83,17 @@ no per-domain aggregate query from the side panel context, no task table this pa
 correctly in CSS; the gap is a data source, not a styling gap, and is exactly what
 decision 9 already named for the review page's plan list.
 
+### The companion's own storage listener would have destroyed the transition it exists for
+
+First draft of `sidepanel.js` re-rendered the whole gaze DOM tree on every
+`chrome.storage.onChanged` event, including a `companionState`-only change. That
+replaces the `.m-companion-capsule` element with a brand-new one carrying the new
+`data-state` from the start — there is no "previous" element left in the DOM for the
+CSS transition to animate *from*, so the one authored move (translateY+scaleY, 280ms)
+would have snapped instantly instead of playing. Fixed by keeping a reference to the
+capsule and only mutating its `data-state` attribute in place for state-only changes;
+a full rebuild happens exclusively when the session itself changes.
+
 ### `gstack browse` / Playwright: browser binary version mismatch
 
 `~/.claude/skills/gstack/browse` needed a Chromium version the global Playwright cache

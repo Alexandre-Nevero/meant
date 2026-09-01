@@ -126,8 +126,8 @@ Settings page, profile page, blocklist management as its own screen (it lives in
 | # | Question | Blocks | Owner |
 |---|---|---|---|
 | ~~Q1~~ | ~~Automatic review tab, or wait for a click?~~ **Automatic — an unprompted review is what makes A3 testable** | S4 | done |
-| **Q2** | Does S9 render in `chrome.sidePanel` or a Document Picture-in-Picture window? PiP floats and needs no host permission but requires a user gesture, dies with its opener, and its extension support is undocumented. Side panel is docked but certain. **30-minute spike, side panel as the fallback** | S9 | Alexandre |
-| **Q3** | Is S9 shown by default, or opened by the user? A companion nobody opens has no effect; a companion that opens itself is an interruption at the worst moment | S9, A9 | Alexandre |
+| ~~Q2~~ | ~~Does S9 render in `chrome.sidePanel` or a Document Picture-in-Picture window?~~ **Answered: `chrome.sidePanel`, without running the PiP spike.** `sidePanel.open()` needs a user gesture the extension already has at Start; PiP's own gesture-and-dies-with-opener requirements weren't worth spending against a certain, docked alternative. The spike is recorded as unrun, not skipped silently | S9 | done |
+| ~~Q3~~ | ~~Is S9 shown by default, or opened by the user?~~ **Answered: opened by Start.** `sidePanel.open()` is called from the popup's Start click handler — the only user gesture in the flow — not via a message to the service worker, which would lose it. Opening on Start is not an interruption because the user just took the action that causes it | S9, A9 | done |
 
 ---
 

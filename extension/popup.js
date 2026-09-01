@@ -106,6 +106,13 @@ function idle() {
         el('p', 'm-meta', res?.offline ? 'No connection. A session needs one to start.' : 'Could not start.'))
       return
     }
+    // Bound to this click, the only user gesture in the flow — chrome.sidePanel.open()
+    // requires one, and it's lost if this goes through a message to the service worker.
+    const { companionEnabled } = await chrome.storage.local.get('companionEnabled')
+    if (companionEnabled !== false) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      if (tab) chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {})
+    }
     render()
   })
 

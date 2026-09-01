@@ -61,11 +61,15 @@ export async function startSession({ intention, plannedMinutes, blocklist }) {
       intention,
       startedAt,
       plannedMinutes,
+      blocklist,
       currentDomain: await activeDomain(),
       currentSince: Date.now(),
       unfocusedSince: null,
       ruleIds: [],
+      driftCount: 0,
+      driftWindowStart: Date.now(),
     },
+    companionState: 'settled',
   })
   await chrome.alarms.create(TICK, { periodInMinutes: 0.5 })
 
@@ -93,7 +97,11 @@ export async function endSession(endReason) {
   } finally {
     await removeAllRules()
     await chrome.alarms.clear(TICK)
-    await chrome.storage.local.set({ session: null })
+    await chrome.storage.local.set({ session: null, companionState: null })
+    if (chrome.sidePanel) {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+      if (tab) await chrome.sidePanel.setOptions({ tabId: tab.id, enabled: false }).catch(() => {})
+    }
   }
 
   if (endReason === 'stopped' || endReason === 'elapsed') {
@@ -121,6 +129,54 @@ async function enqueue(session, event) {
   await chrome.storage.local.set({ queue })
 }
 
+const DRIFT_GRACE_MS = 60_000
+const DRIFT_WINDOW_MS = 25 * 60_000
+const DRIFT_BUDGET = 3
+
+function isKnownDistraction(domain) {
+  return domain != null && Object.values(BLOCKLISTS).some((list) => list.includes(domain))
+}
+
+function isCurrentlyBlocked(domain, blocklist) {
+  return (blocklist ?? []).some((name) => (BLOCKLISTS[name] ?? []).includes(domain))
+}
+
+// The companion, without a model: a visit to a domain from any of the known distraction
+// categories (design/blocklists.js) that isn't even one the user chose to block this
+// session is drift they'd recognize as drift. No page content, no permission, no
+// inference — this is the honest non-AI signal the judge seam (I9) will later replace.
+async function updateCompanion(session, nextDomain) {
+  const { companionEnabled } = await chrome.storage.local.get('companionEnabled')
+  if (companionEnabled === false) return
+
+  const now = Date.now()
+  const withinGrace = now - new Date(session.startedAt).getTime() < DRIFT_GRACE_MS
+  const drifting = !withinGrace && isKnownDistraction(nextDomain) && !isCurrentlyBlocked(nextDomain, session.blocklist)
+
+  const { companionState } = await chrome.storage.local.get('companionState')
+
+  if (!drifting) {
+    if (companionState === 'drifting') await chrome.storage.local.set({ companionState: 'settled' })
+    return
+  }
+  if (companionState === 'drifting') return // already signalled; don't re-cost the budget
+
+  let { driftCount = 0, driftWindowStart = now } = session
+  if (now - driftWindowStart > DRIFT_WINDOW_MS) {
+    driftCount = 0
+    driftWindowStart = now
+  }
+  if (driftCount >= DRIFT_BUDGET) return // over budget this window — companion stays settled
+
+  const stored = await getSession()
+  if (stored) {
+    await chrome.storage.local.set({
+      session: { ...stored, driftCount: driftCount + 1, driftWindowStart },
+      companionState: 'drifting',
+    })
+  }
+}
+
 export async function attribute(nextDomain) {
   const session = await getSession()
   if (!session) return
@@ -135,8 +191,9 @@ export async function attribute(nextDomain) {
       at: new Date(now).toISOString(),
     })
   }
+  await updateCompanion(session, nextDomain)
   await chrome.storage.local.set({
-    session: { ...session, currentDomain: nextDomain, currentSince: now },
+    session: { ...(await getSession()), currentDomain: nextDomain, currentSince: now },
   })
 }
 

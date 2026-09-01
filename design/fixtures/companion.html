@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MEANT — Companion fixture</title>
+<link rel="stylesheet" href="../../extension/meant.css" />
+<style>body { display: flex; gap: 40px; padding: 40px; }</style>
+</head>
+<body class="m-app" data-surface="companion">
+  <div style="width:320px;">
+    <p class="m-meta" style="text-transform:uppercase;letter-spacing:.08em;">Settled — facing your work</p>
+    <main id="root-a" style="display:flex;flex-direction:column;gap:26px;background:var(--m-ground);border-radius:var(--m-r-panel);padding:26px 22px;margin-top:14px;">
+      <div class="m-companion-capsule" data-state="settled">
+        <div class="m-companion-gaze"><div class="m-companion-aperture"></div></div>
+      </div>
+      <p class="m-sentence">finish the client proposal</p>
+      <p class="m-meta">reading this tab</p>
+    </main>
+  </div>
+  <div style="width:320px;">
+    <p class="m-meta" style="text-transform:uppercase;letter-spacing:.08em;">Drifting — facing you</p>
+    <main id="root-b" style="display:flex;flex-direction:column;gap:26px;background:var(--m-ground);border-radius:var(--m-r-panel);padding:26px 22px;margin-top:14px;">
+      <div class="m-companion-capsule" data-state="drifting">
+        <div class="m-companion-gaze"><div class="m-companion-aperture"></div></div>
+      </div>
+      <p class="m-sentence">finish the client proposal</p>
+      <button class="m-companion-disclosure">what this reads</button>
+    </main>
+  </div>
+</body>
+</html>

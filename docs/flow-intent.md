@@ -172,7 +172,7 @@ Seventeen events. Every metric in PRD §8 is derivable from these; nothing here 
 | # | Question | Blocks | Owner |
 |---|---|---|---|
 | Q1 | Is 60 seconds the right away threshold, or is it 30? | EV4 | Alexandre — decide from the first week's own data |
-| **Q2** | Does the companion turn back after a return (EV13), and is that itself a movement against the budget? Turning back is the natural counterpart to turning away, and it is also the closest thing to celebration that could survive I2 | EV12, EV13, N8, I2 | Alexandre |
+| **Q2** | Does the companion turn back after a return (EV13), and is that itself a movement against the budget? Turning back is the natural counterpart to turning away, and it is also the closest thing to celebration that could survive I2 | EV12, EV13, N8, I2 | **Provisionally answered: turns back, free.** `sw.js#updateCompanion` returns to `settled` the moment the next domain isn't drift, uncounted against the 3-per-25-min budget — the budget bounds arousal, and settling lowers it. Explicitly provisional: if a 25-minute recording shows the return turn reading as fussy, drop it for a silent timer instead (design plan, Phase 3) |
 | **Q3** | Is a drift that the user resolves in under ~10 seconds worth signalling at all, or is the signal itself the interruption? | EV12, A9 | Alexandre — from the first week's own data |
 
 ---

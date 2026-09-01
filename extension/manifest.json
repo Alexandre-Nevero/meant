@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "MEANT",
   "version": "0.1.0",
-  "permissions": ["declarativeNetRequest", "tabs", "storage", "alarms"],
+  "permissions": ["declarativeNetRequest", "tabs", "storage", "alarms", "sidePanel"],
+  "side_panel": { "default_path": "sidepanel.html" },
   "host_permissions": [
     "http://localhost:3000/*",
     "*://*.x.com/*", "*://*.twitter.com/*", "*://*.facebook.com/*", "*://*.instagram.com/*",
