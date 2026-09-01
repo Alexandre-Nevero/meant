@@ -1,7 +1,9 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { sql } from '@/lib/db'
+
+export const dynamic = 'force-dynamic'
 
 function durationMinutes(startedAt: string, endedAt: string | null) {
   if (!endedAt) return null
@@ -9,7 +11,8 @@ function durationMinutes(startedAt: string, endedAt: string | null) {
 }
 
 export default async function Dashboard() {
-  const { userId } = await auth()
+  const { data: session } = await auth.getSession()
+  const userId = session?.user?.id
   if (!userId) redirect('/')
 
   const sessions = await sql`

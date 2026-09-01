@@ -213,12 +213,11 @@ Not a chatbot. Not a classifier of *you*. Not a health, clinical, or diagnostic 
 | What | Why | Integration budget |
 |---|---|---|
 | Vercel | Hosting for the web app and API | 1 of 5 |
-| Neon Postgres | Sessions, tasks, judgments, memory, outcomes, pairing | 2 of 5 |
-| Clerk | Sign-in on the web app | 3 of 5 |
-| **Vercel AI Gateway** | **All three model calls. Chosen for one integration, model fallback, observability, and zero data retention (I7)** | **4 of 5** |
+| Neon (Postgres + Auth) | Sessions, tasks, judgments, memory, outcomes, pairing, and web sign-in — one vendor since D21 | 2 of 5 |
+| **Vercel AI Gateway** | **All three model calls. Chosen for one integration, model fallback, observability, and zero data retention (I7)** | **3 of 5** |
 | Chrome / Edge (MV3) | The extension runtime | — |
 
-One slot remains. Spending it requires cutting something else. Voice would spend it; voice is out of scope (§5).
+Two slots remain — D21 freed one by consolidating auth onto Neon. Spending either requires cutting something else. Voice would spend one; voice is out of scope (§5).
 
 **Constraints**
 

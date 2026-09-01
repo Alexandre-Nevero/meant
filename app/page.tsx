@@ -1,19 +1,17 @@
-import { auth } from '@clerk/nextjs/server'
-import { SignInButton } from '@clerk/nextjs'
 import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth/server'
+import { AuthForm } from './auth-form'
+
+export const dynamic = 'force-dynamic'
 
 export default async function Home() {
-  const { userId } = await auth()
-  if (userId) redirect('/dashboard')
+  const { data: session } = await auth.getSession()
+  if (session?.user) redirect('/dashboard')
 
   return (
-    <p className="m-meta">
-      Sign in to continue.{' '}
-      <SignInButton>
-        <button className="m-btn" data-variant="primary">
-          Sign in
-        </button>
-      </SignInButton>
-    </p>
+    <>
+      <p className="m-meta">Sign in or create an account to continue.</p>
+      <AuthForm />
+    </>
   )
 }

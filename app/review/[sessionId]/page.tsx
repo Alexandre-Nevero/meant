@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth/server'
 import { notFound, redirect } from 'next/navigation'
 import { sql } from '@/lib/db'
 import { Answer } from './answer'
@@ -9,8 +9,11 @@ function minutes(seconds: number) {
   return Math.round(seconds / 60)
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function Review({ params }: { params: Promise<{ sessionId: string }> }) {
-  const { userId } = await auth()
+  const { data: authSession } = await auth.getSession()
+  const userId = authSession?.user?.id
   if (!userId) redirect('/')
 
   const { sessionId } = await params

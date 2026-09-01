@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth/server'
 import { sql } from '@/lib/db'
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -10,7 +10,8 @@ function newCode() {
 }
 
 export async function POST() {
-  const { userId } = await auth()
+  const { data: session } = await auth.getSession()
+  const userId = session?.user?.id
   if (!userId) return Response.json({ error: 'unauthorized' }, { status: 401 })
 
   for (let i = 0; i < 3; i++) {

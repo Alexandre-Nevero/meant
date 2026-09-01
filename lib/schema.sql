@@ -1,6 +1,6 @@
 create table device (
   id           uuid primary key default gen_random_uuid(),
-  user_id      text not null,               -- Clerk user id
+  user_id      text not null,               -- Neon Auth user id
   token_hash   text not null unique,        -- sha256 of the device token; the token itself is never stored
   label        text,
   created_at   timestamptz not null default now(),

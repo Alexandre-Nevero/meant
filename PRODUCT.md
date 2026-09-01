@@ -22,7 +22,7 @@
 
 **Business model:** Direct consumer subscription. **Free is mechanical** — blocking, review, ledger. **Paid is the half that knows you** — plan, judge, companion, memory, coach. The paywall sits exactly where the inference cost sits.
 
-**Platforms:** Chrome and Edge extension (macOS and Windows, identical) plus a Next.js web app on Vercel, Clerk sign-in, Neon Postgres, Vercel AI Gateway.
+**Platforms:** Chrome and Edge extension (macOS and Windows, identical) plus a Next.js web app on Vercel, Neon Auth sign-in, Neon Postgres, Vercel AI Gateway. *(D21 — Clerk replaced by Neon Auth.)*
 
 ---
 

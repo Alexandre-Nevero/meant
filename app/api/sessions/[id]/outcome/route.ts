@@ -1,10 +1,11 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth/server'
 import { sql } from '@/lib/db'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { userId } = await auth()
+  const { data: session } = await auth.getSession()
+  const userId = session?.user?.id
   if (!userId) return Response.json({ error: 'unauthorized' }, { status: 401 })
 
   const { id } = await params

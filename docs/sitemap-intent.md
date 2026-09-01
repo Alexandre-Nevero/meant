@@ -89,7 +89,7 @@ The dashboard is the web app's home once signed in. The review is reachable from
 
 | Boundary | Rule |
 |---|---|
-| Web pages | Clerk session required for everything except `/` |
+| Web pages | Neon Auth session required for everything except `/` |
 | Extension → API | Device token in a header; a request with no valid token is rejected, never queued server-side |
 | Row ownership | Every session, event, and outcome row carries a user id, and every query filters on it. There is no "shared" or "public" state anywhere in v1 |
 | Cross-account access | A review or session belonging to another user returns 404, not 403 — the existence of another user's session is not disclosed |

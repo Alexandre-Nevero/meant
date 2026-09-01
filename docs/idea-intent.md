@@ -210,7 +210,7 @@ Empty until v1 ships to someone other than the builder. Expected, not a gap.
 | # | Question | Blocks | Owner | Needed by |
 |---|---|---|---|---|
 | ~~Q1~~ | ~~Does Session ship the full loop?~~ **Answered 2026-08-18: yes, on Apple platforms.** Its review asks what you *learned*; ours asks whether you *finished*, and that answer accumulates | Positioning | Alexandre | done |
-| ~~Q2~~ | ~~Hosting / database / auth providers?~~ **Answered: Vercel, Neon, Clerk (D7).** A fourth is now allocated to AI Gateway (D14) | SDD §2 | Alexandre | done |
+| ~~Q2~~ | ~~Hosting / database / auth providers?~~ **Answered: Vercel, Neon, Clerk (D7).** A fourth is now allocated to AI Gateway (D14). **Clerk later replaced by Neon Auth (D21, 2026-09-01), consolidating auth onto the database vendor** | SDD §2 | Alexandre | done |
 | ~~Q3~~ | ~~Where do default blocklists come from?~~ **Answered: three hardcoded lists in v1, plus a personal list derived from observed drift (PRD-F13)** | PRD | Alexandre | done |
 | ~~Q4~~ | ~~What counts as "away"?~~ **Answered: browser unfocused > 60s (SDD §3)** | SDD §3 | Alexandre | done |
 | **Q5** | Where does the companion live — `chrome.sidePanel`, Document Picture-in-Picture, or neither? Document PiP is always-on-top and needs no host permissions, but requires a user gesture, "never outlives the opening window," and its extension support is undocumented. `<all_urls>` is excluded by SDD V4 | SDD, SITEMAP S9 | Alexandre | Before the companion is built. 30-minute spike |

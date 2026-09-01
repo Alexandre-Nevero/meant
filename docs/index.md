@@ -57,7 +57,7 @@
 | Form factor | Chrome/Edge extension (MV3) + web app with sign-in, a database, and one model gateway |
 | Time budget | **No limit on our build.** The binding constraint is reproduction: a non-technical student, alone and online, must rebuild a defined subset in 4–8 hours. See `../context.md` §5 and §6 |
 | Purpose | **A reference product for apexhuman.ai** — the worked example that students, entrepreneurs, solopreneurs and SMEs learn from. Ships as three artifacts: the product, a rebuild manual, and a build video |
-| External services | Five maximum; **four allocated**: Vercel (hosting), Neon Postgres (database), Clerk (auth), Vercel AI Gateway (inference). One unallocated |
+| External services | Five maximum; **three allocated**: Vercel (hosting), Neon (database + auth, D21), Vercel AI Gateway (inference). Two unallocated |
 | Platforms | Wherever Chrome/Edge runs — macOS and Windows identically |
 | Business model | Direct consumer subscription. Free is mechanical; paid is the half that knows you (D15) |
 | Cut from v1, still cut | Voice, in-session conversation, on-device inference, desktop/OS tracking, app blocking, scheduling, Locked Mode, sync, teams, any score |
@@ -118,7 +118,7 @@
 | D4 | Whole loop shipped thin, rather than one link deeply | 2026-08-18 | PRD |
 | D5 | Calibration and rewards cut from v1 | 2026-08-18 | IDEA §4 — **superseded at 0.2.** Calibration returns as memory (PRD-F11); reward returns only within I2 |
 | D6 | Extension authenticates by one-time pairing code, not OAuth | 2026-08-18 | SDD §4.2 |
-| D7 | Stack: Vercel + Neon Postgres + Clerk | 2026-08-18 | SDD §4.3 |
+| D7 | Stack: Vercel + Neon Postgres + Clerk | 2026-08-18 | SDD §4.3 — **amended by D21** |
 | D8 | Hostname only — never full URLs or page titles | 2026-08-18 | SDD V5 — **partially superseded by D17.** Hostname-only still governs *storage*; titles and text may now be read in flight and stored nowhere |
 | D9 | Block page is a redirect rule, so host permissions are declared per blocklist domain | 2026-08-18 | SDD V4 (amended), build.md §7.4 |
 | **D10** | **Primary user moves from employed corporate administrator to self-employed non-technical browser worker.** The old persona had no purchasing authority, and the only party with budget was the employer — whom IDEA §9 forbids serving, permanently. The product had designed itself into having no legal buyer | 2026-08-28 | IDEA §1, PRD §2 |
@@ -132,6 +132,7 @@
 | **D19** | **The teaching tiers are an architectural rule, not a lesson plan (I9).** A beginner rebuilds a subset and pastes the rest, so judge, companion, memory and coach must each detach without taking the product down. If the pieces do not come apart, the manual cannot exist | 2026-08-28 | PRD I9, PRD §9 |
 | **D20** | **Two gaps stop being excusable now the clock is gone:** the judge's eval set (PRD-F14, without which M7 and K4 are unmeasurable) and data deletion (PRD-F15, an obligation memory created for itself) | 2026-08-28 | PRD §3, `../context.md` §8 |
 | **D18** | **Numbered migrations replace hand-applied `schema.sql`.** Defensible for four hours with no data; not defensible now that memory outlives the sessions that produced it | 2026-08-28 | SDD §3.2 |
+| **D21** | **Clerk replaced by Neon Auth (managed Better Auth), amending D7.** Auth now lives on the same account and branch as the database instead of a fourth separate vendor — one fewer signup on a student's provisioning list (`../context.md` §5). Package is beta (`@neondatabase/auth@0.5.x-beta`); no middleware/`proxy.ts` is used because its route-gating `auth.middleware()` would redirect `/` (the public sign-in page) to itself — every protected surface guards with `auth.getSession()` directly instead, matching the pattern already in place | 2026-09-01 | PRODUCT.md, SDD §4.3, §5, §9.3, sitemap §5, PRD §7, IDEA Q2 |
 
 ---
 

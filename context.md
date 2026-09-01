@@ -223,7 +223,7 @@ Pricing for the reference product itself, the manual's chapter structure, the vi
 
 | # | Question | Blocks | Needed by |
 |---|---|---|---|
-| C1 | Does Apex pre-provision Vercel, Neon, Clerk and AI Gateway accounts, as their copy implies? **This is worth 30–60 minutes of every student's budget** | The whole §5 budget | Before writing A2 |
+| C1 | Does Apex pre-provision Vercel, Neon and AI Gateway accounts, as their copy implies? **This is worth 30–60 minutes of every student's budget.** One fewer account since D21 folded auth into Neon | The whole §5 budget | Before writing A2 |
 | C2 | Is the online student's manual the same artifact as the onsite cohort's, or a reduced one? | A2's scope | Before writing A2 |
 | C3 | What does Apex charge? It sets how much friction a student will tolerate before quitting | Tone and depth of A2 | Before writing A2 |
 | C4 | Is the audience predominantly Southeast Asian? If so, expect more Windows, older machines, and different payment rails — all of which further confirm D14 | Hardware assumptions, T3 contents | Before the first build session |

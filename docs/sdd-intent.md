@@ -130,17 +130,17 @@ Seven tables. The threshold that would justify a separate data-model document is
 
 | Method | Route | Auth | Body | Returns |
 |---|---|---|---|---|
-| POST | `/api/pair` | Clerk session | — | `{ code, expiresAt }` |
+| POST | `/api/pair` | Neon Auth session | — | `{ code, expiresAt }` |
 | POST | `/api/pair/claim` | none + code | `{ code }` | `{ deviceId, token }` |
 | POST | `/api/sessions` | device token | `{ intention, plannedMinutes, blocklist, startedAt }` | `{ sessionId }` |
 | PATCH | `/api/sessions/:id` | device token | `{ endedAt, endReason }` | `{ ok }` |
 | POST | `/api/events` | device token | `{ sessionId, events: [...] }` | `{ accepted }` |
-| PATCH | `/api/sessions/:id/outcome` | Clerk session | `{ outcome }` | `{ ok }` |
+| PATCH | `/api/sessions/:id/outcome` | Neon Auth session | `{ outcome }` | `{ ok }` |
 | **POST** | **`/api/sessions/:id/plan`** | device token | `{ intention }` | `{ tasks: [{ordinal, text}] }` |
-| **PATCH** | **`/api/tasks/:id`** | device token **or** Clerk session | `{ text? , doneAt?, doneSource?, removedAt? }` | `{ ok }` |
+| **PATCH** | **`/api/tasks/:id`** | device token **or** Neon Auth session | `{ text? , doneAt?, doneSource?, removedAt? }` | `{ ok }` |
 | **POST** | **`/api/judge`** | device token | `{ sessionId, taskId, domain, title, extract? }` — `extract` present only on tier T-B (§5.2) | `{ verdict, confidence, tier }` |
 | **GET** | **`/api/memory`** | device token | — | `{ domainClasses: {...}, updatedAt }` — the gating cache |
-| **POST** | **`/api/reviews/:id/coach`** | Clerk session | `{ message? }` | `{ observations, suggestions: [{text, action}] }` |
+| **POST** | **`/api/reviews/:id/coach`** | Neon Auth session | `{ message? }` | `{ observations, suggestions: [{text, action}] }` |
 
 `title` and `extract` are the only fields in this system that carry page content. Both exist for the duration of one request and no handler may write either anywhere. `/api/judge` is the only route that accepts them.
 
@@ -159,11 +159,10 @@ Seven tables. The threshold that would justify a separate data-model document is
 | Service | Used for | Failure behavior | Budget |
 |---|---|---|---|
 | Vercel | Hosting, API routes | Extension queues events locally and retries (E3) | 1 of 5 |
-| Neon Postgres | All persistence | API returns 5xx; extension keeps queueing | 2 of 5 |
-| Clerk | Web sign-in only | Web app unusable; extension keeps recording | 3 of 5 |
-| **Vercel AI Gateway** | **Plan, judge, coach** | **The product degrades to its mechanical form: blocking, attention, review, ledger. Nothing breaks, nothing waits, nothing is lost. This degradation path is a design requirement (K4), not a fallback** | **4 of 5** |
+| Neon (Postgres + Auth) | All persistence, plus web sign-in — same account and branch (D21) | API returns 5xx / auth unreachable; extension keeps queueing, web app sign-in unusable until it recovers | 2 of 5 |
+| **Vercel AI Gateway** | **Plan, judge, coach** | **The product degrades to its mechanical form: blocking, attention, review, ledger. Nothing breaks, nothing waits, nothing is lost. This degradation path is a design requirement (K4), not a fallback** | **3 of 5** |
 
-One slot unallocated.
+Two slots unallocated — one freed by D21, consolidating auth onto the database vendor instead of a fourth account.
 
 ---
 
@@ -303,7 +302,7 @@ The two-minute demo path in IDEA §4 runs twice consecutively without a reload; 
 
 | Data | Where | Sensitivity | Retention |
 |---|---|---|---|
-| Clerk user id, email | Clerk + `device.user_id` | Identifying | Life of the account |
+| Neon Auth user id, email | Neon Auth + `device.user_id` | Identifying | Life of the account |
 | Intention text | `session.intention` | **User-authored; may name real work, clients, projects** | Life of the account; deletable per session |
 | Task text | `task.text` | Same as above, and model-generated from it | Cascades with the session |
 | Hostnames + seconds | `event` | Behavioral | Life of the session row |
@@ -314,7 +313,7 @@ The two-minute demo path in IDEA §4 runs twice consecutively without a reload; 
 | Device token hash | `device.token_hash` | Credential | Until unpaired |
 
 ### 9.2 Processors
-Vercel (hosting), Neon (database), Clerk (identity), **Vercel AI Gateway and the model provider behind it (inference, zero retention required)**. The gateway is the first processor that sees content rather than metadata, which is why V5.5 is a configuration requirement and not a preference.
+Vercel (hosting), Neon (database and identity), **Vercel AI Gateway and the model provider behind it (inference, zero retention required)**. The gateway is the first processor that sees content rather than metadata, which is why V5.5 is a configuration requirement and not a preference.
 
 ### 9.3 User rights and obligations
 Deleting a session deletes its tasks, events, and judgments by cascade. **Memory does not cascade** — it is the whole point of memory — so a "forget what you know about me" action is required and must clear `memory` for that user. Account deletion remains unbuilt; it was a recorded gap at 0.1 and it is now a larger one, because memory persists across sessions by design.
