@@ -8,3 +8,14 @@ node_modules/
 .env*.local
 .superpowers/
 *.tsbuildinfo
+
+# vendored skill packages — reproducible from skills-lock.json
+.agents/
+.claude/
+
+# local tool runtime state (logs, sockets, audit trails)
+.gstack/
+
+# nested/foreign doc-framework copies, not part of this project
+fmd/
+fmdlite/
