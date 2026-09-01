@@ -145,6 +145,15 @@ button, input, select { font: inherit; color: inherit; }
   min-height: 84px;
 }
 .m-field::placeholder { color: var(--m-ink-3); font-family: var(--m-body); font-size: 15px; }
+.m-field[data-pairing-code="true"] {
+  font-family: var(--m-figure);
+  font-size: 24px;
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-transform: uppercase;
+  min-height: auto;
+}
+.m-field[data-pairing-code="true"]::placeholder { font-family: var(--m-figure); letter-spacing: 0.1em; font-size: 13px; }
 
 /* chip fields — duration and blocklist pickers */
 .m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }

@@ -19,6 +19,16 @@ export async function post(path, body, { method = 'POST', queue: shouldQueue = t
       },
       body: JSON.stringify(body),
     })
+    // A device token the server no longer accepts (revoked, or never valid) must not
+    // fail silently (E8) — drop it and any session so the next popup open shows why.
+    if (res.status === 401 && token) {
+      await chrome.storage.local.set({
+        token: null,
+        deviceId: null,
+        session: null,
+        unpairedReason: 'This device was disconnected from your account. Pair again.',
+      })
+    }
     return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) }
   } catch {
     if (shouldQueue) {

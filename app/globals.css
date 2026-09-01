@@ -135,6 +135,18 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--m-r-block);
   padding: 44px 56px;
 }
+[data-surface="pair"] .m-sentence {
+  display: block;
+  font-family: var(--m-figure);
+  font-size: 32px;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-say);
+  padding: 22px 32px;
+  max-width: 320px;
+}
 
 /* ---------- .m-meta — everything else, quiet ---------- */
 
@@ -298,6 +310,17 @@ a { color: inherit; text-decoration: none; }
   font-size: clamp(56px, 6.1vw, 96px);
   line-height: 0.98;
   letter-spacing: -0.035em;
+}
+
+[data-surface="pair"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  min-height: 100vh;
+  padding: 24px;
+  text-align: center;
 }
 
 /* ---------- .m-empty — nothing here yet ---------- */

@@ -33,9 +33,19 @@ function chipGroup(options, { mono = false } = {}) {
 }
 
 function unpaired(message) {
+  const mark = el('p', 'm-mark', '')
+  mark.dataset.state = 'idle'
+
   const field = el('input', 'm-field')
-  field.placeholder = 'Pairing code'
+  field.placeholder = 'PAIRING CODE'
   field.maxLength = 6
+  field.dataset.pairingCode = 'true'
+  field.addEventListener('input', () => {
+    field.value = field.value.toUpperCase()
+  })
+  field.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') claim(field.value)
+  })
 
   const button = el('button', 'm-btn', 'Pair')
   button.dataset.variant = 'primary'
@@ -47,8 +57,9 @@ function unpaired(message) {
     chrome.tabs.create({ url: (await apiBase()) + '/pair' })
   })
 
-  const nodes = [el('p', 'm-meta', 'Connect this browser to your account.'), field, button, link]
+  const nodes = [mark, el('p', 'm-meta', 'Connect this browser to your account.')]
   if (message) nodes.push(el('p', 'm-meta', message))
+  nodes.push(field, button, link)
   show(...nodes)
 }
 
@@ -120,8 +131,11 @@ function running(session) {
 }
 
 async function render() {
-  const { token, session } = await chrome.storage.local.get(['token', 'session'])
-  if (!token) return unpaired()
+  const { token, session, unpairedReason } = await chrome.storage.local.get(['token', 'session', 'unpairedReason'])
+  if (!token) {
+    if (unpairedReason) await chrome.storage.local.remove('unpairedReason')
+    return unpaired(unpairedReason)
+  }
   if (session) return running(session)
   idle()
 }
