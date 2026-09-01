@@ -1,0 +1,87 @@
+/* GENERATED — edit design/tokens.css, then npm run tokens */
+/* MEANT — design tokens
+ * Source of truth: the design canvas ("MEANT Band System"). Values lifted from the
+ * shipped artboards, not invented here. Change them there first, then mirror here.
+ * Light on bare :root. Dark redefines ONLY what must change.
+ */
+
+:root {
+  /* Ground and ink */
+  --m-ground:        #F3F1EE;  /* every surface */
+  --m-ground-sunk:   #E9E6E2;  /* the canvas behind a panel */
+  --m-ink:           #14120F;  /* primary text, strokes, the primary button */
+  --m-ink-2:         #57534E;  /* secondary prose */
+  --m-ink-3:         #8B8681;  /* labels, away, disabled */
+  --m-rule:          #E2DFDB;  /* 0.5px row rules */
+  --m-edge:          #C7C2BB;  /* unselected chip borders, dashed remainder */
+
+  /* Clay — attention. Three tints, ordered by time. Never more than three. */
+  --m-clay:          #C75B39;
+  --m-clay-2:        #D68A6E;
+  --m-clay-3:        #E2B29E;
+
+  /* Away is a hatch, never a solid grey — a hatch says unmeasured, not "another site" */
+  --m-away: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);
+
+  /* Type */
+  --m-display: Fraunces, Georgia, serif;
+  --m-body:    'Public Sans', system-ui, sans-serif;
+  --m-figure:  'Sometype Mono', ui-monospace, monospace;
+  --m-tracking: -0.02em;          /* body and display */
+  --m-tracking-tight: -0.03em;    /* display 44px and up */
+
+  /* Shape — capsules, not cards. Radius scales with the element, never a global 8px. */
+  --m-r-chip:   999px;
+  --m-r-row:    4px;
+  --m-r-panel:  20px;
+  --m-r-field:  26px;
+  --m-r-button: 28px;
+  --m-r-say:    36px;   /* the outline that holds the sentence */
+  --m-r-block:  56px;   /* the block page, the sentence at full size */
+
+  --m-stroke:      1.5px;  /* the outline that holds the sentence */
+  --m-stroke-hair: 0.5px;  /* rules, unselected chips */
+  --m-stroke-loud: 2px;    /* block page, companion facing you */
+
+  /* Motion — one curve, three durations. Never `all`, never ease-in. */
+  --m-ease:      cubic-bezier(0.23, 1, 0.32, 1);
+  --m-dur-press: 160ms;
+  --m-dur-settle: 240ms;
+  --m-dur-rise:  280ms;
+  --m-stagger:   50ms;
+  --m-dur-draw:  900ms;  /* the landing mark, once, on load */
+}
+
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --m-ground:      #14120F;
+    --m-ground-sunk: #0D0C0A;
+    --m-ink:         #F3F1EE;
+    --m-ink-2:       #B8B3AD;
+    --m-ink-3:       #8B8681;
+    --m-rule:        #2A2724;
+    --m-edge:        #3D3935;
+    --m-clay:        #E06B44;
+    --m-clay-2:      #C0765C;
+    --m-clay-3:      #96604D;
+    --m-away: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);
+  }
+}
+
+:root[data-theme="dark"] {
+  --m-ground:      #14120F;
+  --m-ground-sunk: #0D0C0A;
+  --m-ink:         #F3F1EE;
+  --m-ink-2:       #B8B3AD;
+  --m-ink-3:       #8B8681;
+  --m-rule:        #2A2724;
+  --m-edge:        #3D3935;
+  --m-clay:        #E06B44;
+  --m-clay-2:      #C0765C;
+  --m-clay-3:      #96604D;
+  --m-away: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --m-dur-press: 0ms; --m-dur-settle: 0ms; --m-dur-rise: 0ms; --m-stagger: 0ms; --m-dur-draw: 0ms; }
+}

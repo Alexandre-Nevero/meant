@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MEANT — Popup idle fixture</title>
+<link rel="stylesheet" href="../../extension/meant.css" />
+</head>
+<body class="m-app" data-surface="popup" style="width:360px;">
+<main id="root">
+  <p class="m-mark" data-state="idle"></p>
+  <p class="m-meta">What do you mean to do?</p>
+  <input class="m-field" placeholder="" />
+  <div class="m-chip-row">
+    <button class="m-chip" data-mono="true" aria-pressed="true">25 min</button>
+    <button class="m-chip" data-mono="true" aria-pressed="false">50 min</button>
+    <button class="m-chip" data-mono="true" aria-pressed="false">until I stop</button>
+  </div>
+  <div class="m-chip-row">
+    <button class="m-chip" aria-pressed="true">social</button>
+    <button class="m-chip" aria-pressed="false">video</button>
+    <button class="m-chip" aria-pressed="false">news</button>
+  </div>
+  <button class="m-btn" data-variant="primary">Start</button>
+</main>
+</body>
+</html>

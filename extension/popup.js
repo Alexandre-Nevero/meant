@@ -13,6 +13,25 @@ function show(...nodes) {
   root.replaceChildren(...nodes)
 }
 
+/** A single-select row of chips. Returns { row, get value() }. */
+function chipGroup(options, { mono = false } = {}) {
+  const row = el('div', 'm-chip-row')
+  let value = options[0].value
+  const buttons = options.map(({ label, value: v }) => {
+    const chip = el('button', 'm-chip', label)
+    chip.type = 'button'
+    chip.dataset.mono = String(mono)
+    chip.setAttribute('aria-pressed', String(v === value))
+    chip.addEventListener('click', () => {
+      value = v
+      for (const b of buttons) b.setAttribute('aria-pressed', String(b === chip))
+    })
+    row.append(chip)
+    return chip
+  })
+  return { row, get value() { return value } }
+}
+
 function unpaired(message) {
   const field = el('input', 'm-field')
   field.placeholder = 'Pairing code'
@@ -46,22 +65,19 @@ async function claim(value) {
 }
 
 function idle() {
+  const mark = el('p', 'm-mark', '')
+  mark.dataset.state = 'idle'
+
+  const label = el('p', 'm-meta', 'What do you mean to do?')
+
   const field = el('input', 'm-field')
-  field.placeholder = 'What will you finish?'
+  field.placeholder = ''
 
-  const duration = el('select', 'm-field')
-  for (const [label, value] of [['25 minutes', '25'], ['50 minutes', '50'], ['Until I stop', '']]) {
-    const option = el('option', null, label)
-    option.value = value
-    duration.append(option)
-  }
-
-  const list = el('select', 'm-field')
-  for (const name of ['social', 'video', 'news']) {
-    const option = el('option', null, name)
-    option.value = name
-    list.append(option)
-  }
+  const duration = chipGroup(
+    [{ label: '25 min', value: '25' }, { label: '50 min', value: '50' }, { label: 'until I stop', value: '' }],
+    { mono: true },
+  )
+  const blocklist = chipGroup([{ label: 'social', value: 'social' }, { label: 'video', value: 'video' }, { label: 'news', value: 'news' }])
 
   const start = el('button', 'm-btn', 'Start')
   start.dataset.variant = 'primary'
@@ -71,37 +87,26 @@ function idle() {
       type: 'start',
       intention: field.value,
       plannedMinutes: duration.value ? Number(duration.value) : null,
-      blocklist: [list.value],
+      blocklist: [blocklist.value],
     })
     if (!res?.ok) {
       start.disabled = false
-      show(...idleNodes(field, duration, list, start),
+      show(mark, label, field, duration.row, blocklist.row, start,
         el('p', 'm-meta', res?.offline ? 'No connection. A session needs one to start.' : 'Could not start.'))
       return
     }
     render()
   })
 
-  show(...idleNodes(field, duration, list, start))
-}
-
-function idleNodes(field, duration, list, start) {
-  const mark = el('p', 'm-mark', '')
-  mark.dataset.state = 'idle'
-  return [mark, field, duration, list, start]
+  show(mark, label, field, duration.row, blocklist.row, start)
 }
 
 function running(session) {
   const mark = el('p', 'm-mark', '')
   mark.dataset.state = 'running'
 
-  const elapsed = el('p', 'm-meta', '')
-  const paint = () => {
-    const minutes = Math.floor((Date.now() - new Date(session.startedAt).getTime()) / 60000)
-    elapsed.textContent = `${minutes} min elapsed`
-  }
-  paint()
-  setInterval(paint, 1000)
+  const elapsedMinutes = Math.floor((Date.now() - new Date(session.startedAt).getTime()) / 60000)
+  const elapsed = el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
 
   const stop = el('button', 'm-btn', 'Stop')
   stop.dataset.variant = 'quiet'

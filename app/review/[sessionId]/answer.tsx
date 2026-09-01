@@ -18,7 +18,7 @@ export function Answer({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <div className="m-row">
+    <div style={{ display: 'flex', gap: 14 }}>
       <button className="m-answer" data-answer="yes" disabled={sending} onClick={() => answer('yes')}>
         Yes
       </button>

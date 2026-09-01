@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "tokens": "node -e \"const fs=require('fs');fs.writeFileSync('extension/tokens.css','/* GENERATED — edit design/tokens.css, then npm run tokens */\\n'+fs.readFileSync('design/tokens.css','utf8'))\"",
+    "predev": "npm run tokens",
+    "prebuild": "npm run tokens",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"

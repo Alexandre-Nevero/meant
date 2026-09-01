@@ -19,19 +19,17 @@ function remainingText(session) {
   return `${Math.ceil(leftMs / 60000)} minutes left`
 }
 
+// A single read, not a ticking clock — toolkit §9 refuses "a countdown that ticks."
 async function render() {
   const { session } = await chrome.storage.local.get('session')
   if (!session) {
     root.replaceChildren(el('p', 'm-meta', 'No session is running.'))
     return
   }
-  const mark = el('p', 'm-mark', '')
-  mark.dataset.state = 'running'
   root.replaceChildren(
-    mark,
-    el('p', 'm-meta', 'You said you would:'),
     el('p', 'm-sentence', session.intention),
-    el('p', 'm-meta', remainingText(session)),
+    el('p', 'm-meta', "That's still true."),
+    el('p', 'm-row-figure', remainingText(session)),
   )
 }
 
@@ -46,4 +44,3 @@ async function recordHit() {
 
 render()
 recordHit()
-setInterval(render, 1000)

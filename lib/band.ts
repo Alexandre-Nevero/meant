@@ -1,0 +1,18 @@
+export type Segment = { kind: 'attention-1' | 'attention-2' | 'attention-3' | 'away'; flex: number }
+
+/** Attention rows for one session → band segments: top 3 domains by time, then away.
+ * Takes the raw shape `sql` returns (untyped rows), not a declared row type. */
+export function toBand(rows: { kind: string; domain?: string | null; seconds: number }[]): Segment[] {
+  const attention = rows
+    .filter((r) => r.kind === 'attention' && r.domain)
+    .sort((a, b) => b.seconds - a.seconds)
+    .slice(0, 3)
+  const away = rows.filter((r) => r.kind === 'away').reduce((sum, r) => sum + r.seconds, 0)
+
+  const segments: Segment[] = attention.map((r, i) => ({
+    kind: (['attention-1', 'attention-2', 'attention-3'] as const)[i],
+    flex: r.seconds,
+  }))
+  if (away > 0) segments.push({ kind: 'away', flex: away })
+  return segments.filter((s) => s.flex > 0)
+}

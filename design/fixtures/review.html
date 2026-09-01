@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MEANT — Review fixture</title>
+<link rel="stylesheet" href="fixtures.css" />
+</head>
+<body class="m-app">
+<div data-surface="review" style="max-width:880px;margin:0 auto;padding:72px 80px;display:flex;flex-direction:column;gap:24px;">
+  <p class="m-mark" data-state="ended"></p>
+  <p class="m-meta">You meant to</p>
+  <p class="m-sentence">finish the client proposal</p>
+
+  <div class="m-row"><span class="m-row-bar" data-kind="step-done"></span><span class="m-row-domain">outline the scope</span></div>
+  <div class="m-row"><span class="m-row-bar" data-kind="step-done"></span><span class="m-row-domain">write the pricing section</span></div>
+  <div class="m-row"><span class="m-row-bar" data-kind="step-open"></span><span class="m-row-domain">send it</span></div>
+
+  <p class="m-mark" data-state="ended">
+    <span class="m-row-bar" data-kind="attention-1" style="flex:41"></span>
+    <span class="m-row-bar" data-kind="attention-2" style="flex:12"></span>
+    <span class="m-row-bar" data-kind="attention-3" style="flex:9"></span>
+    <span class="m-row-bar" data-kind="away" style="flex:6"></span>
+  </p>
+
+  <div class="m-row"><span class="m-row-bar" data-kind="attention-1"></span><span class="m-row-domain">claude.ai</span><span class="m-row-figure">41 min</span></div>
+  <div class="m-row"><span class="m-row-bar" data-kind="attention-2"></span><span class="m-row-domain">docs.google.com</span><span class="m-row-figure">12 min</span></div>
+  <div class="m-row"><span class="m-row-bar" data-kind="attention-3"></span><span class="m-row-domain">news.ycombinator.com</span><span class="m-row-figure">9 min</span></div>
+  <div class="m-row"><span class="m-row-bar" data-kind="away"></span><span class="m-row-domain">away</span><span class="m-row-figure">6 min</span></div>
+
+  <p class="m-meta">Drifted twice, back within ninety seconds both times. Two blocked attempts.</p>
+
+  <p class="m-rate">Did you?</p>
+  <div style="display:flex;gap:14px;">
+    <button class="m-answer">Yes</button>
+    <button class="m-answer">Not yet</button>
+  </div>
+</div>
+</body>
+</html>

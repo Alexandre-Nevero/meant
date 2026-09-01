@@ -26,6 +26,8 @@ export function AuthForm() {
         {signInState?.error && <p className="m-meta">{signInState.error}</p>}
       </form>
 
+      <p className="m-meta">or</p>
+
       <form action={signUpAction}>
         <input className="m-field" name="name" type="text" placeholder="Name" required />
         <Fields />

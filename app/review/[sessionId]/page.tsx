@@ -1,9 +1,12 @@
-import { auth } from '@/lib/auth/server'
+import { currentUserId } from '@/lib/auth/session'
 import { notFound, redirect } from 'next/navigation'
 import { sql } from '@/lib/db'
+import { toBand } from '@/lib/band'
+import { Band } from '../../band'
 import { Answer } from './answer'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const TINTS = ['attention-1', 'attention-2', 'attention-3'] as const
 
 function minutes(seconds: number) {
   return Math.round(seconds / 60)
@@ -12,8 +15,7 @@ function minutes(seconds: number) {
 export const dynamic = 'force-dynamic'
 
 export default async function Review({ params }: { params: Promise<{ sessionId: string }> }) {
-  const { data: authSession } = await auth.getSession()
-  const userId = authSession?.user?.id
+  const userId = await currentUserId()
   if (!userId) redirect('/')
 
   const { sessionId } = await params
@@ -30,7 +32,7 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
      group by kind, domain
      order by seconds desc`
 
-  const attention = rows.filter((r) => r.kind === 'attention' && r.domain)
+  const topAttention = rows.filter((r) => r.kind === 'attention' && r.domain).slice(0, 3)
   const awaySeconds = rows
     .filter((r) => r.kind === 'away')
     .reduce((total, r) => total + r.seconds, 0)
@@ -45,7 +47,7 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
     from session where user_id = ${userId}`
 
   return (
-    <>
+    <div data-surface="review">
       <p className="m-mark" data-state="ended" />
       {session.intention ? (
         <>
@@ -56,18 +58,20 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
         <p className="m-meta">You didn&apos;t say what you meant to do.</p>
       )}
 
-      {attention.map((row) => (
+      <Band segments={toBand(rows as Parameters<typeof toBand>[0])} state={session.ended_at ? 'ended' : 'running'} />
+
+      {topAttention.map((row, i) => (
         <div className="m-row" key={row.domain}>
+          <span className="m-row-bar" data-kind={TINTS[i]} />
           <span className="m-row-domain">{row.domain}</span>
-          <span className="m-row-bar" data-kind="attention" />
           <span className="m-row-figure">{minutes(row.seconds)} min</span>
         </div>
       ))}
 
       {awaySeconds > 0 && (
         <div className="m-row">
-          <span className="m-row-domain">away</span>
           <span className="m-row-bar" data-kind="away" />
+          <span className="m-row-domain">away</span>
           <span className="m-row-figure">{minutes(awaySeconds)} min</span>
         </div>
       )}
@@ -77,7 +81,7 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
 
       {session.outcome === 'unanswered' ? (
         <>
-          <p className="m-meta">Did you?</p>
+          <p className="m-rate">Did you?</p>
           <Answer sessionId={session.id} />
         </>
       ) : (
@@ -87,6 +91,6 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
             : 'Noted. It carries over.'}
         </p>
       )}
-    </>
+    </div>
   )
 }

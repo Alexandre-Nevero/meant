@@ -1,0 +1,401 @@
+@import '../design/tokens.css';
+
+/* next/font self-hosts and exposes these as CSS variables on <html>; redefine the
+   token aliases to them here so tokens.css itself stays untouched and canonical. */
+:root {
+  --m-display: var(--font-fraunces, Georgia, serif);
+  --m-body: var(--font-public-sans, system-ui, sans-serif);
+  --m-figure: var(--font-sometype-mono, ui-monospace, monospace);
+}
+
+/* ---------- reset ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+button, input { font: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+
+/* ---------- .m-app — the whole surface ---------- */
+
+.m-app {
+  background: var(--m-ground);
+  color: var(--m-ink);
+  font-family: var(--m-body);
+  letter-spacing: var(--m-tracking);
+  min-height: 100%;
+}
+
+/* ---------- .m-mark[data-state] — the mark ----------
+   Childless (:empty): a small decorative brand glyph — the only shape used at
+   popup/block-page/review-header/dashboard-row-icon scale, matching every real
+   call site in the code today.
+   Not empty: the same outline becomes a real flex band of .m-row-bar children —
+   the review's single band and each ledger row's band. */
+
+.m-mark {
+  display: inline-block;
+  width: 34px;
+  height: 16px;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-chip);
+  box-sizing: border-box;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.m-mark:empty[data-state="idle"],
+.m-mark:empty[data-state="empty"] {
+  background: transparent;
+}
+
+.m-mark:empty[data-state="running"]::after,
+.m-mark:empty[data-state="ended"]::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background:
+    linear-gradient(
+      to right,
+      var(--m-clay) 0 58%,
+      transparent 58% 61%,
+      var(--m-clay-2) 61% 76%,
+      transparent 76% 79%,
+      var(--m-clay-3) 79% 100%
+    );
+  border-radius: calc(var(--m-r-chip) - 2px);
+}
+
+.m-mark:not(:empty) {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  padding: 0;
+  border-color: var(--m-edge);
+  border-style: dashed;
+  overflow: hidden;
+}
+
+.m-mark[data-state="ended"]:not(:empty) {
+  border: none;
+}
+
+/* dashboard/ledger row band — a wide, short strip inside the row grid */
+[data-surface="ledger"] .m-row .m-mark {
+  width: 100%;
+  height: 11px;
+  border-width: 0.5px;
+}
+
+/* review's single combined band, once, above the per-domain rows */
+[data-surface="review"] > .m-mark:not(:empty) {
+  width: 100%;
+  height: 32px;
+  border: none;
+}
+
+/* dashboard empty state — the big hollow outline, matching Landing's hero shape */
+.m-empty .m-mark {
+  width: 200px;
+  height: 48px;
+  border-width: var(--m-stroke-loud);
+}
+
+/* ---------- .m-sentence — the user's own words, Fraunces ---------- */
+
+.m-sentence {
+  margin: 0;
+  font-family: var(--m-display);
+  font-weight: 400;
+  letter-spacing: var(--m-tracking);
+  line-height: 1.3;
+}
+
+[data-surface="ledger"] .m-row .m-sentence { font-size: 20px; }
+[data-surface="companion"] .m-sentence {
+  font-size: 16px;
+  display: block;
+  border: var(--m-stroke-hair) solid var(--m-rule);
+  border-radius: var(--m-r-panel);
+  padding: 14px 18px;
+}
+
+/* the outline that holds the sentence — review, popup (running), block page */
+[data-surface="review"] .m-sentence,
+[data-surface="popup"] .m-sentence,
+[data-surface="block"] .m-sentence {
+  display: block;
+  border: var(--m-stroke) solid var(--m-ink);
+}
+[data-surface="review"] .m-sentence { font-size: 28px; border-radius: var(--m-r-say); padding: 22px 32px; }
+[data-surface="popup"] .m-sentence { font-size: 20px; border-radius: var(--m-r-field); padding: 16px 22px; }
+[data-surface="block"] .m-sentence {
+  font-size: 44px;
+  line-height: 1.2;
+  border-width: var(--m-stroke-loud);
+  border-radius: var(--m-r-block);
+  padding: 44px 56px;
+}
+
+/* ---------- .m-meta — everything else, quiet ---------- */
+
+.m-meta {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--m-ink-3);
+}
+
+/* ---------- .m-field — the outline that holds the sentence ---------- */
+
+.m-field {
+  display: block;
+  width: 100%;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-field);
+  padding: 16px 22px;
+  background: transparent;
+  font-family: var(--m-display);
+  font-size: 20px;
+  letter-spacing: var(--m-tracking);
+  color: var(--m-ink);
+}
+.m-field::placeholder { color: var(--m-ink-3); font-family: var(--m-body); font-size: 15px; }
+.m-field:focus-visible { outline: var(--m-stroke) solid var(--m-clay); outline-offset: 2px; }
+
+[data-surface="block"] .m-field {
+  border-width: var(--m-stroke-loud);
+  border-radius: var(--m-r-block);
+  padding: 44px 56px;
+}
+
+/* ---------- .m-btn[data-variant] — buttons ---------- */
+
+.m-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+  width: 100%;
+  border: none;
+  border-radius: var(--m-r-button);
+  font-family: var(--m-body);
+  font-size: 16px;
+  letter-spacing: var(--m-tracking);
+  cursor: pointer;
+  transition: transform var(--m-dur-press) var(--m-ease);
+}
+.m-btn[data-variant="primary"] {
+  background: var(--m-ink);
+  color: var(--m-ground);
+}
+.m-btn[data-variant="quiet"] {
+  background: transparent;
+  color: var(--m-ink);
+  border: var(--m-stroke-hair) solid var(--m-ink);
+}
+.m-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* The popup animates nothing — not even a press. */
+[data-surface="popup"] .m-btn { transition: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .m-btn:not(:disabled):active { transform: scale(0.97); }
+}
+
+/* ---------- .m-answer — Yes / Not yet, byte-identical ----------
+   One rule, no [data-answer] selector — the invariant is structural. */
+
+.m-answer {
+  flex: 1;
+  padding: 16px 0;
+  font-family: var(--m-body);
+  font-size: 16px;
+  letter-spacing: var(--m-tracking);
+  color: var(--m-ink);
+  background: transparent;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-button);
+  cursor: pointer;
+  transition: transform var(--m-dur-press) var(--m-ease);
+}
+.m-answer:disabled { opacity: 0.5; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .m-answer:not(:disabled):active { transform: scale(0.97); }
+}
+
+/* ---------- .m-row / .m-row-bar / .m-row-domain / .m-row-figure ---------- */
+
+.m-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) 88px;
+  gap: 20px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: var(--m-stroke-hair) solid var(--m-rule);
+}
+
+[data-surface="ledger"] .m-row {
+  grid-template-columns: minmax(0, 1fr) 180px 96px;
+  gap: 28px;
+  padding: 20px 0;
+}
+
+[data-surface="companion"] .m-row { grid-template-columns: 12px minmax(0, 1fr); gap: 14px; padding: 11px 0; }
+
+.m-row-bar {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--m-r-row);
+  background: var(--m-edge);
+}
+.m-row-bar[data-kind="attention-1"] { background: var(--m-clay); }
+.m-row-bar[data-kind="attention-2"] { background: var(--m-clay-2); }
+.m-row-bar[data-kind="attention-3"] { background: var(--m-clay-3); }
+.m-row-bar[data-kind="attention"] { background: var(--m-clay); }
+.m-row-bar[data-kind="away"] {
+  background: var(--m-away);
+  border: var(--m-stroke-hair) solid var(--m-ink-3);
+}
+.m-row-bar[data-kind="remainder"] {
+  background: transparent;
+  border: var(--m-stroke-hair) dashed var(--m-edge);
+}
+.m-row-bar[data-kind="step-done"] { background: var(--m-clay); border: 1px solid var(--m-clay); }
+.m-row-bar[data-kind="step-open"] { background: transparent; border: 1px solid var(--m-edge); }
+
+/* inside a band (.m-mark, not empty), row-bars flex-grow instead of holding a fixed size */
+.m-mark:not(:empty) > .m-row-bar {
+  width: auto;
+  height: 100%;
+  border-radius: var(--m-r-chip);
+}
+
+.m-row-domain {
+  margin: 0;
+  font-size: 16px;
+  color: var(--m-ink);
+}
+
+.m-row-figure {
+  margin: 0;
+  font-family: var(--m-figure);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- .m-rate — the ledger / landing headline ---------- */
+
+.m-rate {
+  margin: 0;
+  font-family: var(--m-display);
+  font-weight: 600;
+  letter-spacing: var(--m-tracking-tight);
+}
+[data-surface="ledger"] .m-rate { font-size: 52px; line-height: 1.05; }
+[data-surface="review"] .m-rate { font-size: 44px; line-height: 1.05; }
+[data-surface="landing"] .m-rate {
+  font-size: clamp(56px, 6.1vw, 96px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+/* ---------- .m-empty — nothing here yet ---------- */
+
+.m-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: 60vh;
+  text-align: center;
+}
+
+/* ---------- landing — structural layout only, not part of the class contract ---------- */
+
+[data-surface="landing"] {
+  display: flex;
+  flex-direction: column;
+}
+[data-surface="landing"] section,
+[data-surface="landing"] header {
+  padding: 96px 48px;
+  border-top: var(--m-stroke-hair) solid var(--m-rule);
+}
+[data-surface="landing"] header {
+  padding: 0 48px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: none;
+  border-bottom: var(--m-stroke-hair) solid var(--m-rule);
+}
+[data-surface="landing"] .m-landing-brand { display: flex; align-items: center; gap: 12px; }
+[data-surface="landing"] .m-landing-wordmark {
+  margin: 0;
+  font-family: var(--m-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+}
+[data-surface="landing"] header .m-mark { width: 34px; height: 16px; }
+
+[data-surface="landing"] .m-landing-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+  padding-top: 112px;
+  padding-bottom: 104px;
+  min-height: calc(100vh - 76px);
+  justify-content: center;
+  border-top: none;
+}
+[data-surface="landing"] .m-landing-hero > .m-mark { width: 100%; max-width: 880px; height: 48px; border-width: var(--m-stroke-loud); border-radius: 26px; }
+[data-surface="landing"] .m-landing-hero > .m-rate { max-width: 900px; }
+[data-surface="landing"] .m-landing-lede { margin: 0; font-size: 21px; line-height: 1.5; color: var(--m-ink-2); max-width: 56ch; }
+[data-surface="landing"] .m-landing-auth { display: flex; flex-direction: column; gap: 16px; max-width: 420px; }
+[data-surface="landing"] .m-landing-auth form { display: flex; flex-direction: column; gap: 12px; }
+
+[data-surface="landing"] .m-landing-h2 {
+  margin: 0;
+  font-family: var(--m-display);
+  font-weight: 600;
+  font-size: clamp(32px, 3vw, 46px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+[data-surface="landing"] .m-landing-beats { display: flex; flex-direction: column; gap: 56px; }
+[data-surface="landing"] .m-landing-beats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 40px;
+}
+[data-surface="landing"] .m-landing-beats-grid > div { display: flex; flex-direction: column; gap: 12px; }
+[data-surface="landing"] .m-landing-beats-grid .m-mark { width: 28px; height: 12px; }
+[data-surface="landing"] .m-landing-beat-title { margin: 0; font-family: var(--m-display); font-size: 24px; line-height: 1.2; }
+[data-surface="landing"] .m-landing-beats-grid .m-meta { font-size: 16px; line-height: 1.5; color: var(--m-ink-2); }
+
+[data-surface="landing"] .m-landing-prose { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 80px; align-items: start; }
+[data-surface="landing"] .m-landing-prose .m-landing-h2 { font-size: clamp(36px, 3.4vw, 52px); }
+[data-surface="landing"] .m-landing-prose .m-meta { font-size: 19px; line-height: 1.6; color: var(--m-ink-2); padding-top: 10px; }
+
+[data-surface="landing"] .m-landing-ledger { display: flex; flex-direction: column; gap: 44px; margin-top: auto; }
+[data-surface="landing"] .m-landing-ledger .m-row { grid-template-columns: minmax(0, 1fr) 240px 104px; gap: 32px; }
+[data-surface="landing"] .m-landing-ledger .m-row .m-mark { width: 100%; height: 11px; border: none; }
+[data-surface="landing"] .m-landing-auth .m-btn { width: auto; padding: 19px 38px; }
+
+/* ---------- motion: entry ---------- */
+
+.m-rise {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--m-dur-rise) var(--m-ease), transform var(--m-dur-rise) var(--m-ease);
+}
+@starting-style { .m-rise { opacity: 0; transform: translateY(8px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .m-rise { transition: none; }
+  .m-btn, .m-answer { transition: none; }
+}

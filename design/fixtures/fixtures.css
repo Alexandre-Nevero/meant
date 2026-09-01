@@ -1,0 +1,16 @@
+/* Fixtures load the real app/globals.css — the same rules the product uses — plus
+   local copies of the three faces (no next/font build step exists standalone here). */
+
+@import '../../app/globals.css';
+
+@font-face { font-family: 'Fraunces'; src: url('../../extension/fonts/fraunces.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Public Sans'; src: url('../../extension/fonts/public-sans.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Sometype Mono'; src: url('../../extension/fonts/sometype-mono.woff2') format('woff2'); font-weight: 400; }
+
+:root {
+  --m-display: 'Fraunces', Georgia, serif;
+  --m-body: 'Public Sans', system-ui, sans-serif;
+  --m-figure: 'Sometype Mono', ui-monospace, monospace;
+}
+
+body { min-height: 100vh; }

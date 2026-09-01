@@ -1,25 +1,24 @@
-import { auth } from '@/lib/auth/server'
+import { currentUserId } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { sql } from '@/lib/db'
+import { toBand } from '@/lib/band'
+import { toWords } from '@/lib/words'
+import { Band } from '../band'
 
 export const dynamic = 'force-dynamic'
 
-function durationMinutes(startedAt: string, endedAt: string | null) {
-  if (!endedAt) return null
-  return Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60000)
-}
-
 export default async function Dashboard() {
-  const { data: session } = await auth.getSession()
-  const userId = session?.user?.id
+  const userId = await currentUserId()
   if (!userId) redirect('/')
 
   const sessions = await sql`
-    select s.id, s.intention, s.started_at, s.ended_at, s.outcome,
-           (select e.domain from event e
-             where e.session_id = s.id and e.kind = 'attention' and e.domain is not null
-             group by e.domain order by sum(e.seconds) desc limit 1) as top_domain
+    select s.id, s.intention, s.ended_at, s.outcome,
+           coalesce(
+             (select json_agg(json_build_object('kind', e.kind, 'domain', e.domain, 'seconds', e.seconds))
+                from event e where e.session_id = s.id),
+             '[]'
+           ) as events
       from session s
      where s.user_id = ${userId}
      order by s.started_at desc
@@ -27,7 +26,7 @@ export default async function Dashboard() {
 
   if (sessions.length === 0) {
     return (
-      <div className="m-empty">
+      <div className="m-empty" data-surface="ledger">
         <p className="m-mark" data-state="empty" />
         <p className="m-meta">Nothing here yet. Finish something and it will be.</p>
       </div>
@@ -38,34 +37,32 @@ export default async function Dashboard() {
     select
       count(*) filter (where outcome = 'yes')::int as finished,
       count(*) filter (where outcome in ('yes', 'no'))::int as answered
-    from session where user_id = ${userId}`
+    from session
+    where user_id = ${userId} and started_at >= date_trunc('month', now())`
 
   return (
-    <>
-      <p className="m-rate">{counts.finished} of {counts.answered} finished</p>
+    <div data-surface="ledger">
+      <h1 className="m-rate">
+        {toWords(counts.answered)} this month. {toWords(counts.finished)} finished.
+      </h1>
 
-      {sessions.map((session) => {
-        const minutes = durationMinutes(session.started_at, session.ended_at)
-        return (
-          <div className="m-row" key={session.id}>
-            <p className="m-mark" data-state={minutes == null ? 'running' : 'ended'} />
-            {session.intention ? (
-              <Link className="m-sentence" href={`/review/${session.id}`}>
-                {session.intention}
-              </Link>
-            ) : (
-              <Link className="m-meta" href={`/review/${session.id}`}>
-                No intention given
-              </Link>
-            )}
-            <span className="m-meta">{minutes == null ? 'running' : `${minutes} min`}</span>
-            <span className="m-row-domain">{session.top_domain ?? '—'}</span>
-            <span className="m-meta">
-              {session.outcome === 'yes' ? 'Yes' : session.outcome === 'no' ? 'Not yet' : 'Unanswered'}
-            </span>
-          </div>
-        )
-      })}
-    </>
+      {sessions.map((s) => (
+        <div className="m-row" key={s.id}>
+          {s.intention ? (
+            <Link className="m-sentence" href={`/review/${s.id}`}>
+              {s.intention}
+            </Link>
+          ) : (
+            <Link className="m-meta" href={`/review/${s.id}`}>
+              No intention given
+            </Link>
+          )}
+          <Band segments={toBand(s.events as Parameters<typeof toBand>[0])} state={s.ended_at ? 'ended' : 'running'} />
+          <p className="m-meta" style={{ color: s.outcome === 'unanswered' ? undefined : 'var(--m-ink)' }}>
+            {s.outcome === 'yes' ? 'Yes' : s.outcome === 'no' ? 'Not yet' : 'Unanswered'}
+          </p>
+        </div>
+      ))}
+    </div>
   )
 }
