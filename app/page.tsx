@@ -1,16 +1,39 @@
 import { redirect } from 'next/navigation'
 import { currentUserId } from '@/lib/auth/session'
-import { AuthForm } from './auth-form'
 import { Band } from './band'
+import { BeatsScroll } from './beats-scroll'
 
 export const dynamic = 'force-dynamic'
 
+// The mark evolving across the loop (canvas: Landing.dc.html §beats), not four
+// matching cards — each beat's chip and band are a step further along than the last.
 const BEATS = [
-  { title: 'Say it.', body: 'Type what you mean to finish. Leaving it empty is allowed, and it is counted.' },
-  { title: 'Work.', body: 'Attention is recorded without you starting anything.' },
-  { title: 'Get blocked.', body: 'The sites you chose show your own sentence back to you. No bypass.' },
-  { title: 'Answer.', body: 'Did you? Yes or Not yet, weighted the same, forever.' },
-]
+  {
+    title: 'Say it.',
+    body: 'Type what you mean to finish. Leaving it empty is allowed, and it is counted.',
+    sentence: '',
+    segments: [{ kind: 'remainder', flex: 1 }],
+  },
+  {
+    title: 'Work.',
+    body: 'Attention is recorded without you starting anything.',
+    sentence: 'finish the supplier report',
+    segments: [{ kind: 'attention-1', flex: 20 }, { kind: 'attention-2', flex: 6 }, { kind: 'attention-3', flex: 2 }],
+  },
+  {
+    title: 'Get blocked.',
+    body: 'The sites you chose show your own sentence back to you. No bypass.',
+    sentence: 'finish the supplier report',
+    segments: [{ kind: 'attention-1', flex: 30 }, { kind: 'attention-2', flex: 8 }, { kind: 'attention-3', flex: 3 }],
+  },
+  {
+    title: 'Answer.',
+    body: 'Did you? Yes or Not yet, weighted the same, forever.',
+    sentence: 'finish the supplier report',
+    muted: true,
+    segments: [{ kind: 'attention-1', flex: 41 }, { kind: 'attention-2', flex: 12 }, { kind: 'attention-3', flex: 9 }],
+  },
+] as const
 
 const LEDGER_PREVIEW = [
   { intention: 'finish the supplier report', outcome: 'Not yet', segments: [{ kind: 'attention-1', flex: 41 }, { kind: 'attention-2', flex: 12 }, { kind: 'attention-3', flex: 9 }] },
@@ -47,25 +70,13 @@ export default async function Home() {
           avoid, and sits with you while you work. Every other focus app has to ask whether you
           were focused. This one is inside the tab, so it already knows.
         </p>
-        <div className="m-landing-auth" id="auth">
-          <p className="m-meta">Sign in or create an account to continue.</p>
-          <AuthForm />
+        <div className="m-landing-auth">
+          <a className="m-btn" data-variant="primary" href="/sign-in">Sign in</a>
           <p className="m-meta">Chrome and Edge. No installer, no admin rights.</p>
         </div>
       </section>
 
-      <section className="m-landing-beats">
-        <h2 className="m-landing-h2">Four steps and one sentence.</h2>
-        <div className="m-landing-beats-grid">
-          {BEATS.map((beat) => (
-            <div key={beat.title}>
-              <p className="m-mark" data-state="ended" />
-              <p className="m-landing-beat-title">{beat.title}</p>
-              <p className="m-meta">{beat.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <BeatsScroll beats={BEATS} />
 
       <section className="m-landing-prose">
         <h2 className="m-landing-h2">It reads the page. It stores nothing.</h2>
@@ -95,7 +106,7 @@ export default async function Home() {
           </div>
         ))}
         <div className="m-landing-auth">
-          <a className="m-btn" data-variant="primary" href="#auth">Sign in</a>
+          <a className="m-btn" data-variant="primary" href="/sign-in">Sign in</a>
           <p className="m-meta">Your sessions stay in your account. There is no team view.</p>
         </div>
       </section>

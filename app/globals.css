@@ -378,8 +378,10 @@ a { color: inherit; text-decoration: none; }
 [data-surface="landing"] .m-landing-hero > .m-mark { width: 100%; max-width: 880px; height: 48px; border-width: var(--m-stroke-loud); border-radius: 26px; }
 [data-surface="landing"] .m-landing-hero > .m-rate { max-width: 900px; }
 [data-surface="landing"] .m-landing-lede { margin: 0; font-size: 21px; line-height: 1.5; color: var(--m-ink-2); max-width: 56ch; }
-[data-surface="landing"] .m-landing-auth { display: flex; flex-direction: column; gap: 16px; max-width: 420px; }
-[data-surface="landing"] .m-landing-auth form { display: flex; flex-direction: column; gap: 12px; }
+
+/* .m-landing-auth is shared with /sign-in (data-surface="pair") — not landing-scoped */
+.m-landing-auth { display: flex; flex-direction: column; gap: 16px; max-width: 420px; }
+.m-landing-auth form { display: flex; flex-direction: column; gap: 12px; }
 
 [data-surface="landing"] .m-landing-h2 {
   margin: 0;
@@ -389,14 +391,39 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.08;
   letter-spacing: -0.03em;
 }
-[data-surface="landing"] .m-landing-beats { display: flex; flex-direction: column; gap: 56px; }
-[data-surface="landing"] .m-landing-beats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 40px;
+[data-surface="landing"] .m-landing-beats { display: flex; flex-direction: column; gap: 56px; overflow: hidden; }
+
+/* Fixed-width panels wider than the viewport can show four of — the overflow the
+ * scroll-jack scrubs through (app/beats-scroll.tsx). A `fr` grid that already fits
+ * the viewport has nothing to scroll; measured at exactly 1440px, it did not. */
+[data-surface="landing"] .m-landing-beats-grid { display: flex; gap: 56px; width: max-content; }
+[data-surface="landing"] .m-landing-beats-grid > div { display: flex; flex-direction: column; gap: 12px; width: 480px; flex: 0 0 auto; }
+
+/* the mini outline that holds each beat's sentence — same primitive as .m-sentence, smaller */
+[data-surface="landing"] .m-landing-beat-chip {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-say);
 }
-[data-surface="landing"] .m-landing-beats-grid > div { display: flex; flex-direction: column; gap: 12px; }
-[data-surface="landing"] .m-landing-beats-grid .m-mark { width: 28px; height: 12px; }
+[data-surface="landing"] .m-landing-beat-chip[data-muted="true"] { border-color: var(--m-ink-3); }
+[data-surface="landing"] .m-landing-beat-chip p {
+  margin: 0;
+  font-family: var(--m-display);
+  font-size: 12px;
+  letter-spacing: var(--m-tracking);
+  color: var(--m-ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* the beat's own band — real data (dead-ends.md), not the small decorative glyph */
+[data-surface="landing"] .m-landing-beats-grid .m-mark { width: 100%; height: 11px; }
+
 [data-surface="landing"] .m-landing-beat-title { margin: 0; font-family: var(--m-display); font-size: 24px; line-height: 1.2; }
 [data-surface="landing"] .m-landing-beats-grid .m-meta { font-size: 16px; line-height: 1.5; color: var(--m-ink-2); }
 
@@ -417,6 +444,15 @@ a { color: inherit; text-decoration: none; }
   transition: opacity var(--m-dur-rise) var(--m-ease), transform var(--m-dur-rise) var(--m-ease);
 }
 @starting-style { .m-rise { opacity: 0; transform: translateY(8px); } }
+
+/* the beats section's scroll-jack is desktop + motion-allowed only (matches the
+ * gsap.matchMedia() query in app/beats-scroll.tsx) — stack the track into a real
+ * single-column layout for anyone who won't get the pin, not a wide row clipped by
+ * the section's own overflow:hidden with no way to reach beats 3 and 4. */
+@media (max-width: 900px), (prefers-reduced-motion: reduce) {
+  [data-surface="landing"] .m-landing-beats-grid { display: flex; flex-direction: column; width: 100%; gap: 40px; }
+  [data-surface="landing"] .m-landing-beats-grid > div { width: 100%; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .m-rise { transition: none; }
