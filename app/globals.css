@@ -409,7 +409,18 @@ a { color: inherit; text-decoration: none; }
  * the narrative should have kept going. One pinned track now, six panels: the loop,
  * then what it reads, then what it never shows you — matching the single continuous
  * "chapter scroll" a Persuade surface earns (impeccable animate.md), not three. */
-[data-surface="landing"] .m-landing-story { display: flex; flex-direction: column; gap: 56px; overflow: hidden; }
+/* Pinning fixes this section at its own natural content height, not the viewport's —
+ * left unset, the panels sat jammed against the top with the rest of the screen bare
+ * for the whole scroll-through. min-height + centering matches the hero's own fix for
+ * the identical problem (a section shorter than the viewport it gets pinned inside). */
+[data-surface="landing"] .m-landing-story {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 56px;
+  min-height: calc(100vh - 76px);
+  overflow: hidden;
+}
 
 /* Fixed-width panels wider than the viewport can show all six of — the overflow the
  * scroll-jack scrubs through (app/scroll-story.tsx). A `fr` grid that already fits
