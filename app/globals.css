@@ -366,18 +366,29 @@ a { color: inherit; text-decoration: none; }
 [data-surface="landing"] header .m-mark { width: 34px; height: 16px; }
 
 [data-surface="landing"] .m-landing-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 56px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: center;
+  gap: 64px;
   padding-top: 112px;
   padding-bottom: 104px;
   min-height: calc(100vh - 76px);
-  justify-content: center;
   border-top: none;
 }
-[data-surface="landing"] .m-landing-hero > .m-mark { width: 100%; max-width: 880px; height: 48px; border-width: var(--m-stroke-loud); border-radius: 26px; }
-[data-surface="landing"] .m-landing-hero > .m-rate { max-width: 900px; }
+[data-surface="landing"] .m-landing-hero-copy { display: flex; flex-direction: column; gap: 56px; min-width: 0; }
+[data-surface="landing"] .m-landing-hero-copy > .m-mark { width: 100%; max-width: 880px; height: 48px; border-width: var(--m-stroke-loud); border-radius: 26px; }
+[data-surface="landing"] .m-landing-hero-copy > .m-rate { max-width: 900px; }
 [data-surface="landing"] .m-landing-lede { margin: 0; font-size: 21px; line-height: 1.5; color: var(--m-ink-2); max-width: 56ch; }
+
+/* the hero's one focal moment (animate.md): a live, breathing companion, cycling
+ * settled → drifting on a demo timer — the actual differentiator, not a mockup of
+ * it. Decorative only at this width; hidden below 900px rather than stacked awkwardly
+ * beneath the CTA, so it never competes with the one thing that must convert there. */
+[data-surface="landing"] .m-landing-hero-companion { display: flex; justify-content: center; }
+@media (max-width: 900px) {
+  [data-surface="landing"] .m-landing-hero { grid-template-columns: 1fr; }
+  [data-surface="landing"] .m-landing-hero-companion { display: none; }
+}
 
 /* .m-landing-auth is shared with /sign-in (data-surface="pair") — not landing-scoped */
 .m-landing-auth { display: flex; flex-direction: column; gap: 16px; max-width: 420px; }
@@ -391,16 +402,30 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.08;
   letter-spacing: -0.03em;
 }
-[data-surface="landing"] .m-landing-beats { display: flex; flex-direction: column; gap: 56px; overflow: hidden; }
 
-/* Fixed-width panels wider than the viewport can show four of — the overflow the
- * scroll-jack scrubs through (app/beats-scroll.tsx). A `fr` grid that already fits
+/* ---------- the scroll-story — four steps, then the two guarantees, one sequence ----------
+ * Previously three separate sections (a static 4-card grid, then two standalone prose
+ * blocks) that stopped the scroll-jack short and reverted to plain stacking right when
+ * the narrative should have kept going. One pinned track now, six panels: the loop,
+ * then what it reads, then what it never shows you — matching the single continuous
+ * "chapter scroll" a Persuade surface earns (impeccable animate.md), not three. */
+[data-surface="landing"] .m-landing-story { display: flex; flex-direction: column; gap: 56px; overflow: hidden; }
+
+/* Fixed-width panels wider than the viewport can show all six of — the overflow the
+ * scroll-jack scrubs through (app/scroll-story.tsx). A `fr` grid that already fits
  * the viewport has nothing to scroll; measured at exactly 1440px, it did not. */
-[data-surface="landing"] .m-landing-beats-grid { display: flex; gap: 56px; width: max-content; }
-[data-surface="landing"] .m-landing-beats-grid > div { display: flex; flex-direction: column; gap: 12px; width: 480px; flex: 0 0 auto; }
+[data-surface="landing"] .m-landing-story-track { display: flex; gap: 56px; width: max-content; }
+[data-surface="landing"] .m-landing-panel { display: flex; flex-direction: column; gap: 12px; flex: 0 0 auto; min-width: 0; }
+[data-surface="landing"] .m-landing-panel[data-kind="step"] { width: 480px; }
+[data-surface="landing"] .m-landing-panel[data-kind="statement"] { width: 560px; }
 
-/* the mini outline that holds each beat's sentence — same primitive as .m-sentence, smaller */
+/* the top zone: a step's chip holding its sentence, or a statement's bare brand mark —
+ * both 28px, so the six panels share one rhythm rather than reading as two templates */
+[data-surface="landing"] .m-landing-panel-top { height: 28px; display: flex; align-items: center; }
+[data-surface="landing"] .m-landing-panel-spacer { height: 11px; } /* holds a statement's title at the same baseline as a step's, under its unseen band */
+
 [data-surface="landing"] .m-landing-beat-chip {
+  width: 100%;
   height: 28px;
   display: flex;
   align-items: center;
@@ -421,19 +446,17 @@ a { color: inherit; text-decoration: none; }
   text-overflow: ellipsis;
 }
 
-/* the beat's own band — real data (dead-ends.md), not the small decorative glyph */
-[data-surface="landing"] .m-landing-beats-grid .m-mark { width: 100%; height: 11px; }
+/* a step's own band — real data (dead-ends.md), not the small decorative glyph */
+[data-surface="landing"] .m-landing-panel[data-kind="step"] > .m-mark { width: 100%; height: 11px; }
 
-[data-surface="landing"] .m-landing-beat-title { margin: 0; font-family: var(--m-display); font-size: 24px; line-height: 1.2; }
-[data-surface="landing"] .m-landing-beats-grid .m-meta { font-size: 16px; line-height: 1.5; color: var(--m-ink-2); }
-
-[data-surface="landing"] .m-landing-prose { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 80px; align-items: start; }
-[data-surface="landing"] .m-landing-prose .m-landing-h2 { font-size: clamp(36px, 3.4vw, 52px); }
-[data-surface="landing"] .m-landing-prose .m-meta { font-size: 19px; line-height: 1.6; color: var(--m-ink-2); padding-top: 10px; }
+[data-surface="landing"] .m-landing-panel-title { margin: 0; font-family: var(--m-display); font-size: 26px; line-height: 1.2; }
+[data-surface="landing"] .m-landing-panel .m-meta { font-size: 16px; line-height: 1.5; color: var(--m-ink-2); }
 
 [data-surface="landing"] .m-landing-ledger { display: flex; flex-direction: column; gap: 44px; margin-top: auto; }
+[data-surface="landing"] .m-landing-ledger-rows { display: flex; flex-direction: column; gap: 44px; } /* the reveal wrapper (app/ledger-reveal.tsx) — carries the row gap the section itself used to */
 [data-surface="landing"] .m-landing-ledger .m-row { grid-template-columns: minmax(0, 1fr) 240px 104px; gap: 32px; }
 [data-surface="landing"] .m-landing-ledger .m-row .m-mark { width: 100%; height: 11px; border: none; }
+[data-surface="landing"] .m-landing-ledger .m-row .m-row-bar { transform-origin: left; } /* the reveal scales these in, left to right — app/ledger-reveal.tsx */
 [data-surface="landing"] .m-landing-auth .m-btn { width: auto; padding: 19px 38px; }
 
 /* ---------- motion: entry ---------- */
@@ -445,16 +468,79 @@ a { color: inherit; text-decoration: none; }
 }
 @starting-style { .m-rise { opacity: 0; transform: translateY(8px); } }
 
-/* the beats section's scroll-jack is desktop + motion-allowed only (matches the
- * gsap.matchMedia() query in app/beats-scroll.tsx) — stack the track into a real
+/* the story's scroll-jack is desktop + motion-allowed only (matches the
+ * gsap.matchMedia() query in app/scroll-story.tsx) — stack the track into a real
  * single-column layout for anyone who won't get the pin, not a wide row clipped by
- * the section's own overflow:hidden with no way to reach beats 3 and 4. */
+ * the section's own overflow:hidden with no way to reach the later panels. */
 @media (max-width: 900px), (prefers-reduced-motion: reduce) {
-  [data-surface="landing"] .m-landing-beats-grid { display: flex; flex-direction: column; width: 100%; gap: 40px; }
-  [data-surface="landing"] .m-landing-beats-grid > div { width: 100%; }
+  [data-surface="landing"] .m-landing-story-track { display: flex; flex-direction: column; width: 100%; gap: 40px; }
+  [data-surface="landing"] .m-landing-panel[data-kind="step"],
+  [data-surface="landing"] .m-landing-panel[data-kind="statement"] { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .m-rise { transition: none; }
   .m-btn, .m-answer { transition: none; }
+}
+
+/* ---------- the companion — gaze, not a face ----------
+ * Ported verbatim from extension/meant.css for the hero demo (app/companion-demo.tsx).
+ * Three nodes, each one job: .m-companion-capsule (outline, ::after cross-fade only),
+ * .m-companion-gaze (position + size, an interruptible transform TRANSITION),
+ * .m-companion-aperture (aliveness — breathe/blink KEYFRAMES). Keyframes and a
+ * transform transition can't share one node, so aliveness and gaze position live on
+ * different elements — same reason as the extension original. */
+.m-companion-capsule {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-panel);
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+.m-companion-capsule::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: var(--m-stroke-loud) solid var(--m-ink);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--m-dur-rise) var(--m-ease);
+}
+.m-companion-capsule[data-state="drifting"]::after { opacity: 1; }
+
+.m-companion-gaze {
+  width: 44px;
+  height: 30px;
+  transform: translateY(27px) scaleY(0.333);
+  transition: transform var(--m-dur-rise) var(--m-ease);
+}
+.m-companion-capsule[data-state="drifting"] .m-companion-gaze {
+  transform: translateY(0) scaleY(1);
+}
+
+.m-companion-aperture {
+  width: 100%;
+  height: 100%;
+  background: var(--m-clay);
+  border-radius: 15px;
+  animation: m-breathe 4.2s ease-in-out infinite, m-blink 6.7s linear infinite;
+}
+
+@keyframes m-breathe {
+  0%, 100% { opacity: 0.92; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.06); }
+}
+@keyframes m-blink {
+  0%, 96%, 100% { opacity: 1; }
+  97.5% { opacity: 0.15; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-companion-aperture { animation: none; }
+  .m-companion-gaze, .m-companion-capsule::after { transition: none; }
 }

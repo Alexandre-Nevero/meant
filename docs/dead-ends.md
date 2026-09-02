@@ -102,3 +102,34 @@ the project root) fetched newer cached versions (1232/1234) that didn't satisfy 
 pinned dependency. Had to install from inside `~/gstack` itself, where the pinned
 `playwright-core` version lives, so the install resolves the exact revision the tool
 was built against.
+
+### GSAP `pinSpacing` silently disables itself when the pinned element's parent is `display:flex`
+
+Built the landing scroll-jack (`app/scroll-story.tsx`) with `ScrollTrigger.create({
+pin: true, scrub: 1, end: () => '+='+distance(), animation: gsap.to(track, {x: () =>
+-distance(), ease: 'none'}) })`. Distance computed correctly (confirmed 744px via a
+temporary `console.log`), `ScrollTrigger.getAll()[0]` showed the right `start`/`end`
+pixel range — but `document.querySelector('.pin-spacer').style.height` never grew past
+the section's own natural height. Scrolling to the reported `end` position was
+impossible: the document simply didn't have that much extra height, because the page's
+own root (`[data-surface="landing"] { display:flex; flex-direction:column }`) is the
+pinned section's parent.
+
+Read `node_modules/gsap/dist/ScrollTrigger.js` directly (~line 1825):
+```js
+pinSpacing === false || pinSpacing === _margin || (pinSpacing = !pinSpacing && pin.parentNode && pin.parentNode.style && _getComputedStyle(pin.parentNode).display === "flex" ? false : _padding);
+```
+When `pinSpacing` isn't explicitly set and the pinned element's parent computes to
+`display:flex`, GSAP defaults it to `false` — no spacer growth, pin has nothing to
+scroll through, and nothing in the console or the ScrollTrigger instance itself says so
+(`start`/`end` still report the correct intended range; only the spacer disagrees).
+
+**Fix:** pass `pinSpacing: true` explicitly whenever the pinned element's parent is a
+flex (or likely grid) container. Cheap, and there's no warning to catch it — the only
+signal is scrolling to the reported `end` and finding you can't reach it.
+
+Also worth keeping from the same build: `end` (a function) re-evaluates on
+`ScrollTrigger.refresh()` by default, but a tween's own dynamic property functions
+(`x: () => ...`) do not, unless `invalidateOnRefresh: true` is set on the trigger — a
+plain captured `const distance = …` computed once at mount will silently go stale the
+moment a web font swap reflows the track after first paint.

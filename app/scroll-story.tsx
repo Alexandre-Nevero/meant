@@ -9,21 +9,30 @@ import type { Segment } from '@/lib/band'
 
 gsap.registerPlugin(ScrollTrigger)
 
-type Beat = {
+type StepPanel = {
+  kind: 'step'
   title: string
   body: string
   sentence: string
   muted?: boolean
   segments: readonly Segment[]
 }
+type StatementPanel = { kind: 'statement'; title: string; body: string }
+export type Panel = StepPanel | StatementPanel
 
-/** The four beats, evolving across the loop (canvas: Landing.dc.html §beats) — pinned
- * and scrubbed horizontally, desktop and motion-allowed only. gsap.matchMedia() owns
- * the split, matching the CSS breakpoint below: a narrow viewport (≤900px) or
- * `prefers-reduced-motion` gets the plain stacked column with no pin and no transform
- * — the full readable state, not a degraded one (ui-ux-pro-max: scroll-jacking is
- * High-severity motion-sickness risk without this fallback). */
-export function BeatsScroll({ beats }: { beats: readonly Beat[] }) {
+/** The loop, then the two guarantees — one pinned, horizontally scrubbed sequence
+ * (canvas: Landing.dc.html §beats, extended). Previously three separate sections: a
+ * static 4-card row, then two standalone prose blocks the scroll-jack released into.
+ * Persuade mode earns one rehearsed focal sequence over repeated section reveals
+ * (impeccable animate.md) — so the two guarantees are panels 5 and 6 of the same
+ * track, not their own static stops.
+ *
+ * Desktop and motion-allowed only: gsap.matchMedia() gates it, matching the CSS
+ * breakpoint in globals.css. A narrow viewport or `prefers-reduced-motion` gets the
+ * plain stacked column with no pin and no transform — the full readable state, not a
+ * degraded one (ui-ux-pro-max: scroll-jacking is High-severity motion-sickness risk
+ * without this fallback). */
+export function ScrollStory({ panels }: { panels: readonly Panel[] }) {
   const section = useRef<HTMLElement>(null)
   const track = useRef<HTMLDivElement>(null)
 
@@ -59,6 +68,10 @@ export function BeatsScroll({ beats }: { beats: readonly Beat[] }) {
           scrub: 1,
           end: () => `+=${distance()}`,
           animation: gsap.to(track.current, { x: () => -distance(), ease: 'none' }),
+          // A real window resize (not just this effect's own first measurement)
+          // must re-run `end` AND re-resolve the tween's own function-based `x` —
+          // ScrollTrigger's default resize refresh only does the former.
+          invalidateOnRefresh: true,
         })
 
         // Fraunces finishes loading after this effect's first measurement; refresh
@@ -70,19 +83,30 @@ export function BeatsScroll({ beats }: { beats: readonly Beat[] }) {
   )
 
   return (
-    <section className="m-landing-beats" ref={section}>
+    <section className="m-landing-story" ref={section}>
       <h2 className="m-landing-h2">Four steps and one sentence.</h2>
-      <div className="m-landing-beats-grid" ref={track}>
-        {beats.map((beat) => (
-          <div key={beat.title}>
-            <div className="m-landing-beat-chip" data-muted={beat.muted ? 'true' : undefined}>
-              {beat.sentence && <p>{beat.sentence}</p>}
+      <div className="m-landing-story-track" ref={track}>
+        {panels.map((panel) =>
+          panel.kind === 'step' ? (
+            <div className="m-landing-panel" data-kind="step" key={panel.title}>
+              <div className="m-landing-beat-chip" data-muted={panel.muted ? 'true' : undefined}>
+                {panel.sentence && <p>{panel.sentence}</p>}
+              </div>
+              <Band segments={[...panel.segments]} />
+              <p className="m-landing-panel-title">{panel.title}</p>
+              <p className="m-meta">{panel.body}</p>
             </div>
-            <Band segments={[...beat.segments]} />
-            <p className="m-landing-beat-title">{beat.title}</p>
-            <p className="m-meta">{beat.body}</p>
-          </div>
-        ))}
+          ) : (
+            <div className="m-landing-panel" data-kind="statement" key={panel.title}>
+              <div className="m-landing-panel-top">
+                <p className="m-mark" data-state="ended" />
+              </div>
+              <div className="m-landing-panel-spacer" aria-hidden="true" />
+              <p className="m-landing-panel-title">{panel.title}</p>
+              <p className="m-meta">{panel.body}</p>
+            </div>
+          ),
+        )}
       </div>
     </section>
   )
