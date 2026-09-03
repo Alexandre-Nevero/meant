@@ -523,7 +523,7 @@ One canonical example per recurring operation. Every sample carries the version 
 | Error handling | {{ERRORS | e.g. "Fail loudly in dev, gracefully in prod; never swallow an error"}} |
 | Logging | {{LOGGING}} |
 | Tests: what and where | {{TESTS}} |
-| Commit / branch style | {{GIT}} |
+| Commit / branch style | Conventional commits (`feat(scope):`, `fix(scope):`, `docs:`, `chore:`, ...). **Two remotes, both required:** `origin` (org, `ED3N-Ventures-Interns/meant`) and `personal` (`Alexandre-Nevero/meant`). Push every branch you intend to keep to both — a push to only one is incomplete. Forking is disabled on the org repo, so `personal` is a plain, separately-created repo sharing history from the point it was seeded, not a GitHub fork. |
 | Formatting / lint | {{LINT}} |
 
 ### E. Guardrails during implementation
