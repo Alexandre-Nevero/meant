@@ -29,6 +29,7 @@ export default async function Dashboard() {
       <div className="m-empty" data-surface="ledger">
         <p className="m-mark" data-state="empty" />
         <p className="m-meta">Nothing here yet. Finish something and it will be.</p>
+        <Link className="m-meta" href="/setup">Set up your sites</Link>
       </div>
     )
   }
@@ -45,6 +46,7 @@ export default async function Dashboard() {
       <h1 className="m-rate">
         {toWords(counts.answered)} this month. {toWords(counts.finished)} finished.
       </h1>
+      <Link className="m-meta" href="/setup">Set up your sites</Link>
 
       {sessions.map((s) => (
         <div className="m-row" key={s.id}>

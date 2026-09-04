@@ -135,6 +135,7 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--m-r-block);
   padding: 44px 56px;
 }
+[data-surface="setup"] .m-sentence { font-size: 26px; }
 [data-surface="pair"] .m-sentence {
   display: block;
   font-family: var(--m-figure);
@@ -179,6 +180,25 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--m-r-block);
   padding: 44px 56px;
 }
+
+/* ---------- .m-chip-row / .m-chip — an add/remove set of short tokens ----------
+   Pre-existing exception to the 13-class contract (docs/design-toolkit.md §8), ported
+   verbatim from extension/meant.css: /setup's site lists are the same shape of data
+   (a short, unordered, removable hostname) as the popup's blocklist chips, so it reuses
+   the established form rather than forking a second one for the same kind of thing. */
+
+.m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.m-chip {
+  padding: 8px 14px;
+  font-family: var(--m-body);
+  font-size: 13px;
+  color: var(--m-ink-3);
+  background: transparent;
+  border: var(--m-stroke-hair) solid var(--m-edge);
+  border-radius: var(--m-r-chip);
+  cursor: pointer;
+}
+.m-chip:focus-visible { outline: var(--m-stroke) solid var(--m-clay); outline-offset: 2px; }
 
 /* ---------- .m-btn[data-variant] — buttons ---------- */
 
@@ -321,6 +341,15 @@ a { color: inherit; text-decoration: none; }
   min-height: 100vh;
   padding: 24px;
   text-align: center;
+}
+
+[data-surface="setup"] {
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 64px 24px;
 }
 
 /* ---------- .m-empty — nothing here yet ---------- */

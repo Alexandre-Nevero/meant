@@ -69,6 +69,12 @@ export default function Pair() {
       <p className="m-meta">
         Expires at {new Date(pairing.expiresAt).toLocaleTimeString()}.
       </p>
+      {/* The claim happens in the extension, a separate surface this tab can't observe
+          without polling — so "continue" is a step the person takes once they've pasted
+          the code, not an auto-redirect on a success this page has no way to detect. */}
+      <a className="m-btn" data-variant="quiet" href="/setup">
+        Continue to setup
+      </a>
     </div>
   )
 }
