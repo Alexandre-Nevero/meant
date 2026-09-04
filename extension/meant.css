@@ -56,6 +56,12 @@ button, input, select { font: inherit; color: inherit; }
   gap: 36px;
 }
 [data-surface="companion"] #root { padding: 26px 22px; gap: 26px; min-height: 100vh; }
+/* Task 6: two more row-groups (cycle, site chips) had to fit under Chrome's ~600px popup
+ * ceiling, so the popup's own spacing tightened below the global default above — scoped here,
+ * not on the unscoped #root rule, so [data-surface="companion"] (the side panel) and
+ * [data-surface="block"] — both already fully overridden above — stay untouched, and no other
+ * future surface silently inherits a popup-specific number. */
+[data-surface="popup"] #root { gap: 18px; padding: 20px; }
 
 /* ---------- .m-mark — the mark: a small glyph when empty, a real band when it holds data ---------- */
 
@@ -109,7 +115,7 @@ button, input, select { font: inherit; color: inherit; }
   border-radius: var(--m-r-field);
   padding: 16px 22px;
 }
-[data-surface="popup"] .m-sentence { font-size: 20px; min-height: 84px; }
+[data-surface="popup"] .m-sentence { font-size: 20px; min-height: 76px; }
 [data-surface="block"] .m-sentence {
   font-size: 44px;
   line-height: 1.2;
@@ -146,6 +152,9 @@ button, input, select { font: inherit; color: inherit; }
   min-height: 84px;
 }
 .m-field::placeholder { color: var(--m-ink-3); font-family: var(--m-body); font-size: 15px; }
+/* Task 6: same popup-only tightening as #root above — the sentence field is the one that
+ * pushed the fixture past budget (design/canvas/PopupIdle.dc.html: 84px → 76px). */
+[data-surface="popup"] .m-field { min-height: 76px; }
 .m-field[data-pairing-code="true"] {
   font-family: var(--m-figure);
   font-size: 24px;
@@ -171,6 +180,13 @@ button, input, select { font: inherit; color: inherit; }
 .m-chip[aria-pressed="true"] { color: var(--m-ink); border-color: var(--m-ink); }
 .m-chip[data-mono="true"] { font-family: var(--m-figure); font-size: 12px; }
 
+/* Task 6: "where it happens" and "blocking N" read as one related cluster (the site chips)
+ * rather than two unrelated rows that happen to be adjacent — a tighter internal gap than the
+ * rest of #root's row-groups, per design/canvas/PopupIdle.dc.html. Popup-only: no other
+ * surface uses these. */
+[data-surface="popup"] .m-chip-cluster { display: flex; flex-direction: column; gap: 12px; }
+[data-surface="popup"] .m-chip-group { display: flex; flex-direction: column; gap: 7px; }
+
 /* ---------- .m-btn — no animation on this surface, opened dozens of times a day ---------- */
 
 .m-btn {
@@ -189,6 +205,9 @@ button, input, select { font: inherit; color: inherit; }
 .m-btn[data-variant="primary"] { background: var(--m-ink); color: var(--m-ground); margin-top: auto; }
 .m-btn[data-variant="quiet"] { background: transparent; color: var(--m-ink); border: var(--m-stroke-hair) solid var(--m-ink); }
 .m-btn:disabled { opacity: 0.5; cursor: default; }
+/* Task 6: same popup-only tightening as #root and .m-field above (Start button padding
+ * 16px → 14px, design/canvas/PopupIdle.dc.html). */
+[data-surface="popup"] .m-btn { padding: 14px 0; }
 
 /* ---------- .m-row / .m-row-bar — the step list ---------- */
 
