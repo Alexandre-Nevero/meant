@@ -38,13 +38,49 @@ path from the planning session; that copy is a session artifact, not the source 
 | Task | Status | Commit | Evidence |
 |---|---|---|---|
 | 1 | **complete** | `66cd8ee..7c19205` | 11/11 tests pass; review clean; `sw.js` untouched |
-| 2–20 | not started | — | — |
+| 2 | **complete** | `0e79ed9..c1577d1` | 13/13 tests pass; spec ✅, quality Approved; 1 plan-mandated finding accepted, 1 Minor parked (see below) |
+| 3 | **complete** | `c1577d1..a3f4b0d` | 14/14 tests pass; spec ✅, quality Approved; 3 Minor deferred to final review |
+| 4 | **complete** | `a3f4b0d..5ead97a` | 1 fix round; migration verified against live dev DB; 14/14 tests; 2 Minor deferred |
+| 5 | **complete** | `5ead97a..79d9364` | 1 fix round (clay-on-chip); 24/24 tests; live-DB round-trip verified via device token; browser click-through NOT verified |
+| 6 | **complete** | `79d9364..aadeb5f` | 2 fix rounds; 40/40 tests; live-DB PATCH round-trip verified; real popup NOT physically loaded |
+| 7–20 | not started | — | — |
 
-**Nothing in the running extension has changed yet.** Task 1 added a pure module and its tests;
-`extension/sw.js` still uses the original `attribute()` and `settleFocus()`. Task 2 is the first
-task with a visible behaviour change, and its check is physical: lock the screen for ~70 seconds
-mid-session with Chrome focused, then read the review. Today that time is credited to whatever
-tab was open; after Task 2 it reads `away`.
+**Task 2 shipped.** `extension/sw.js` now detects away via `chrome.idle` instead of window
+focus alone, with the Step 3b `TICK` backstop closing the idle-but-audible hole. Physical
+verification (install prompt, lock-screen check, video/audio hand-check) was **not** performed —
+no browser/OS was available to the implementer subagent. Do this by hand before treating Task 2
+as fully proven: load `extension/` unpacked, lock the screen ~70s mid-session with Chrome
+focused, confirm the review shows an `away` row of roughly the locked duration.
+
+### Task 2 findings, and a live redesign that changes Task 6/16's starting point
+
+The task review found one **Important, plan-mandated** issue: `transition()` — exactly as this
+plan's own brief specifies it — never calls `updateCompanion()`, so the companion's drift signal
+goes fully dark (stuck at `settled`) from this commit until whichever later task rewires it.
+Verified independently (grep: zero call sites remain). **Adjudicated: accepted, no code change**
+— see below for why. One Minor (an imprecise code comment, not a functional bug) is parked for
+the final whole-branch review.
+
+**While this was pending, a live redesign of the companion ("Orbit") was confirmed** — draggable,
+present on every tab, cross-tab persistent, still signals drift/focus/return but through new
+icon-driven interactions (tap/hold/double-tap). A reference image is saved at
+`design/references/companion-orbit-proposal.png`. It is **not** wired into
+`design/canvas/*.dc.html` — `Companion.dc.html` remains the current visual truth — this is an
+unreviewed proposal pending Task 6/16 sign-off.
+
+Given that redesign, the Task 2 finding was ruled moot rather than fix-loop-worthy: the entire
+`updateCompanion`/`isKnownDistraction`/`DRIFT_*` path in `sw.js` is legacy and gets replaced
+wholesale by whatever Task 6/16 build for Orbit, so patching it back on for the ~6 intervening
+tasks would be throwaway work.
+
+**⚠️ Before Task 6 or Task 16 touch any popup/companion code**, the artboard sign-off must
+explicitly resolve: the Orbit reference visibly shows a focus-time **percentage** ("72% in
+flow"), a return-rate **percentage with a progress ring** ("67% came back"), and a drift
+**count**, all of which `CLAUDE.md`'s *"No total-hours figure, no percentage, no score, on any
+surface"* currently forbids outright — and a step checklist with checkmarks, which **D38**
+explicitly *cuts, not defers*, for three stated reasons. Task 6/16 must decide, with the human,
+whether Orbit supersedes those invariants and D38, or whether the reference needs to be pared
+back to match them, **before** any code lands. Do not silently pick one.
 
 ### What Task 1 actually shipped
 
@@ -450,10 +486,16 @@ network. Drift marking stays review-only, per `I2` and `design.md` §7.
 | `app/page.tsx` | Delete `LEDGER_PREVIEW` and the hardcoded headline |
 | `lib/band.ts` | `drift` and `break` segment kinds |
 
-**Reuse, do not rewrite:** `extension/api.js#post`, `sw.js#flush`, `sw.js#installRules`,
+**Reuse, do not rewrite:** `extension/api.js#post`, `sw.js#flush`,
 `popup.js#chipGroup` (extend to multi-select, don't replace), `lib/db.ts#sql`,
 `lib/device-auth.ts#deviceFromRequest`, `lib/auth/session.ts#currentUserId` (already catches the
 stale-cookie throw, `D24`), `lib/band.ts#toBand`, `app/band.tsx#Band`, `lib/words.ts#toWords`.
+**`sw.js#installRules` stays untouched through Tasks 3-5** — its `BLOCKLISTS[name] ?? []`
+lookup keeps resolving the category tokens the (still unmodified) popup sends. It is **not**
+"reuse forever": whichever task first has the popup send literal per-domain chips (Task 6 or 7,
+once D40's carve output lands) must change it to treat an unrecognised token as a literal
+domain — see Task 3's compatibility-bridge note, which exists precisely so that task doesn't
+have to rediscover this.
 
 ---
 
@@ -641,7 +683,7 @@ becomes its own kind so a rest stops looking like a distraction."
 
 ---
 
-## Task 2: Honest away detection via chrome.idle
+## Task 2: Honest away detection via chrome.idle  ✅ COMPLETE (`c1577d1`, 13/13)
 
 **Files:** modify `extension/manifest.json`, `extension/sw.js`.
 
@@ -661,12 +703,12 @@ async function transition({ mode, domain, at = Date.now() })   // -> the updated
 and `session` in `chrome.storage.local` gains `slice` (a `Slice`) and `dwellSince` (ms epoch).
 **`transition()` is deliberately self-contained** — Tasks 8 and 10 each insert one line into it.
 
-- [ ] **Step 1: Permission**
+- [x] **Step 1: Permission**
 
 `permissions` becomes `["declarativeNetRequest","tabs","storage","alarms","sidePanel","idle"]`.
 `idle` adds **no** install warning (verified). The install prompt is unchanged by this task.
 
-- [ ] **Step 2: One reducer replaces `attribute` and `settleFocus`**
+- [x] **Step 2: One reducer replaces `attribute` and `settleFocus`**
 
 Delete `attribute()` (`sw.js:180-198`), `settleFocus()` (`202-221`), and `session.unfocusedSince`.
 
@@ -694,7 +736,7 @@ an undefined function for six tasks, which breaks `context.md` §7 rule 3 ("fail
 may block the steps after it"). After this task the extension must load and track correctly on
 its own.
 
-- [ ] **Step 3: An exhaustive, pure mapping from chrome.idle's states to our modes**
+- [x] **Step 3: An exhaustive, pure mapping from chrome.idle's states to our modes**
 
 `chrome.idle.onStateChanged` fires **only on transitions**, never repeatedly while idle, and
 `locked` can arrive with no prior `idle` *(verified: developer.chrome.com — idle, 2026-09-03)*.
@@ -748,7 +790,7 @@ chrome.idle.onStateChanged.addListener(async (state) => {
 })
 ```
 
-- [ ] **Step 3b: The tick backstop — without this, D27 reintroduces the bug it was written to fix**
+- [x] **Step 3b: The tick backstop — without this, D27 reintroduces the bug it was written to fix**
 
 `onStateChanged` fires only on transitions. So when Step 3 returns `null` for idle-but-audible,
 **no further idle event will ever arrive.** Start a 40-minute video, walk away: `idle` fires at
@@ -773,17 +815,18 @@ if (idle !== 'active') {
 do not touch the machine, and let it finish. **Pass:** within one tick of the audio stopping,
 the session flips to `away`. Before Step 3b it would have accrued attention indefinitely.
 
-- [ ] **Step 4: Simplify the focus handler**
+- [x] **Step 4: Simplify the focus handler**
 
 `WINDOW_ID_NONE` → `transition({mode:'away', domain:null})` (the carry handles short gaps);
 otherwise `transition({mode:'attention', domain: await activeDomain()})`.
 
-- [ ] **Step 5: Repoint the remaining call sites**
+- [x] **Step 5: Repoint the remaining call sites**
 
 `tabs.onActivated`, `tabs.onUpdated`, `endSession`'s final flush → `transition`. The `TICK`
 handler drops `settleFocus()` and keeps `flush()` plus the `plannedMinutes` check.
 
-- [ ] **Step 6: Verify — the visible check**
+- [~] **Step 6: Verify — the visible check** — NOT physically performed (no browser/OS
+  available during automated execution). Do this by hand before trusting Task 2 fully.
 
 Load `extension/` unpacked. **Read the install prompt: two warnings only, no third line.** Start
 a session, sit on one tab 30s, lock the screen 70s **with Chrome focused**, return, stop, open
@@ -791,7 +834,7 @@ the review.
 **Pass:** an `away` row of roughly the locked duration. Before this task it showed zero away and
 credited the whole period to the open tab.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add extension/manifest.json extension/sw.js
@@ -804,7 +847,7 @@ attention, not away."
 
 ---
 
-## Task 3: Local-first session start
+## Task 3: Local-first session start  ✅ COMPLETE (`a3f4b0d`, 14/14)
 
 `startSession` (`sw.js:50-85`) awaits `POST /api/sessions` and bails if it fails, so a session
 cannot start offline — while in-session events queue happily. That also puts the network in the
@@ -828,7 +871,7 @@ corrected, judged, tally`. **Later tasks read these exact names; do not rename t
 `POST /api/sessions` accepts a client-supplied `id` and is an idempotent upsert.
 `installRules(domains)` now takes **resolved domains**, not category names.
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```js
 // test/session-id.test.js
@@ -839,7 +882,7 @@ test('a client-generated session id is a v4 uuid', () => {
 })
 ```
 
-- [ ] **Step 2: Make `startSession` local-first**
+- [x] **Step 2: Make `startSession` local-first**
 
 ```js
 export async function startSession({ intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle }) {
@@ -877,28 +920,51 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
 }
 ```
 
-Note `installRules` now takes **domains**, not category names — D40 resolves categories to a
-domain set in the popup, so the worker installs exactly what the user approved.
+**Compatibility bridge — until Task 6 rewires the popup.** `extension/popup.js` still sends the
+old message shape (`{type:'start', intention, plannedMinutes, blocklist}`) until Task 6 lands.
+Without a bridge, `blockedDomains` arrives `undefined`, `installRules(undefined)` installs zero
+rules, and Step 5's own "block page works" check fails — for every session started through the
+real UI, for as many tasks as it takes Task 6 to land. Bridge it in the
+`chrome.runtime.onMessage` listener:
 
-- [ ] **Step 3: Idempotent upsert**
+```js
+if (message?.type === 'start') {
+  const blockedDomains = message.blockedDomains ?? message.blocklist ?? []
+  sendResponse(await startSession({ ...message, blockedDomains }))
+}
+```
+
+`installRules`'s current `BLOCKLISTS[name] ?? []` lookup is **unchanged this task** — it keeps
+resolving the category tokens the old popup sends (`'social'`, `'video'`, `'news'`), so blocking
+keeps working exactly as it does today. `installRules` itself is not yet ready for literal
+per-domain input eventually — `BLOCKLISTS['x.com']` is undefined, so a caller passing already-
+resolved domains (D40's design) would just as silently install zero rules. Whichever task first
+has the popup send real per-domain chips (Task 6 or 7, once D40's carve output lands) must also
+change `installRules` to
+`[...new Set((input ?? []).flatMap((v) => BLOCKLISTS[v] ?? [v]))]` — treat anything not a known
+category as a literal domain — before switching the popup over. Recorded here, at the point the
+gap was found, so that task doesn't reintroduce the same silent-failure shape.
+
+- [x] **Step 3: Idempotent upsert**
 
 Validate `id` as a UUID (client-supplied, therefore untrusted) and 400 on malformed. Then
 `insert ... on conflict (id) do nothing` — **not** `do update`: a replayed queued start must not
 overwrite an `ended_at` a later `PATCH` already wrote.
 
-- [ ] **Step 4: Drain the queue when no session runs**
+- [x] **Step 4: Drain the queue when no session runs**
 
 `chrome.runtime.onStartup.addListener(flush)` and `chrome.runtime.onInstalled.addListener(flush)`,
 plus a final `flush()` in `endSession`'s `finally`. Today the alarm only exists during a session,
 so a queued session-end `PATCH` waits for the *next* session.
 
-- [ ] **Step 5: Verify offline start**
+- [~] **Step 5: Verify offline start** — NOT physically performed (no browser available during
+  automated execution). Do this by hand before trusting Task 3 fully.
 
 DevTools → service worker → **Offline**. Start a session. **Pass:** popup shows running
 immediately, block page works. Switch tabs, stop, go online, wait a tick. **Pass:** the dashboard
 shows the offline session with its events.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add extension/sw.js app/api/sessions/route.ts test/session-id.test.js
@@ -911,7 +977,7 @@ upsert keyed on that id."
 
 ---
 
-## Task 4: Migrations, and the tables the rest of the plan needs
+## Task 4: Migrations, and the tables the rest of the plan needs  ✅ COMPLETE (`5ead97a`, 14/14)
 
 **Files:** create `lib/migrate.mjs`, `lib/migrations/001-baseline.sql`,
 `lib/migrations/002-drift.sql`, `lib/thresholds.ts`; modify `package.json`, `lib/schema.sql`.
@@ -928,14 +994,14 @@ SIGNAL_WINDOW_MS, MEMORY_MIN_EVIDENCE, MEMORY_MIN_AGREEMENT, CONFIDENCE_FLOOR,
 DAILY_JUDGMENT_CAP, CYCLE_PRESETS, PATTERN_MIN_SESSIONS`.
 `memory.value` for `kind='domain_class'` is `{work_n, distract_n, neutral_n, last_at}`.
 
-- [ ] **Step 1: `001-baseline.sql`**
+- [x] **Step 1: `001-baseline.sql`**
 
 Copy `lib/schema.sql` verbatim with `create table if not exists`, and **name** the indexes
 (`session_user_started_idx`, `event_session_idx`) so `create index if not exists` works — the
 existing bare `create index on` has no name and cannot be made idempotent. Safe against the live
 database.
 
-- [ ] **Step 2: `002-drift.sql`**
+- [x] **Step 2: `002-drift.sql`**
 
 ```sql
 alter table session add column if not exists work_sites      text[] not null default '{}';
@@ -987,7 +1053,10 @@ to know which were shown; and `gate` records *why* a distract resolution stayed 
 the false-positive instrument — it is how you learn that 80% of suppressed signals were dwell
 misses. And there is no `task` table, per D38.
 
-- [ ] **Step 3: `lib/migrate.mjs`**
+- [x] **Step 3: `lib/migrate.mjs`** — the brief's `split(/;\s*$/m)` had a real bug (missed a
+  `;` followed by a trailing same-line comment, and separately a `;` embedded inside a
+  comment); shipped as strip-all-`--`-comments-then-split-on-`;` instead, closing the whole
+  class rather than patching one regex edge case. Verified against the live DB.
 
 ```js
 import { readdir, readFile } from 'node:fs/promises'
@@ -1015,7 +1084,7 @@ for (const name of files) {
 the correct non-tagged escape hatch in the installed version, and whether the HTTP driver accepts
 multi-statement strings — if it does, drop the split. Do not guess.
 
-- [ ] **Step 4: `lib/thresholds.ts`**
+- [x] **Step 4: `lib/thresholds.ts`**
 
 ```ts
 // Each constant names the open question it provisionally answers. Changing one is a product
@@ -1048,21 +1117,22 @@ export const CYCLE_PRESETS = [{ work: 25, break: 5 }, { work: 50, break: 10 }] a
 export const PATTERN_MIN_SESSIONS = 8
 ```
 
-- [ ] **Step 5: `lib/schema.sql` becomes a pointer**
+- [x] **Step 5: `lib/schema.sql` becomes a pointer**
 
 ```sql
 -- Superseded by lib/migrations/. Run `npm run migrate`.
 -- Kept as a path so old links resolve; the baseline lives in 001-baseline.sql (D18).
 ```
 
-- [ ] **Step 6: Run twice, then check the guarantee**
+- [x] **Step 6: Run twice, then check the guarantee** — run against the live dev DB in
+  `.env.local`; `judgment` guarantee check: 0 matches for title/extract.
 
 ```bash
 npm run migrate && npm run migrate
 psql "$DATABASE_URL" -c "\d judgment" | grep -icE "title|extract"   # must be 0
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add lib/migrate.mjs lib/migrations lib/thresholds.ts lib/schema.sql package.json
@@ -1075,7 +1145,7 @@ table. Sessions gain cycle lengths and an approved domain set."
 
 ---
 
-## Task 5: Setup — the two standing lists
+## Task 5: Setup — the two standing lists  ✅ COMPLETE (`79d9364`, 24/24)
 
 **Files:** create `app/setup/page.tsx`, `app/api/lists/route.ts`; modify `app/dashboard/page.tsx`
 (a quiet link), `app/pair/page.tsx` (continue into setup).
@@ -1097,7 +1167,7 @@ PUT  /api/lists  <- same shape
 plus an exported `normalizeDomain(input)` -> bare lowercase hostname, and `memory` rows with
 `kind='list'`, `key='work_sites'|'distract_sites'`, `value={domains: string[]}`.
 
-- [ ] **Step 1: The screen, in the product's voice**
+- [x] **Step 1: The screen, in the product's voice**
 
 > **Where do you work?** The sites your actual work happens on. *(input + chips)*
 >
@@ -1108,24 +1178,26 @@ plus an exported `normalizeDomain(input)` -> bare lowercase hostname, and `memor
 Copy rules from `design-toolkit.md` §7: second person, present tense, lowercase for the user's own
 words. Never "productive" / "unproductive". Never "distraction score".
 
-- [ ] **Step 2: Store in `memory`, not a new table**
+- [x] **Step 2: Store in `memory`, not a new table**
 
 `kind='list'`, `key='work_sites' | 'distract_sites'`, `value={domains: string[]}`. They are
 user-level facts that outlive sessions, which is what `memory` is for, and it avoids an eighth
 table (`SDD` §3.1 keeps the count under ~12 deliberately).
 
-- [ ] **Step 3: Normalise on write, and test the normaliser**
+- [x] **Step 3: Normalise on write, and test the normaliser**
 
 Strip scheme, `www.`, path, port; lowercase. `https://www.Docs.Google.com/x` →
 `docs.google.com`. Reject anything without a dot. **Unit-test it** — it is the seam where user
 input meets hostname matching, and a mismatch here silently breaks resolution with no error.
 
-- [ ] **Step 4: Verify**
+- [~] **Step 4: Verify** — device-token GET/PUT round-trip verified against the live dev DB;
+  the session-cookie half and the full browser click-through (pair → setup → dashboard) were
+  NOT physically driven. Do this by hand before trusting Task 5 fully.
 
 Fresh account → pair → setup → fill both → dashboard. **Pass:** `GET /api/lists` with a device
 token returns both. Reload setup; the chips are still there.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/setup app/api/lists app/dashboard app/pair
@@ -1137,14 +1209,35 @@ a standing answer that resolves on its own — the asymmetry is deliberate."
 
 ---
 
-## Task 6: The popup, idle — three questions and a cycle
+## Task 6: The popup, idle — three questions and a cycle  ✅ COMPLETE (`aadeb5f`, 40/40)
 
 **The artboard comes first.** `design/canvas/PopupIdle.dc.html` is visual truth (360×420, five
 stacked blocks, `Start` pinned with `margin-top:auto`). This adds two rows. That is a change to
 visual truth and must not be slipped in.
 
 **Files:** modify `design/canvas/PopupIdle.dc.html`, `design/fixtures/popup-idle.html`,
-`extension/popup.js`, `extension/meant.css`.
+`extension/popup.js`, `extension/meant.css`, `app/api/sessions/[id]/route.ts`,
+`extension/sw.js#installRules`.
+
+**`installRules` must be fixed in this task, not a later one.** Task 3's plan note said
+"whichever task first has the popup send literal domains (Task 6 or 7) must also change
+`installRules`" — this is that task. Once `idle()` sends real hostnames (`gmail.com`,
+`amazon.com`, ...) as `blockedDomains` instead of category tokens, `installRules`'s current
+`BLOCKLISTS[name] ?? []` lookup resolves every one of them to `[]` (a literal domain is never a
+`BLOCKLISTS` key), and **zero block rules get installed for any session, from this commit
+forward** — the single most severe possible regression to this task, since the whole point of
+switching to individual-domain chips is that they actually block. Fix, in `extension/sw.js`:
+
+```js
+async function installRules(listNames) {
+  const domains = [...new Set((listNames ?? []).flatMap((name) => BLOCKLISTS[name] ?? [name]))]
+  ...
+```
+
+The only change is `?? []` → `?? [name]`: an unrecognised token (not a `BLOCKLISTS` key) is now
+treated as a literal domain instead of contributing nothing. This is backward-compatible with
+any caller that still passes category names (still resolved via `BLOCKLISTS`) and forward-
+compatible with real domains (passed through as-is). Nothing else in the function changes.
 
 **Interfaces**
 
@@ -1156,7 +1249,10 @@ The popup supplies `workSites`, `blockedDomains`, `blocklists` and `cycle` to `s
 `lastChoice = { plannedMinutes, cycle, blockedDomains, blocklists, workSites }`.
 `popup.js#chipGroup` gains `{ multi: true, value }` — extended, not replaced.
 
-- [ ] **Step 1: Propose the artboard, then STOP for sign-off**
+- [x] **Step 1: Propose the artboard, then STOP for sign-off** — redone once: the first
+  proposal deferred "where it happens" to the running popup, which conflicted with this
+  task's own spec (workSites must exist at Start). Human resolved it: both site-chip rows
+  stay in the idle popup, disambiguated by label text only. Approved.
 
 Invoke `/impeccable`. Target:
 
@@ -1188,14 +1284,14 @@ popup instead — Start stays a pure commitment gesture and the row arrives seco
 well inside the 60-second grace — that is a legitimate alternative and the artboard is where it
 gets decided, not the code.
 
-- [ ] **Step 2: Multi-select chips**
+- [x] **Step 2: Multi-select chips**
 
 `popup.js#chipGroup` is single-select and always defaults to `options[0]` (so `social` is
 preselected whatever the user chose last time). Extend to `chipGroup({ multi: true, value })`.
 Keep the `<button aria-pressed>` pattern — `design.md` §8 confirms it is the right ARIA shape and
 that the focus ring survives.
 
-- [ ] **Step 3: Recall last session's answers**
+- [x] **Step 3: Recall last session's answers**
 
 Write `lastChoice = { plannedMinutes, cycle, blockedDomains, blocklists, workSites }` on Start;
 pre-select from it. First ever session: `workSites` from `GET /api/lists` with none selected;
@@ -1204,18 +1300,78 @@ pre-select from it. First ever session: `workSites` from `GET /api/lists` with n
 **Deferred, named:** recalling per-*intention* rather than per-session. Real value on repeated
 work; needs a similarity check for a tap or two saved. Not in this plan.
 
-- [ ] **Step 4: The cycle picker**
+- [x] **Step 4: The cycle picker**
 
 `25/5 · 50/10 · custom · no cycles`. `custom` reveals two number inputs. `no cycles` means one
 continuous block, which is today's behaviour and must remain the zero-config path.
 
-- [ ] **Step 5: The 60-second sentence lock (D34)**
+**`CYCLE_PRESETS` in the extension.** Same cross-import problem as `GRACE_MS` below —
+`lib/thresholds.ts` (T4) is a TypeScript file for the Next app, unreachable from the plain-JS
+extension. Define a local literal in `popup.js`:
+`const CYCLE_PRESETS = [{ work: 25, break: 5 }, { work: 50, break: 10 }]` (matching
+`lib/thresholds.ts`'s value — cite it in a comment). `custom` and `no cycles` aren't presets and
+don't belong in this array; they're the two other cycle-chip states the UI handles directly.
+
+- [x] **Step 5: The 60-second sentence lock (D34)**
 
 In the running popup the sentence is an editable `.m-field` while
 `Date.now() - startedAt < GRACE_MS`, and plain `.m-sentence` text after. An edit inside the
 window `PATCH`es the session. Unit-test the predicate, not the DOM.
 
-- [ ] **Step 6: Verify**
+**`GRACE_MS` in the extension.** `lib/thresholds.ts` (T4) is a TypeScript file for the Next app
+— the plain-JS extension cannot import it, and `extension/lib/gate.js` (T10) is where the
+extension-side copy canonically lives, four tasks from now. Define a local
+`const GRACE_MS = 60_000` in `popup.js` for this task (matching `lib/thresholds.ts`'s value —
+cite it in a comment), and let Task 10 reconcile the duplication when `gate.js` lands. This is
+a magic-number duplication, not a forward reference (`context.md` §7 rule 3): nothing here
+imports a module or calls a function that doesn't exist yet.
+
+**`app/api/sessions/[id]/route.ts` cannot do this PATCH today.** Its current `PATCH` handler
+validates `body.endedAt` (string) **and** `body.endReason` (in `END_REASONS`) unconditionally —
+an intention-only PATCH body has neither and 400s. Branch on which shape arrived:
+
+```ts
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const device = await deviceFromRequest(req)
+  if (!device) return Response.json({ error: 'unauthorized' }, { status: 401 })
+
+  const { id } = await params
+  const body = await req.json().catch(() => null)
+  if (!body) return Response.json({ error: 'bad request' }, { status: 400 })
+
+  // D34: the sentence, inside the grace window, on a still-open session.
+  if (typeof body.intention === 'string') {
+    const updated = await sql`
+      update session set intention = ${body.intention}
+       where id = ${id} and device_id = ${device.id} and user_id = ${device.user_id}
+         and ended_at is null
+       returning id`
+    if (updated.length === 0) return Response.json({ error: 'not found' }, { status: 404 })
+    return Response.json({ ok: true })
+  }
+
+  if (typeof body.endedAt === 'string' && END_REASONS.includes(body.endReason)) {
+    const updated = await sql`
+      update session set ended_at = ${body.endedAt}, end_reason = ${body.endReason}
+       where id = ${id} and device_id = ${device.id} and user_id = ${device.user_id}
+         and ended_at is null
+       returning id`
+    if (updated.length === 0) return Response.json({ error: 'not found' }, { status: 404 })
+    return Response.json({ ok: true })
+  }
+
+  return Response.json({ error: 'bad request' }, { status: 400 })
+}
+```
+
+Server-side enforcement of the 60-second window itself is out of scope here — the brief's own
+instruction is to unit-test the *client* predicate, not re-derive it server-side; a client past
+its grace window simply won't call PATCH. If that gap ever matters (a modified client PATCHing
+late), it's a follow-up, not this task's job.
+
+- [~] **Step 6: Verify** — `detect.mjs` clean (run twice, both fix rounds). Load-unpacked
+  physical check NOT performed — no browser available during automated execution. Do this by
+  hand before trusting Task 6 fully.
 
 ```bash
 node ~/.agents/skills/impeccable/scripts/detect.mjs design/fixtures/popup-idle.html
@@ -1223,10 +1379,12 @@ node ~/.agents/skills/impeccable/scripts/detect.mjs design/fixtures/popup-idle.h
 Load unpacked, open the popup. **Pass:** nothing animates; fits without scrolling; last session's
 picks pre-selected; Start works with zero taps beyond the sentence.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit** — landed as 3 commits: main (`e35cd84`), an `installRules` fix
+  (`9ae0f55`, caught before formal review), and a class-contract/blur/normalize fix
+  (`aadeb5f`, from the formal review's 3 findings).
 
 ```bash
-git add design/canvas/PopupIdle.dc.html design/fixtures extension/popup.js extension/meant.css
+git add design/canvas/PopupIdle.dc.html design/fixtures extension/popup.js extension/meant.css app/api/sessions/\[id\]/route.ts
 git commit -m "feat(popup): ask where it happens, what to block, and the cycle
 
 Three questions per session, pre-selected from last time, so a routine session is
