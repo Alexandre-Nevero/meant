@@ -198,7 +198,7 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--m-r-chip);
   cursor: pointer;
 }
-.m-chip:focus-visible { outline: var(--m-stroke) solid var(--m-clay); outline-offset: 2px; }
+.m-chip:focus-visible { outline: var(--m-stroke) solid var(--m-ink); outline-offset: 2px; }
 
 /* ---------- .m-btn[data-variant] — buttons ---------- */
 
