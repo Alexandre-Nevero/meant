@@ -1,5 +1,6 @@
 import { post, apiBase } from './api.js'
 import { isEditable } from './lib/sentence-lock.js'
+import { normalizeDomain } from './lib/normalize-domain.js'
 
 const root = document.getElementById('root')
 
@@ -72,20 +73,34 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
       input.style.width = '96px'
       plusButton.replaceWith(input)
       input.focus()
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') { input.replaceWith(plusButton); return }
-        if (e.key !== 'Enter') return
-        const v = input.value.trim().toLowerCase()
+
+      // Blur fires after Escape/Enter replace the input (removing a focused element blurs
+      // it), so `settled` stops that from double-committing or overriding a discard.
+      let settled = false
+      const commit = () => {
+        if (settled) return
+        settled = true
+        const v = normalizeDomain(input.value)
         input.replaceWith(plusButton)
         if (v && !selected.has(v)) {
           selected.add(v)
           addChip(v)
           if (onChange) onChange(currentValue())
         }
+      }
+      const discard = () => {
+        if (settled) return
+        settled = true
+        input.replaceWith(plusButton)
+      }
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') discard()
+        else if (e.key === 'Enter') commit()
       })
-      input.addEventListener('blur', () => {
-        if (input.isConnected) input.replaceWith(plusButton)
-      })
+      // Clicking Start (or anywhere else) without pressing Enter first must not silently
+      // drop what was typed — blur commits exactly like Enter. Only Escape discards.
+      input.addEventListener('blur', commit)
     })
     row.append(plusButton)
   }
@@ -243,11 +258,16 @@ async function idle() {
     onChange: (v) => { blockingLabel.textContent = `blocking ${v.length}` },
   })
 
-  const whereGroup = el('div', 'm-chip-group')
+  // data-chip-layout, not a class: the class contract is frozen at 13 fixed classes plus
+  // .m-chip/.m-chip-row/.m-companion-* — attribute values stay extensible, class names don't.
+  const whereGroup = el('div')
+  whereGroup.dataset.chipLayout = 'group'
   whereGroup.append(el('p', 'm-meta', 'where it happens'), workSites.row)
-  const blockGroup = el('div', 'm-chip-group')
+  const blockGroup = el('div')
+  blockGroup.dataset.chipLayout = 'group'
   blockGroup.append(blockingLabel, blocked.row)
-  const siteCluster = el('div', 'm-chip-cluster')
+  const siteCluster = el('div')
+  siteCluster.dataset.chipLayout = 'cluster'
   siteCluster.append(whereGroup, blockGroup)
 
   const start = el('button', 'm-btn', 'Start')

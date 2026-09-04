@@ -183,9 +183,10 @@ button, input, select { font: inherit; color: inherit; }
 /* Task 6: "where it happens" and "blocking N" read as one related cluster (the site chips)
  * rather than two unrelated rows that happen to be adjacent — a tighter internal gap than the
  * rest of #root's row-groups, per design/canvas/PopupIdle.dc.html. Popup-only: no other
- * surface uses these. */
-[data-surface="popup"] .m-chip-cluster { display: flex; flex-direction: column; gap: 12px; }
-[data-surface="popup"] .m-chip-group { display: flex; flex-direction: column; gap: 7px; }
+ * surface uses these. `data-chip-layout` (not a 14th class — the class contract is frozen at
+ * 13 fixed classes plus .m-chip/.m-chip-row/.m-companion-*; attribute values stay extensible). */
+[data-surface="popup"] [data-chip-layout="cluster"] { display: flex; flex-direction: column; gap: 12px; }
+[data-surface="popup"] [data-chip-layout="group"] { display: flex; flex-direction: column; gap: 7px; }
 
 /* ---------- .m-btn — no animation on this surface, opened dozens of times a day ---------- */
 
