@@ -48,40 +48,38 @@ async function activeDomain() {
   }
 }
 
-export async function startSession({ intention, plannedMinutes, blocklist }) {
-  const open = await getSession()
-  if (open) await endSession('superseded')
+export async function startSession({ intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle }) {
+  const existing = await getSession()
+  if (existing) await endSession('superseded')
 
-  const startedAt = new Date().toISOString()
-  const res = await post('/api/sessions', { intention, plannedMinutes, blocklist, startedAt })
-  if (!res.ok) return { ok: false, offline: Boolean(res.offline) }
+  const sessionId = crypto.randomUUID()
+  const now = Date.now()
+  const startedAt = new Date(now).toISOString()
 
+  // Local state and block rules first. Nothing here touches the network (N6, N3).
   await chrome.storage.local.set({
     session: {
-      sessionId: res.data.sessionId,
-      intention,
-      startedAt,
-      plannedMinutes,
-      blocklist,
-      currentDomain: await activeDomain(),
-      currentSince: Date.now(),
-      ruleIds: [],
-      driftCount: 0,
-      driftWindowStart: Date.now(),
+      sessionId, intention, startedAt, plannedMinutes,
+      blockedDomains, blocklists, workSites, cycle,
+      slice: emptySlice(now), dwellSince: now, visitSeq: 0,
+      ruleIds: [], signals: [], corrected: [], judged: {}, tally: {},
     },
     companionState: 'settled',
   })
   await chrome.alarms.create(TICK, { periodInMinutes: 0.5 })
-
   try {
-    const ruleIds = await installRules(blocklist)
-    const stored = await getSession()
-    await chrome.storage.local.set({ session: { ...stored, ruleIds } })
+    const ruleIds = await installRules(blockedDomains)
+    const s = await getSession()
+    await chrome.storage.local.set({ session: { ...s, ruleIds } })
   } catch (error) {
     await endSession('stopped')
     return { ok: false, error: String(error) }
   }
-  return { ok: true }
+
+  // Then tell the server. `post` queues on failure (api.js:33-40), so an offline start syncs on
+  // the next flush. The missing `await` is the fire-and-forget and is deliberate.
+  post('/api/sessions', { id: sessionId, intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle, startedAt })
+  return { ok: true, sessionId }
 }
 
 export async function endSession(endReason) {
@@ -102,6 +100,9 @@ export async function endSession(endReason) {
       const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
       if (tab) await chrome.sidePanel.setOptions({ tabId: tab.id, enabled: false }).catch(() => {})
     }
+    // No session means no alarm to drain the queue later, so try once more now — this is
+    // what lets a queued end-of-session PATCH sync without waiting for the next session.
+    await flush()
   }
 
   if (endReason === 'stopped' || endReason === 'elapsed') {
@@ -278,8 +279,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   ;(async () => {
-    if (message?.type === 'start') sendResponse(await startSession(message))
-    else if (message?.type === 'stop') sendResponse(await endSession('stopped'))
+    if (message?.type === 'start') {
+      const blockedDomains = message.blockedDomains ?? message.blocklist ?? []
+      sendResponse(await startSession({ ...message, blockedDomains }))
+    } else if (message?.type === 'stop') sendResponse(await endSession('stopped'))
     else sendResponse({ ok: false })
   })()
   return true
@@ -294,3 +297,8 @@ chrome.runtime.onStartup.addListener(async () => {
   if (session) await endSession('recovered')
   else await removeAllRules()
 })
+
+// The tick alarm only runs during a session, so without this a queued session-end PATCH
+// (e.g. the browser closed offline) would otherwise wait for the next session to sync.
+chrome.runtime.onStartup.addListener(flush)
+chrome.runtime.onInstalled.addListener(flush)
