@@ -6,7 +6,7 @@ const TICK = 'meant-tick'
 const RULE_ID_BASE = 1000
 
 async function installRules(listNames) {
-  const domains = [...new Set((listNames ?? []).flatMap((name) => BLOCKLISTS[name] ?? []))]
+  const domains = [...new Set((listNames ?? []).flatMap((name) => BLOCKLISTS[name] ?? [name]))]
   if (domains.length === 0) return []
 
   const existing = await chrome.declarativeNetRequest.getDynamicRules()
