@@ -288,6 +288,7 @@ async function idle() {
       cycle: cycleValue,
     })
     if (!res?.ok) {
+      console.error('popup: start failed', res, chrome.runtime.lastError)
       start.disabled = false
       show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start,
         el('p', 'm-meta', res?.offline ? 'No connection. A session needs one to start.' : 'Could not start.'))
@@ -312,7 +313,19 @@ async function idle() {
     render()
   })
 
-  show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start)
+  const disconnect = el('button', 'm-btn', 'Disconnect this device')
+  disconnect.dataset.variant = 'quiet'
+  disconnect.addEventListener('click', async () => {
+    disconnect.disabled = true
+    // Fire-and-forget the revoke: even if it's offline, clearing the local token is
+    // what matters for "I want this device paired to nothing" — the same shape as
+    // the automatic 401 path in api.js, applied on purpose instead of on rejection.
+    await post('/api/device', undefined, { method: 'DELETE', queue: false })
+    await chrome.storage.local.set({ token: null, deviceId: null, session: null })
+    render()
+  })
+
+  show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect)
 }
 
 function running(session) {

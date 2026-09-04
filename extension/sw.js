@@ -72,6 +72,7 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
     const s = await getSession()
     await chrome.storage.local.set({ session: { ...s, ruleIds } })
   } catch (error) {
+    console.error('startSession: installRules failed', error)
     await endSession('stopped')
     return { ok: false, error: String(error) }
   }
