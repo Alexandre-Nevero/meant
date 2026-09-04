@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { advance, emptySlice } from '../extension/lib/attribution.js'
+import { advance, emptySlice, idleMode } from '../extension/lib/attribution.js'
 
 const T0 = 1_700_000_000_000
 const at = (s) => T0 + s * 1000
@@ -101,4 +101,21 @@ test('a null domain in attention mode emits nothing (chrome://, new tab)', () =>
 
 test('emptySlice starts in attention, no domain, no carry', () => {
   assert.deepEqual(emptySlice(at(0)), { domain: null, since: at(0), mode: 'attention', awayCarryMs: 0 })
+})
+
+test('idleMode maps all three chrome.idle states exhaustively', () => {
+  assert.equal(idleMode('active', false), 'attention')
+  assert.equal(idleMode('active', true), 'attention')
+  assert.equal(idleMode('idle', false), 'away')
+  assert.equal(idleMode('idle', true), null, 'audio playing: stay on the domain')
+  assert.equal(idleMode('locked', false), 'away')
+  assert.equal(idleMode('locked', true), 'away', 'a locked screen is never watching')
+})
+
+test('idleMode fails safe on an unknown state rather than dropping time', () => {
+  // advance() has explicit mode branches, so an unmapped mode emits no event while state
+  // still advances — the elapsed time vanishes. This is the guard that makes that
+  // unreachable from sw.js.
+  assert.equal(idleMode('hibernating', false), 'away')
+  assert.equal(idleMode(undefined, false), 'away')
 })

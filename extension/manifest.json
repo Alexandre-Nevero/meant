@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MEANT",
   "version": "0.1.0",
-  "permissions": ["declarativeNetRequest", "tabs", "storage", "alarms", "sidePanel"],
+  "permissions": ["declarativeNetRequest", "tabs", "storage", "alarms", "sidePanel", "idle"],
   "side_panel": { "default_path": "sidepanel.html" },
   "host_permissions": [
     "http://localhost:3000/*",

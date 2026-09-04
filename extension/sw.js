@@ -1,5 +1,6 @@
 import { post, apiBase } from './api.js'
 import { BLOCKLISTS } from './blocklists.js'
+import { advance, emptySlice, idleMode, IDLE_DETECTION_S } from './lib/attribution.js'
 
 const TICK = 'meant-tick'
 const RULE_ID_BASE = 1000
@@ -64,7 +65,6 @@ export async function startSession({ intention, plannedMinutes, blocklist }) {
       blocklist,
       currentDomain: await activeDomain(),
       currentSince: Date.now(),
-      unfocusedSince: null,
       ruleIds: [],
       driftCount: 0,
       driftWindowStart: Date.now(),
@@ -88,7 +88,7 @@ export async function endSession(endReason) {
   const session = await getSession()
   if (!session) return { ok: false }
   try {
-    await attribute(null)
+    await transition({ mode: session.slice?.mode ?? 'attention', domain: null })
     await flush()
     await post(`/api/sessions/${session.sessionId}`, {
       endedAt: new Date().toISOString(),
@@ -115,8 +115,6 @@ export async function endSession(endReason) {
 
   return { ok: true }
 }
-
-const AWAY_THRESHOLD_MS = 60_000
 
 async function enqueue(session, event) {
   const { queue = [] } = await chrome.storage.local.get('queue')
@@ -177,59 +175,38 @@ async function updateCompanion(session, nextDomain) {
   }
 }
 
-export async function attribute(nextDomain) {
+async function transition({ mode, domain, at = Date.now() }) {
   const session = await getSession()
   if (!session) return
-
-  const now = Date.now()
-  const seconds = Math.round((now - session.currentSince) / 1000)
-  if (session.currentDomain && seconds > 0) {
-    await enqueue(session, {
-      kind: 'attention',
-      domain: session.currentDomain,
-      seconds,
-      at: new Date(now).toISOString(),
-    })
-  }
-  await updateCompanion(session, nextDomain)
-  await chrome.storage.local.set({
-    session: { ...(await getSession()), currentDomain: nextDomain, currentSince: now },
-  })
+  const prior = session.slice ?? emptySlice(new Date(session.startedAt).getTime())
+  const { events, state } = advance(prior, { at, mode, domain })
+  for (const event of events) await enqueue(session, event)
+  // dwellSince survives service-worker death because it lives in storage.
+  const dwellSince = state.domain && state.domain === prior.domain ? (session.dwellSince ?? at) : at
+  const next = { ...session, slice: state, dwellSince }
+  await chrome.storage.local.set({ session: next })
+  return next
 }
 
-// A gap over 60s becomes `away` and resets the clock. A shorter gap is left alone,
-// so a quick alt-tab stays attributed to the domain that was open (US-03).
-async function settleFocus() {
-  const session = await getSession()
-  if (!session?.unfocusedSince) return
+chrome.idle.setDetectionInterval(IDLE_DETECTION_S)
 
-  const now = Date.now()
-  const gap = now - session.unfocusedSince
-  if (gap > AWAY_THRESHOLD_MS) {
-    await enqueue(session, {
-      kind: 'away',
-      domain: null,
-      seconds: Math.round(gap / 1000),
-      at: new Date(now).toISOString(),
-    })
-    await chrome.storage.local.set({
-      session: { ...session, unfocusedSince: null, currentSince: now },
-    })
-    return
-  }
-  await chrome.storage.local.set({ session: { ...session, unfocusedSince: null } })
-}
+chrome.idle.onStateChanged.addListener(async (state) => {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+  const mode = idleMode(state, Boolean(tab?.audible))
+  if (mode === null) return                       // D27: idle but still playing. Step 3b re-checks.
+  await transition({ mode, domain: mode === 'attention' ? await activeDomain() : null })
+})
 
 chrome.tabs.onActivated.addListener(async () => {
-  await attribute(await activeDomain())
+  await transition({ mode: 'attention', domain: await activeDomain() })
 })
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!changeInfo.url || !tab.active) return
   try {
-    await attribute(new URL(changeInfo.url).hostname || null)
+    await transition({ mode: 'attention', domain: new URL(changeInfo.url).hostname || null })
   } catch {
-    await attribute(null)
+    await transition({ mode: 'attention', domain: null })
   }
 })
 
@@ -237,13 +214,10 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   const session = await getSession()
   if (!session) return
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
-    if (!session.unfocusedSince) {
-      await chrome.storage.local.set({ session: { ...session, unfocusedSince: Date.now() } })
-    }
+    await transition({ mode: 'away', domain: null })
     return
   }
-  await settleFocus()
-  await attribute(await activeDomain())
+  await transition({ mode: 'attention', domain: await activeDomain() })
 })
 
 export async function flush() {
@@ -283,8 +257,16 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const session = await getSession()
   if (!session) return
 
-  await settleFocus()
   await flush()
+
+  // D27's escape hatch needs a re-check, because chrome.idle will not fire again while the
+  // system stays idle. Bounded by the alarm period, which satisfies N1 (< 30s loss per gap).
+  const idle = await chrome.idle.queryState(IDLE_DETECTION_S)
+  if (idle !== 'active') {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    const mode = idleMode(idle, Boolean(tab?.audible))
+    if (mode !== null) await transition({ mode, domain: null })
+  }
 
   if (session.plannedMinutes != null) {
     const elapsedMs = Date.now() - new Date(session.startedAt).getTime()

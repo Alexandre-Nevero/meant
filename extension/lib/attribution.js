@@ -33,3 +33,14 @@ export function advance(state, next) {
 
   return { events, state: { domain: next.domain ?? null, since: next.at, mode: next.mode, awayCarryMs } }
 }
+
+/** Exhaustive map from chrome.idle's three states to our three modes.
+ *  `null` means "make no transition" — the one case where staying put is correct.
+ *  Never returns undefined: an unmapped state must not reach advance(), whose explicit
+ *  mode branches would silently drop the elapsed time. */
+export function idleMode(idleState, audible) {
+  if (idleState === 'active') return 'attention'
+  if (idleState === 'locked') return 'away'      // a locked screen is never watching, audio or not
+  if (idleState === 'idle') return audible ? null : 'away'
+  return 'away'                                   // unknown future state: fail safe, never drop time
+}
