@@ -76,7 +76,6 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
         </div>
       )}
 
-      <p className="m-meta">off by {minutes(awaySeconds)} min</p>
       {blocked > 0 && <p className="m-meta">{blocked} blocked attempts</p>}
 
       {session.outcome === 'unanswered' ? (
