@@ -55,12 +55,10 @@ button, input, select { font: inherit; color: inherit; }
   justify-content: center;
   gap: 36px;
 }
-[data-surface="companion"] #root { padding: 26px 22px; gap: 26px; min-height: 100vh; }
 /* Task 6: two more row-groups (cycle, site chips) had to fit under Chrome's ~600px popup
  * ceiling, so the popup's own spacing tightened below the global default above — scoped here,
- * not on the unscoped #root rule, so [data-surface="companion"] (the side panel) and
- * [data-surface="block"] — both already fully overridden above — stay untouched, and no other
- * future surface silently inherits a popup-specific number. */
+ * not on the unscoped #root rule, so [data-surface="block"] — already fully overridden above —
+ * stays untouched, and no other future surface silently inherits a popup-specific number. */
 [data-surface="popup"] #root { gap: 18px; padding: 20px; }
 
 /* ---------- .m-mark — the mark: a small glyph when empty, a real band when it holds data ---------- */
@@ -123,13 +121,6 @@ button, input, select { font: inherit; color: inherit; }
   border-radius: var(--m-r-block);
   padding: 44px 56px;
 }
-[data-surface="companion"] .m-sentence {
-  font-size: 16px;
-  border: var(--m-stroke-hair) solid var(--m-rule);
-  border-radius: var(--m-r-panel);
-  padding: 14px 18px;
-}
-
 /* ---------- .m-meta ---------- */
 
 .m-meta { margin: 0; font-size: 13px; line-height: 1.45; color: var(--m-ink-3); }
@@ -219,8 +210,6 @@ button, input, select { font: inherit; color: inherit; }
   align-items: center;
   padding: 8px 0;
 }
-[data-surface="companion"] .m-row { grid-template-columns: 12px minmax(0, 1fr); gap: 14px; padding: 11px 0; border-bottom: var(--m-stroke-hair) solid var(--m-rule); }
-
 .m-row-bar {
   width: 11px;
   height: 11px;
@@ -243,78 +232,9 @@ button, input, select { font: inherit; color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- the companion — gaze, not a face ----------
- * Three nodes, each doing one job:
- *  .m-companion-capsule  — the outline; only its stroke weight changes (::after cross-fade)
- *  .m-companion-gaze     — position + size, a transform TRANSITION (interruptible, GPU-only)
- *  .m-companion-aperture — aliveness, breathe/blink KEYFRAMES
- * Keyframes and a transform transition can't coexist on one node — a running
- * `animation` overrides any `transition` targeting the same property — so aliveness
- * and gaze position live on different elements. */
-
-.m-companion-capsule {
-  position: relative;
-  width: 104px;
-  height: 104px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: var(--m-stroke) solid var(--m-ink);
-  border-radius: var(--m-r-panel);
-  box-sizing: border-box;
-  margin: 0 auto;
-}
-.m-companion-capsule::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border: var(--m-stroke-loud) solid var(--m-ink);
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity var(--m-dur-rise) var(--m-ease);
-}
-.m-companion-capsule[data-state="drifting"]::after { opacity: 1; }
-
-.m-companion-gaze {
-  width: 44px;
-  height: 30px;
-  transform: translateY(27px) scaleY(0.333);
-  transition: transform var(--m-dur-rise) var(--m-ease);
-}
-.m-companion-capsule[data-state="drifting"] .m-companion-gaze {
-  transform: translateY(0) scaleY(1);
-}
-
-.m-companion-aperture {
-  width: 100%;
-  height: 100%;
-  background: var(--m-clay);
-  border-radius: 15px;
-  animation: m-breathe 4.2s ease-in-out infinite, m-blink 6.7s linear infinite;
-}
-
-@keyframes m-breathe {
-  0%, 100% { opacity: 0.92; transform: scaleY(1); }
-  50% { opacity: 1; transform: scaleY(1.06); }
-}
-@keyframes m-blink {
-  0%, 96%, 100% { opacity: 1; }
-  97.5% { opacity: 0.15; }
-}
-
-.m-companion-disclosure {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-family: var(--m-figure);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--m-ink-3);
-  cursor: pointer;
-  text-align: center;
-  width: 100%;
-}
+/* The companion no longer docks here — extension/companion-overlay.js floats it on the
+ * page itself via a Shadow DOM, self-contained, with its own copy of the same gaze/
+ * aperture visual. Nothing in this file renders it anymore. */
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

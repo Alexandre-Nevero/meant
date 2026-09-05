@@ -38,11 +38,22 @@ export async function getSession() {
   return session ?? null
 }
 
+// Strips `www.` so a tracked visit matches the same bare form the user configures
+// everywhere else (setup, the popup's site chips) — `new URL().hostname` alone
+// left `www.facebook.com` on the review page next to a configured `facebook.com`,
+// looking like two different sites. Unlike normalizeDomain (extension/lib/
+// normalize-domain.js), this never rejects a no-dot hostname: a visited tab's
+// hostname (e.g. `localhost`) is already valid, not user-typed free text.
+function bareHostname(url) {
+  const hostname = new URL(url).hostname.toLowerCase()
+  return (hostname.startsWith('www.') ? hostname.slice(4) : hostname) || null
+}
+
 async function activeDomain() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
   if (!tab?.url) return null
   try {
-    return new URL(tab.url).hostname || null
+    return bareHostname(tab.url)
   } catch {
     return null
   }
@@ -97,10 +108,6 @@ export async function endSession(endReason) {
     await removeAllRules()
     await chrome.alarms.clear(TICK)
     await chrome.storage.local.set({ session: null, companionState: null })
-    if (chrome.sidePanel) {
-      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-      if (tab) await chrome.sidePanel.setOptions({ tabId: tab.id, enabled: false }).catch(() => {})
-    }
     // No session means no alarm to drain the queue later, so try once more now — this is
     // what lets a queued end-of-session PATCH sync without waiting for the next session.
     await flush()
@@ -206,7 +213,7 @@ chrome.tabs.onActivated.addListener(async () => {
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!changeInfo.url || !tab.active) return
   try {
-    await transition({ mode: 'attention', domain: new URL(changeInfo.url).hostname || null })
+    await transition({ mode: 'attention', domain: bareHostname(changeInfo.url) })
   } catch {
     await transition({ mode: 'attention', domain: null })
   }

@@ -303,13 +303,9 @@ async function idle() {
         workSites: workSitesValue,
       },
     })
-    // Bound to this click, the only user gesture in the flow — chrome.sidePanel.open()
-    // requires one, and it's lost if this goes through a message to the service worker.
-    const { companionEnabled } = await chrome.storage.local.get('companionEnabled')
-    if (companionEnabled !== false) {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      if (tab) chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {})
-    }
+    // The companion floats on the page itself now (extension/companion-overlay.js) —
+    // it reacts to chrome.storage's session/companionState on its own; nothing here
+    // needs to open or target a surface.
     render()
   })
 
