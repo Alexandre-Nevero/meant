@@ -181,6 +181,22 @@ test.describe('session lifecycle', () => {
     await page.locator('input.m-field').first().fill('domain label test')
     await page.getByRole('button', { name: 'Start' }).click()
 
+    // installRules() is still in flight when Start's click handler resolves (same race
+    // as the "Start installs a real declarativeNetRequest rule" test above) — navigating
+    // before the rule actually exists loads the real example.net instead of getting
+    // redirected, and DNR only intercepts NEW navigation attempts, so it never
+    // re-navigates to blocked.html afterward. Poll for the rule first.
+    const [sw] = context.serviceWorkers()
+    await expect
+      .poll(
+        async () =>
+          (await sw.evaluate(() => chrome.declarativeNetRequest.getDynamicRules())).some((r: any) =>
+            r.condition.requestDomains?.includes('example.net'),
+          ),
+        { timeout: 10_000, intervals: [200] },
+      )
+      .toBe(true)
+
     const blockedPage = await context.newPage()
     await blockedPage.bringToFront()
     await blockedPage.goto('https://example.net')
