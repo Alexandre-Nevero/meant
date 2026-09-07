@@ -359,6 +359,18 @@ signed-out sees the sign-in form, signed-in sees a "Go to your dashboard" link.
     visible, a sign-in form with an email input field (in the hero section) is present,
     and no "Go to your dashboard" link is visible.
 
+### Q — Dashboard ledger container width (pure CSS constraint)
+
+The ledger container had no max-width constraint and stretched to fill the full viewport,
+even at very wide breakpoints where a 1000px container is the approved design. This case
+verifies the fix wires the approved fixture value into the shipped stylesheet.
+
+46. Sign up and land on `/dashboard`. Set the viewport to 1600px wide. **Pass:** the
+    `[data-surface="ledger"]` element's bounding box width is at most 1000px, not close to
+    the full 1600px viewport. (This is the CSS-only constraint, already approved in
+    `design/fixtures/ledger.html` and `design/canvas/Ledger.dc.html` — not a new design
+    decision, just a missing implementation detail.)
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

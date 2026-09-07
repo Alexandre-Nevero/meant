@@ -79,6 +79,15 @@ a { color: inherit; text-decoration: none; }
   border: none;
 }
 
+[data-surface="ledger"] {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 72px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 /* dashboard/ledger row band — a wide, short strip inside the row grid */
 [data-surface="ledger"] .m-row .m-mark {
   width: 100%;
