@@ -66,12 +66,18 @@ test('the away row explains what "away" means via a hover title, not new visible
     () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
   )
 
+  // Wait for the session-creation POST (fired from sw.js startSession()) to land server-side.
+  // The Start button click is fire-and-forget on the client; sessionId is available from storage
+  // immediately, but the server row may not exist yet. Matching the pattern from Case G (line 30).
+  await setupPage.waitForTimeout(500)
+
   // Inject a real away event directly via the same API sw.js's own flush() uses —
   // deterministic, no dependency on real idle/focus timing.
-  await context.request.post('/api/events', {
+  const eventRes = await context.request.post('/api/events', {
     headers: { authorization: `Bearer ${token}` },
     data: { sessionId, events: [{ kind: 'away', domain: null, seconds: 120, at: new Date().toISOString() }] },
   })
+  expect(eventRes.status()).toBe(200)
 
   await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
 
