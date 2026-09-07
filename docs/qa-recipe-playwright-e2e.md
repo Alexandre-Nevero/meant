@@ -273,6 +273,22 @@ to both `idle()` and `running()`, and a read-only `blocking: <domains>` line
     (PRODUCT.md: the popup animates nothing) — and the two nav buttons render at a
     reasonable size without wrapping awkwardly.
 
+### L — Extension protocol filtering (Task 1 fix)
+
+The `bareHostname()` function in `extension/sw.js` parses tab URLs to extract hostnames
+for time-tracking. Before this fix, it did not check the URL's protocol, so
+`chrome-extension://<id>/popup.html` would parse fine and its "hostname" (the extension's
+own random ID string) would be tracked as a visited domain. This case verifies the fix
+silently filters non-HTTP(S) schemes.
+
+40. Start a session, then `context.newPage()` and navigate to the extension's own popup
+    page (e.g. `chrome-extension://<extensionId>/popup.html`). **Pass:** wait a moment,
+    then stop the session and fetch its review data via `GET /review/:id`. The review page
+    HTML does *not* contain the extension ID string anywhere — confirming the chrome-extension://
+    URL's hostname was never tracked as a domain. (The regex used for this pass criteria
+    must match the extension ID to be meaningful, so the test constructs it dynamically
+    from `extensionId` rather than hardcoding.)
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

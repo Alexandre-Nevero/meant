@@ -137,4 +137,32 @@ test.describe('session lifecycle', () => {
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
+
+  test('visiting the extension\'s own pages during a session is never tracked as a domain', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairAndOpenPopup(page, extensionId)
+    await page.locator('input.m-field').first().fill('scheme filter test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const sessionId: string = await page.evaluate(
+      () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+    )
+
+    // Visit the popup's own chrome-extension:// URL as a real page, and trigger a real
+    // tab-activation transition against it.
+    const extPage = await context.newPage()
+    await extPage.goto(`chrome-extension://${extensionId}/popup.html`)
+    await extPage.waitForTimeout(500)
+
+    await page.bringToFront()
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+    await expect
+      .poll(async () => {
+        const res = await page.request.get(`/review/${sessionId}`)
+        return res.ok() ? await res.text() : ''
+      }, { timeout: 5_000 })
+      .not.toMatch(new RegExp(extensionId))
+  })
 })

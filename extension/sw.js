@@ -60,8 +60,15 @@ export async function getSession() {
 // looking like two different sites. Unlike normalizeDomain (extension/lib/
 // normalize-domain.js), this never rejects a no-dot hostname: a visited tab's
 // hostname (e.g. `localhost`) is already valid, not user-typed free text.
+//
+// Only http/https are real, trackable sites — a chrome-extension:// URL (the
+// popup itself, blocked.html) parses fine and its "hostname" is just the
+// extension's own random-looking ID, which must never be attributed time as if
+// it were a site the user visited.
 function bareHostname(url) {
-  const hostname = new URL(url).hostname.toLowerCase()
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+  const hostname = parsed.hostname.toLowerCase()
   return (hostname.startsWith('www.') ? hostname.slice(4) : hostname) || null
 }
 
