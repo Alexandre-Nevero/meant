@@ -62,7 +62,15 @@ Breaking one is a bug, not a preference.
 ## Constraints that shape design
 
 - No OS permissions, no admin rights, no installer.
-- `<all_urls>` never appears in `host_permissions`. It exists only as `optional_host_permissions`, requested when the user turns on deep judging, and declinable forever.
+- `<all_urls>` appears in `host_permissions` (shipped 2026-09-07, see `docs/dead-ends.md`) —
+  this superseded the original per-domain-optional design. Reasoning: the extension's own
+  content script already runs at `<all_urls>` (the companion floats on every page), and
+  `declarativeNetRequest`'s `redirect` action requires host permission for the domain being
+  redirected — a per-domain `optional_host_permissions` flow would mean asking for a new
+  permission grant every time the user names a new distraction site to block, which is
+  worse UX than a single, upfront, honest `<all_urls>` grant for a feature (blocking
+  arbitrary sites) that fundamentally needs it. This is not a new category of trust beyond
+  what the content script already requires.
 - Hostname only, in storage. Page title and page text are read in flight for one classification and stored nowhere.
 - Nothing waits on a model. Not the session start, not a block, not a page load.
 - Four of five external services allocated. The fifth would buy voice, and voice is out of scope.
