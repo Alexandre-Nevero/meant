@@ -19,3 +19,7 @@ node_modules/
 # nested/foreign doc-framework copies, not part of this project
 fmd/
 fmdlite/
+
+# Playwright run artifacts
+test-results/
+playwright-report/
