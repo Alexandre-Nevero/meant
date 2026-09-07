@@ -179,9 +179,8 @@ function isKnownDistraction(domain) {
   return domain != null && Object.values(BLOCKLISTS).some((list) => list.includes(domain))
 }
 
-function isCurrentlyBlocked(domain, blocklist) {
-  return (blocklist ?? []).some((name) => (BLOCKLISTS[name] ?? []).includes(domain))
-}
+// isCurrentlyBlocked (resolving BLOCKLISTS *category names*) is removed — it never
+// matched this call site's actual shape anyway (see below), and nothing else used it.
 
 // The companion, without a model: a visit to a domain from any of the known distraction
 // categories (design/blocklists.js) that isn't even one the user chose to block this
@@ -193,7 +192,9 @@ async function updateCompanion(session, nextDomain) {
 
   const now = Date.now()
   const withinGrace = now - new Date(session.startedAt).getTime() < DRIFT_GRACE_MS
-  const drifting = !withinGrace && isKnownDistraction(nextDomain) && !isCurrentlyBlocked(nextDomain, session.blocklist)
+  // session.blockedDomains is already a flat array of resolved domain strings (set by
+  // startSession) — check membership directly, not via a category-name resolver.
+  const drifting = !withinGrace && isKnownDistraction(nextDomain) && !(session.blockedDomains ?? []).includes(nextDomain)
 
   const { companionState } = await chrome.storage.local.get('companionState')
 
@@ -229,6 +230,7 @@ async function transition({ mode, domain, at = Date.now() }) {
   const dwellSince = state.domain && state.domain === prior.domain ? (session.dwellSince ?? at) : at
   const next = { ...session, slice: state, dwellSince }
   await chrome.storage.local.set({ session: next })
+  await updateCompanion(next, state.domain)
   return next
 }
 

@@ -206,3 +206,19 @@ the companion appears with Shields off — if it does, Shields is the cause and 
 either a documented user-facing workaround or (if Brave's extension API allows detecting
 Shields state) a code change; if it still doesn't appear, Shields is ruled out and this
 needs fresh investigation with different tooling than computer-use has provided so far.
+
+### The companion's drift signal was dead code — `updateCompanion` was never called (2026-09-08)
+
+Confirmed by grep: `updateCompanion` (`extension/sw.js`) was fully defined but had zero
+call sites anywhere in the file. It also had a field-name bug that made it moot either
+way — `isCurrentlyBlocked(nextDomain, session.blocklist)` read `session.blocklist`
+(singular), a field that is never set (sessions store `blockedDomains`/`blocklists`,
+plural); `isCurrentlyBlocked` resolves BLOCKLISTS *category names*, but `blockedDomains`
+is already a flat array of resolved domain strings, so even passing the right field in
+wouldn't have worked without also changing the check's shape. In practice, the companion
+could only ever render its default 'focus' ring — the 'drift' state was unreachable,
+which independently explains reports that focus vs. drift were "too vague to tell apart."
+
+Fixed both: the check now compares `nextDomain` directly against `session.blockedDomains`,
+and `updateCompanion(next, state.domain)` is called from inside `transition()`, so every
+real tab/domain-change event now actually drives the signal.

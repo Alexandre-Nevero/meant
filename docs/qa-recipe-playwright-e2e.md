@@ -307,6 +307,24 @@ a session on a tab and never switches tabs would see zero minutes attributed to 
     floors milliseconds to whole seconds, so a shorter wait would never emit an event, and
     a test that checks this fix would pass falsely even without the fix.)
 
+### N — The companion's drift signal was dead code (Task 3 fix)
+
+`updateCompanion()` in `extension/sw.js` computed the ring's drift/focus state but had
+zero call sites anywhere in the file — `transition()` never called it, so the companion
+could only ever render its default 'focus' ring. It also had a field-name bug
+(`session.blocklist`, singular, never set) that would have kept it broken even if called;
+sessions store the resolved domain list as `blockedDomains` (plural).
+
+42. Start a session but do not block `youtube.com` this session. Push `session.startedAt`
+    back past `DRIFT_GRACE_MS` (60s) in storage (no real wait). Navigate to
+    `https://example.com`. **Pass:** the companion's ring is `data-state="focus"`. Then
+    perform a real navigation (`waitUntil: 'commit'`) to `https://youtube.com` — a known
+    'video'-category distraction domain (`design/blocklists.js`) that is not on this
+    session's own `blockedDomains`. **Pass:** the ring flips to `data-state="drift"` within
+    3s, confirming `transition()`'s real call to `updateCompanion()` — not a manual
+    `companionState` storage write — actually drives the signal on a genuine domain-change
+    event.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

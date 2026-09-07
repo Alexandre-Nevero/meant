@@ -94,4 +94,38 @@ test.describe('floating companion', () => {
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
+
+  test('drifting to a known-distraction domain not on this session\'s own blocklist actually flips the ring to drift', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    // Deliberately don't block youtube.com this session — isKnownDistraction() should still
+    // flag it (it's in BLOCKLISTS' 'video' category), and it's not in this session's own
+    // blockedDomains, so it should read as drift.
+    await pairAndStart(setupPage, extensionId)
+
+    // Push startedAt back past DRIFT_GRACE_MS (60s) without a real wait.
+    await setupPage.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        chrome.storage.local.get('session', ({ session }: any) => {
+          session.startedAt = new Date(Date.now() - 90_000).toISOString()
+          chrome.storage.local.set({ session }, () => resolve())
+        })
+      })
+    })
+
+    const page = await context.newPage()
+    await page.goto('https://example.com')
+    const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
+    await expect(dotWrap).toHaveAttribute('data-state', 'focus')
+
+    // A real navigation to a known-distraction domain, not a manual companionState write —
+    // this is what actually exercises updateCompanion's own call site. `waitUntil: 'commit'`
+    // (not the default 'load') since only the URL-change event matters here — waiting for
+    // youtube.com's own full page load would make this test slow and network-flaky for no
+    // reason.
+    await page.goto('https://youtube.com', { waitUntil: 'commit' })
+    await expect(dotWrap).toHaveAttribute('data-state', 'drift', { timeout: 3_000 })
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
 })
