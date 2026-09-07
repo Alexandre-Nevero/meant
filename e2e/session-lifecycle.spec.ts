@@ -149,11 +149,12 @@ test.describe('session lifecycle', () => {
       () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
     )
 
-    // Visit the popup's own chrome-extension:// URL as a real page, and trigger a real
-    // tab-activation transition against it.
+    // Visit the popup's own chrome-extension:// URL as a real page. Must wait long
+    // enough for advance() to emit an event (it floors milliseconds to seconds, so 500ms
+    // would be 0s and never fire). 2000ms ensures we cross the 1-second floor.
     const extPage = await context.newPage()
     await extPage.goto(`chrome-extension://${extensionId}/popup.html`)
-    await extPage.waitForTimeout(500)
+    await extPage.waitForTimeout(2000)
 
     await page.bringToFront()
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
