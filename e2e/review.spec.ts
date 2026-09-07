@@ -40,4 +40,10 @@ test('review page normalizes www. off tracked domains and has no redundant off-b
   expect(bodyText).not.toContain('www.example.com')
   expect(bodyText).toContain('example.com') // it did get tracked, just normalized
   expect(bodyText).not.toMatch(/off by \d+ min/)
+
+  // Task 4 — the same data, extracted, now also served as JSON for the popup to consume.
+  const apiRes = await reviewPage.request.get(`/api/sessions/${sessionId}/review`)
+  expect(apiRes.status()).toBe(200)
+  const apiData = await apiRes.json()
+  expect(apiData.topAttention.some((r: any) => r.domain === 'example.com')).toBe(true)
 })

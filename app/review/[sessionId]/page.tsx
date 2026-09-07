@@ -1,11 +1,10 @@
 import { currentUserId } from '@/lib/auth/session'
 import { notFound, redirect } from 'next/navigation'
-import { sql } from '@/lib/db'
+import { getReviewData } from '@/lib/review-data'
 import { toBand } from '@/lib/band'
 import { Band } from '../../band'
 import { Answer } from './answer'
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TINTS = ['attention-1', 'attention-2', 'attention-3'] as const
 
 function minutes(seconds: number) {
@@ -19,48 +18,24 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
   if (!userId) redirect('/')
 
   const { sessionId } = await params
-  if (!UUID.test(sessionId)) notFound()
-
-  const [session] = await sql`
-    select id, intention, outcome, started_at, ended_at
-      from session where id = ${sessionId} and user_id = ${userId}`
-  if (!session) notFound()
-
-  const rows = await sql`
-    select kind, domain, coalesce(sum(seconds), 0)::int as seconds, count(*)::int as hits
-      from event where session_id = ${sessionId}
-     group by kind, domain
-     order by seconds desc`
-
-  const topAttention = rows.filter((r) => r.kind === 'attention' && r.domain).slice(0, 3)
-  const awaySeconds = rows
-    .filter((r) => r.kind === 'away')
-    .reduce((total, r) => total + r.seconds, 0)
-  const blocked = rows
-    .filter((r) => r.kind === 'block_hit')
-    .reduce((total, r) => total + r.hits, 0)
-
-  const [counts] = await sql`
-    select
-      count(*) filter (where outcome = 'yes')::int as finished,
-      count(*) filter (where outcome in ('yes', 'no'))::int as answered
-    from session where user_id = ${userId}`
+  const data = await getReviewData(sessionId, userId)
+  if (!data) notFound()
 
   return (
     <div data-surface="review">
       <p className="m-mark" data-state="ended" />
-      {session.intention ? (
+      {data.intention ? (
         <>
           <p className="m-meta">You meant to</p>
-          <p className="m-sentence">{session.intention}</p>
+          <p className="m-sentence">{data.intention}</p>
         </>
       ) : (
         <p className="m-meta">You didn&apos;t say what you meant to do.</p>
       )}
 
-      <Band segments={toBand(rows as Parameters<typeof toBand>[0])} state={session.ended_at ? 'ended' : 'running'} />
+      <Band segments={toBand(data.rows as Parameters<typeof toBand>[0])} state={data.endedAt ? 'ended' : 'running'} />
 
-      {topAttention.map((row, i) => (
+      {data.topAttention.map((row, i) => (
         <div className="m-row" key={row.domain}>
           <span className="m-row-bar" data-kind={TINTS[i]} />
           <span className="m-row-domain">{row.domain}</span>
@@ -68,25 +43,25 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
         </div>
       ))}
 
-      {awaySeconds > 0 && (
+      {data.awaySeconds > 0 && (
         <div className="m-row">
           <span className="m-row-bar" data-kind="away" />
           <span className="m-row-domain">away</span>
-          <span className="m-row-figure">{minutes(awaySeconds)} min</span>
+          <span className="m-row-figure">{minutes(data.awaySeconds)} min</span>
         </div>
       )}
 
-      {blocked > 0 && <p className="m-meta">{blocked} blocked attempts</p>}
+      {data.blockedAttempts > 0 && <p className="m-meta">{data.blockedAttempts} blocked attempts</p>}
 
-      {session.outcome === 'unanswered' ? (
+      {data.outcome === 'unanswered' ? (
         <>
           <p className="m-rate">Did you?</p>
-          <Answer sessionId={session.id} />
+          <Answer sessionId={sessionId} />
         </>
       ) : (
         <p className="m-meta">
-          {session.outcome === 'yes'
-            ? `Good. That's ${counts.finished} of ${counts.answered}.`
+          {data.outcome === 'yes'
+            ? `Good. That's ${data.finished} of ${data.answered}.`
             : 'Noted. It carries over.'}
         </p>
       )}
