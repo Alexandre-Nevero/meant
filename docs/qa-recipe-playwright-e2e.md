@@ -355,7 +355,7 @@ signed-out sees the sign-in form, signed-in sees a "Go to your dashboard" link.
     "Every other focus app has to ask whether you were focused." is visible, and a
     `href="/dashboard"` link with text "Go to your dashboard" is present in the hero
     section. No email input field is visible (verifying the auth form is not rendered).
-45. In a fresh browser context, navigate to `/` unsigned-out. **Pass:** the hero text is
+45. In a fresh browser context, navigate to `/` signed-out. **Pass:** the hero text is
     visible, a sign-in form with an email input field (in the hero section) is present,
     and no "Go to your dashboard" link is visible.
 
