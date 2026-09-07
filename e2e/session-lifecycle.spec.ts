@@ -30,9 +30,14 @@ test.describe('session lifecycle', () => {
     await page.locator('input.m-field').first().fill('block test')
     await page.getByRole('button', { name: 'Start' }).click()
 
+    // installRules() is still in flight when Start's click handler resolves (it
+    // resolves once the async message handler yields, not once installRules has
+    // actually finished) — poll instead of reading the rules synchronously.
     const [sw] = context.serviceWorkers()
+    await expect
+      .poll(async () => (await sw.evaluate(() => chrome.declarativeNetRequest.getDynamicRules())).length, { timeout: 10_000, intervals: [200] })
+      .toBeGreaterThan(0)
     const rules = await sw.evaluate(() => chrome.declarativeNetRequest.getDynamicRules())
-    expect(rules.length).toBeGreaterThan(0)
     expect(rules.some((r: any) => r.condition.requestDomains?.includes('facebook.com'))).toBeTruthy()
 
     // Stop must also remove the rules it installed — a leaked rule would keep blocking

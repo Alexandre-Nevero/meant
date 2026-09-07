@@ -31,6 +31,13 @@ which domains are blocked — as a joined list, `blocking: ${session.blockedDoma
 (`popup.js:468`), not a count. Same idea, two different shapes, in two screens of the same
 popup.
 
+`design/canvas/PopupIdle.dc.html:52` also still shows the old live count label, `blocking 4`,
+not the static `what to block` string this fix ships. Same deviation as BlockPage.dc.html above,
+and for the same reason: the artboard only had to render one clean demo screen with a plausible
+number, not settle the label-grammar mismatch against its sibling `where it happens` label. This
+is a deliberate, reasoned deviation from the canvas, not an oversight — flagged here per the same
+hierarchy-of-truth rule.
+
 ## Flow
 
 Interstitial (no new flow — same render path, richer output):

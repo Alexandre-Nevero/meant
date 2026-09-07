@@ -19,12 +19,13 @@ async function pairPopup(page: import('@playwright/test').Page, extensionId: str
 // uses for the negative case (no tab), applied here for the positive case.
 //
 // The target URL itself is verified by spying on chrome.tabs.create's argument, rather
-// than reading the opened tab's final URL: the web app's own '/' route redirects an
-// authenticated session straight to /dashboard server-side (app/page.tsx:
-// `if (userId) redirect('/dashboard')`), which every test account here is (freshAccount
-// signs in). So "meant.app"'s landed URL is legitimately /dashboard too — reading it back
-// would make the two buttons indistinguishable. The spy sidesteps that: it captures the
-// exact URL popup.js asked for, before any server-side redirect gets a say.
+// than reading the opened tab's final URL: the web app's own '/' route swaps its CTA to
+// a "Go to your dashboard" link for an authenticated session (app/page.tsx checks
+// `userId`), which every test account here is (freshAccount signs in) — but the landing
+// page itself still renders at '/', it never redirects there. So reading the opened
+// tab's URL back wouldn't distinguish "meant.app" from "History" anyway once a real
+// click on that CTA link is followed. The spy sidesteps that: it captures the exact URL
+// popup.js asked chrome.tabs.create for, before any in-page navigation gets a say.
 async function armTabsCreateSpy(page: import('@playwright/test').Page) {
   await page.evaluate(() => {
     const w = window as unknown as { __tabUrls?: string[] }
@@ -99,26 +100,31 @@ test.describe('popup, idle state', () => {
     await landingPage.close()
   })
 
-  test('multi-select chips toggle independently, not exclusively', async ({ context, extensionId, freshAccount }) => {
+  // The duration picker is chipGroup's single-select path (no multi/removable) — one of
+  // the two chip groups in this popup still genuinely toggle rather than add/remove
+  // (the other is the cycle picker). Site chips became removable in an earlier task, so
+  // clicking one now deletes it instead of toggling it — this test used to click site
+  // chips and no longer exercised toggle behaviour at all.
+  test('single-select chips toggle exclusively: picking one flips the previous one off', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    // Add two chips via the + input, confirm both stay pressed together.
-    const plusButtons = page.getByRole('button', { name: '+' })
-    await plusButtons.first().click()
-    await page.keyboard.type('gmail.com')
-    await page.keyboard.press('Enter')
-    await plusButtons.first().click()
-    await page.keyboard.type('amazon.com')
-    await page.keyboard.press('Enter')
+    const fiftyChip = page.getByRole('button', { name: '50 min' })
+    const twentyFiveChip = page.getByRole('button', { name: '25 min' })
 
-    const gmailChip = page.getByRole('button', { name: /gmail\.com/ })
-    const amazonChip = page.getByRole('button', { name: /amazon\.com/ })
-    await expect(gmailChip).toHaveAttribute('aria-pressed', 'true')
-    await expect(amazonChip).toHaveAttribute('aria-pressed', 'true')
-    await gmailChip.click() // toggling one must not affect the other
-    await expect(amazonChip).toHaveAttribute('aria-pressed', 'true')
+    // 50/10 is the documented first-ever-session cycle default, but the duration default
+    // is '25 min' (see idle()'s chipGroup call) — confirm the starting state first.
+    await expect(twentyFiveChip).toHaveAttribute('aria-pressed', 'true')
+    await expect(fiftyChip).toHaveAttribute('aria-pressed', 'false')
+
+    await fiftyChip.click()
+    await expect(fiftyChip).toHaveAttribute('aria-pressed', 'true')
+    await expect(twentyFiveChip).toHaveAttribute('aria-pressed', 'false') // the previous pick must flip off
+
+    await twentyFiveChip.click()
+    await expect(twentyFiveChip).toHaveAttribute('aria-pressed', 'true')
+    await expect(fiftyChip).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('typed domains are normalized on Enter and on blur, not dropped', async ({ context, extensionId, freshAccount }) => {

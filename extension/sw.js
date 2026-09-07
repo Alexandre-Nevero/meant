@@ -179,9 +179,6 @@ function isKnownDistraction(domain) {
   return domain != null && Object.values(BLOCKLISTS).some((list) => list.includes(domain))
 }
 
-// isCurrentlyBlocked (resolving BLOCKLISTS *category names*) is removed — it never
-// matched this call site's actual shape anyway (see below), and nothing else used it.
-
 // The companion, without a model: a visit to a domain from any of the known distraction
 // categories (design/blocklists.js) that isn't even one the user chose to block this
 // session is drift they'd recognize as drift. No page content, no permission, no
