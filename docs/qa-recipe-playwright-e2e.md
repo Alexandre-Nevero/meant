@@ -96,6 +96,12 @@ resolve that ambiguity for real here.
      Visit that domain in a new tab. **Pass:** redirected to `blocked.html` (verifies that
      the broadened `host_permissions` allows `redirect` rules to execute for non-hardcoded
      domains; this test fails against the pre-fix manifest).
+15b. Sweep test (Task 2): Open a tab to a domain *before* starting a session, then start
+     a session that adds that domain to the blocklist. **Pass:** the already-open tab is
+     redirected to `blocked.html` within 3 seconds (verifies that `sweepOpenTabs` runs
+     immediately after `installRules`, catching tabs that were loaded before the rules
+     existed; this distinct from 15, which tests the ordinary `declarativeNetRequest` rule
+     for a fresh navigation after rules are installed).
 16. Sentence lock, without waiting 60 real seconds: directly set
     `session.startedAt` in `chrome.storage.local` to "now" for the editable case and to
     ">60s ago" for the locked case, then open the popup fresh for each and read the
