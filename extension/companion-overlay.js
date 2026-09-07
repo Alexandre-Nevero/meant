@@ -103,16 +103,18 @@ function css() {
   `
 }
 
-function clampToViewport(left, top) {
-  const maxLeft = window.innerWidth - SIZE
-  const maxTop = window.innerHeight - SIZE
-  return { left: Math.min(Math.max(left, 0), Math.max(maxLeft, 0)), top: Math.min(Math.max(top, 0), Math.max(maxTop, 0)) }
+function clampFraction(frac) {
+  return Math.min(Math.max(frac, 0), 1)
 }
 
 async function positionHost() {
   const { companionPosition } = await chrome.storage.local.get('companionPosition')
-  if (companionPosition?.left != null && companionPosition?.top != null) {
-    const { left, top } = clampToViewport(companionPosition.left, companionPosition.top)
+  // A stale {left, top} (pre-fraction format) has no xFrac/yFrac — treat it exactly
+  // like "nothing stored" rather than writing a migration: a dragged-position
+  // preference is low-stakes, and the next drag naturally re-saves the new format.
+  if (companionPosition?.xFrac != null && companionPosition?.yFrac != null) {
+    const left = clampFraction(companionPosition.xFrac) * (window.innerWidth - SIZE)
+    const top = clampFraction(companionPosition.yFrac) * (window.innerHeight - SIZE)
     hostEl.style.left = `${left}px`
     hostEl.style.top = `${top}px`
     hostEl.style.right = ''
@@ -134,7 +136,8 @@ function startDrag(e) {
 
 function onDrag(e) {
   if (!dragState) return
-  const { left, top } = clampToViewport(e.clientX - dragState.offsetX, e.clientY - dragState.offsetY)
+  const left = Math.min(Math.max(e.clientX - dragState.offsetX, 0), Math.max(window.innerWidth - SIZE, 0))
+  const top = Math.min(Math.max(e.clientY - dragState.offsetY, 0), Math.max(window.innerHeight - SIZE, 0))
   hostEl.style.left = `${left}px`
   hostEl.style.top = `${top}px`
   hostEl.style.right = ''
@@ -145,8 +148,13 @@ async function endDrag() {
   if (!dragState) return
   dragState = null
   dot.dataset.dragging = 'false'
+  const left = parseInt(hostEl.style.left, 10)
+  const top = parseInt(hostEl.style.top, 10)
   await chrome.storage.local.set({
-    companionPosition: { left: parseInt(hostEl.style.left, 10), top: parseInt(hostEl.style.top, 10) },
+    companionPosition: {
+      xFrac: window.innerWidth > SIZE ? left / (window.innerWidth - SIZE) : 0,
+      yFrac: window.innerHeight > SIZE ? top / (window.innerHeight - SIZE) : 0,
+    },
   })
 }
 

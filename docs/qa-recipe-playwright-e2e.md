@@ -325,6 +325,26 @@ sessions store the resolved domain list as `blockedDomains` (plural).
     `companionState` storage write — actually drives the signal on a genuine domain-change
     event.
 
+### O — Companion position stored as a viewport fraction, not absolute pixels (Task 4 fix)
+
+`positionHost()`/`endDrag()` in `extension/companion-overlay.js` used to store a dragged
+position as absolute `{left, top}` pixels in `chrome.storage.local`, then reclamp those
+pixels against whatever window's own `innerWidth`/`innerHeight` happened to be loading
+it (`clampToViewport`). A position valid on a wide monitor got silently reclamped smaller
+on a narrower window — the dot appeared to "drift" between windows of different sizes.
+The fix stores `{xFrac, yFrac}` (0-1 range) instead, so a fresh window reconstructs the
+same relative place regardless of its own size. A stale `{left, top}` value (no
+`xFrac`/`yFrac`) is treated the same as no stored position — falls back to the default
+bottom-right corner.
+
+43. Pair and start a session on a setup page. Open a wide window (`1400x900`), navigate
+    to `https://example.com`, and drag the companion to roughly its horizontal center.
+    Record the dragged position as a fraction of that window's own width. Open a genuinely
+    narrower window (`500x700`), navigate to `https://example.org`. **Pass:** the
+    companion's horizontal fraction in the narrow window is within 0.05 of the fraction
+    recorded in the wide window — confirming the stored position holds its relative place
+    instead of being reclamped against the narrower window's own smaller width.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

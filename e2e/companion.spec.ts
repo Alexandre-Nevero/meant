@@ -72,6 +72,40 @@ test.describe('floating companion', () => {
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
+  test('a dragged position holds its relative place across windows of different sizes', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId)
+
+    const wide = await context.newPage()
+    await wide.setViewportSize({ width: 1400, height: 900 })
+    await wide.goto('https://example.com')
+    const wideHost = wide.locator(HOST_SELECTOR)
+    const wideBox = (await wideHost.boundingBox())!
+
+    // Drag it to roughly the horizontal center of the WIDE viewport.
+    const target = { x: 700, y: wideBox.y }
+    await wide.mouse.move(wideBox.x + wideBox.width / 2, wideBox.y + wideBox.height / 2)
+    await wide.mouse.down()
+    await wide.mouse.move(target.x, target.y, { steps: 10 })
+    await wide.mouse.up()
+    const draggedBox = (await wideHost.boundingBox())!
+    const draggedFracX = draggedBox.x / 1400
+
+    // A genuinely narrower window loading the same stored position should land at
+    // roughly the same FRACTION across its own (smaller) width, not get silently
+    // reclamped to a different relative spot.
+    const narrow = await context.newPage()
+    await narrow.setViewportSize({ width: 500, height: 700 })
+    await narrow.goto('https://example.org')
+    const narrowBox = (await narrow.locator(HOST_SELECTOR).boundingBox())!
+    const narrowFracX = narrowBox.x / 500
+
+    expect(Math.abs(narrowFracX - draggedFracX)).toBeLessThan(0.05)
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
   test('state is told by ring presence/style, and a return gets one pulse', async ({ context, extensionId, freshAccount }) => {
     const setupPage = await context.newPage()
     await freshAccount(setupPage)
