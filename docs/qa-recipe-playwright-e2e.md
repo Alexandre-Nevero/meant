@@ -409,6 +409,23 @@ device-token auth via `requestUserId()`).
     longer includes the domain (polled, confirming the server-side standing list changed,
     not just local render state). Reload the popup. **Pass:** the chip does not reappear.
 
+### T — Work site chip row max-height and scroll cap (Task 9)
+
+The site chips' flex row had no height limit, so adding many sites (e.g., a list of 15+)
+would cause the row to wrap unbounded and grow the popup's own height past its practical
+~600px ceiling, pushing the Start button and other controls off-screen. The fix adds
+`max-height: 132px; overflow-y: auto;` to `.m-chip-row` — approximately 4 rows of chips
+at the popup's 360px width (132px ≈ 4 × ~30px chip height + ~12px gaps), a reasonable
+compact cluster without dominating the popup.
+
+49. Pair a device and open the popup. Use the work sites "+" input to add 15 domains
+    (e.g., `site0.example.com` through `site14.example.com`), each on its own Enter.
+    **Pass:** the `.m-chip-row` containing the work site chips has a `boundingBox().height`
+    less than 300px (well under the popup's practical ceiling), confirming that the chips
+    scroll internally instead of growing the popup unbounded. (Visually/human check: the
+    row appears as a compact ~4-line chip grid with an internal scrollbar, not a tall
+    tower of wrapping chips extending past the Start button.)
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

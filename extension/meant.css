@@ -156,7 +156,7 @@ button, input, select { font: inherit; color: inherit; }
 .m-field[data-pairing-code="true"]::placeholder { font-family: var(--m-figure); letter-spacing: 0.1em; font-size: 13px; }
 
 /* chip fields — duration and blocklist pickers */
-.m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; max-height: 132px; overflow-y: auto; }
 .m-chip {
   padding: 8px 14px;
   font-family: var(--m-body);

@@ -260,6 +260,24 @@ test.describe('popup, idle state', () => {
     // Deduplicated to a single chip, not oscillating forever and never resolving.
     await expect(page.getByRole('button', { name: 'docs.google.com' })).toHaveCount(1)
   })
+
+  test('a long site list scrolls inside the chip row instead of growing the popup unbounded', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const plusButtons = page.getByRole('button', { name: '+' })
+    for (let i = 0; i < 15; i++) {
+      await plusButtons.first().click()
+      await page.keyboard.type(`site${i}.example.com`)
+      await page.keyboard.press('Enter')
+    }
+
+    // Target the work sites chip row (first data-chip-layout="group" contains "where it happens" and workSites row)
+    const workSiteRow = page.locator('[data-chip-layout="group"]').first().locator('.m-chip-row')
+    const box = (await workSiteRow.boundingBox())!
+    expect(box.height).toBeLessThan(300) // well under the popup's own practical ~600px ceiling
+  })
 })
 
 // Case K — the running popup's own nav row and blocked-sites visibility (Task 6 brief).
