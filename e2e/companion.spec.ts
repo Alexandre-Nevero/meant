@@ -128,4 +128,48 @@ test.describe('floating companion', () => {
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
+
+  test('a known-distraction domain the user DID block this session never reads as drift', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    // NOT using this suite's real "add a blocked domain + Start" UI flow here: doing so
+    // installs a real declarativeNetRequest redirect rule (Case D), and a DNR redirect
+    // intercepts the navigation before the tab's URL ever updates to the real domain —
+    // confirmed by instrumenting chrome.tabs.onUpdated directly: for a DNR-redirected
+    // domain, the listener's changeInfo.url goes straight from the previous page to the
+    // blocked.html redirect URL, never showing 'https://youtube.com/' at all. So a real
+    // end-to-end block would make `nextDomain` inside updateCompanion always resolve to
+    // null (blocked.html is chrome-extension://, filtered by Task 1's safeHostname) —
+    // never actually reaching the session.blockedDomains membership check this test
+    // exists to cover. Setting session.blockedDomains directly isolates exactly the field
+    // the fix touches, the same storage-manipulation technique this suite already uses
+    // for startedAt (see the sibling drift test above), while still driving the ring via
+    // a real navigation → chrome.tabs.onUpdated → transition() → updateCompanion() call
+    // chain, not a manual companionState write.
+    await pairAndStart(setupPage, extensionId)
+    await setupPage.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        chrome.storage.local.get('session', ({ session }: any) => {
+          session.startedAt = new Date(Date.now() - 90_000).toISOString() // past DRIFT_GRACE_MS (60s)
+          session.blockedDomains = ['youtube.com']
+          chrome.storage.local.set({ session }, () => resolve())
+        })
+      })
+    })
+
+    const page = await context.newPage()
+    await page.goto('https://example.com')
+    const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
+    await expect(dotWrap).toHaveAttribute('data-state', 'focus')
+
+    // A real navigation (no DNR rule actually installed for it here, so it loads for
+    // real) — this is what exercises updateCompanion's session.blockedDomains check on a
+    // domain that IS a known distraction category member (BLOCKLISTS' 'video' category)
+    // but that this session's own blockedDomains says is already handled, not drift.
+    await page.goto('https://youtube.com', { waitUntil: 'commit' })
+    await page.waitForTimeout(500)
+    await expect(dotWrap).toHaveAttribute('data-state', 'focus') // still focus, not drift
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
 })
