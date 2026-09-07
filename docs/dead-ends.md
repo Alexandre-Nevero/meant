@@ -169,3 +169,38 @@ separately if it recurs.
 targeting for additional origins. Task 1 adds a regression test (`e2e/session-lifecycle.spec.ts`,
 "a blocked domain not in the old hardcoded list is still redirected to blocked.html")
 that verifies blocking works for non-hardcoded domains and fails against the old manifest.
+
+### The floating companion never appears in the user's real Brave — root cause unconfirmed (2026-09-07)
+
+Confirmed directly by the user (not a stale-tab timing coincidence — "never," across
+many sessions): the companion (`extension/companion-overlay.js`) does not appear on any
+page in their real Brave install, despite three attempts at live computer-use diagnosis
+producing evidence that this project's own Playwright E2E suite directly contradicts —
+the suite has run `e2e/companion.spec.ts` dozens of times today, against this exact
+`extension/` folder, in a real (non-mocked) unpacked Chromium load, and it reliably
+passes.
+
+All three computer-use diagnostic rounds turned out to be unreliable on inspection, not
+just inconclusive: round 1 read DevTools' Application → Local Storage panel (which shows
+`window.localStorage`, unrelated to `chrome.storage.local`) and reported it as if it were
+extension storage; round 2 reported "no network requests fired" from what was likely a
+regular page's Network tab rather than the service worker's own, and treated the popup
+closing on blur — normal Chrome behavior any time an extension popup loses focus, e.g.
+from opening DevTools right after a click — as evidence of failure; round 3 read the raw
+LevelDB storage files directly (a legitimate method) and found a real, active session,
+directly disproving round 1's own conclusion.
+
+Researched whether Brave Shields' script-blocking could affect an extension's own
+`content_scripts` (as opposed to a page's own scripts) — checked Brave's GitHub issue
+tracker directly (brave/brave-browser#45019, #46155, #8307) rather than assume either
+way. No definitive public documentation exists on this specific question.
+
+**No code fix made** — there is no confirmed root cause to fix, and guessing one (as
+round 1 did) produces a wrong "fix" that doesn't address the real problem while looking
+resolved. Given three rounds of unreliable live diagnosis already, a fourth wasn't
+pursued. Instead, one simple, concrete, human-only check was added to the manual testing
+walkthrough: toggle Brave Shields off for a test site (one click, no DevTools) and see if
+the companion appears with Shields off — if it does, Shields is the cause and the fix is
+either a documented user-facing workaround or (if Brave's extension API allows detecting
+Shields state) a code change; if it still doesn't appear, Shields is ruled out and this
+needs fresh investigation with different tooling than computer-use has provided so far.
