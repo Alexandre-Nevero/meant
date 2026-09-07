@@ -23,7 +23,12 @@ test('stopping a session shows the outcome question in the popup, opens no tab',
   const pageCountBefore = context.pages().length
   await page.getByRole('button', { name: 'Stop' }).click()
 
-  await page.waitForTimeout(500) // give a would-be chrome.tabs.create a moment to fire, if it were going to
+  // endSession awaits a real network PATCH before its finally clears the session — a
+  // fixed wait here raced that under full-suite load (confirmed: ~1-in-5 flake). Poll
+  // the real state instead, same pattern used everywhere else in this suite.
+  await expect
+    .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session)))))
+    .toBeNull()
   expect(context.pages().length).toBe(pageCountBefore) // no new tab opened
 
   await page.reload() // popup.html closes/reopens between real popup opens; this simulates that
