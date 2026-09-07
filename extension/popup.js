@@ -342,13 +342,12 @@ async function idle() {
   // First ever session: blockedDomains defaults to the whole standing distract list.
   const blockedValues = lastChoice ? lastChoice.blockedDomains : distractSites
   const blockedOptions = [...new Set([...distractSites, ...blockedValues])].map((d) => ({ label: d, value: d }))
-  const blockingLabel = el('p', 'm-meta', `blocking ${blockedValues.length}`)
+  const blockingLabel = el('p', 'm-meta', 'what to block')
   const blocked = chipGroup(blockedOptions, {
     multi: true,
     addable: true,
     removable: true,
     value: blockedValues,
-    onChange: (v) => { blockingLabel.textContent = `blocking ${v.length}` },
     onRemove: (domain) => removeFromList('distract', domain),
   })
 

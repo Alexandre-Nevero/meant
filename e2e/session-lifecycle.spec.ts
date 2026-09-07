@@ -167,6 +167,27 @@ test.describe('session lifecycle', () => {
       .not.toMatch(new RegExp(extensionId))
   })
 
+  // Case V — the block page names the blocked domain in its time-left line (Task 12).
+  test('the block page names the blocked domain in its time-left line', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairAndOpenPopup(page, extensionId)
+    await addBlockedDomain(page, 'example.net')
+    await page.locator('input.m-field').first().fill('domain label test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const blockedPage = await context.newPage()
+    await blockedPage.bringToFront()
+    await blockedPage.goto('https://example.net')
+    await expect(blockedPage).toHaveURL(/blocked\.html\?d=example\.net/)
+
+    // The domain now appears folded into the existing muted time-left line, not a new element.
+    await expect(blockedPage.locator('.m-row-figure')).toHaveText(/^example\.net — \d+ minutes left$/)
+
+    await page.bringToFront()
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
   test('the already-focused tab starts accumulating attention time immediately on Start, with no tab switch needed', async ({ context, extensionId, freshAccount }) => {
     const workPage = await context.newPage()
     await workPage.goto('https://example.com')

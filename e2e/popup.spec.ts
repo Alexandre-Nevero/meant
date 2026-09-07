@@ -73,7 +73,7 @@ test.describe('popup, idle state', () => {
     await expect(page.getByRole('button', { name: '25/5' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'no cycles' })).toBeVisible()
     await expect(page.getByText('where it happens')).toBeVisible()
-    await expect(page.getByText(/^blocking \d+$/)).toBeVisible()
+    await expect(page.getByText('what to block')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Start' })).toBeVisible()
 
     // 50/10 is the documented first-ever-session default (Task 6 brief, Step 3) — not
@@ -259,6 +259,32 @@ test.describe('popup, idle state', () => {
     await page.keyboard.press('Enter') // accepts the standing suggestion
     // Deduplicated to a single chip, not oscillating forever and never resolving.
     await expect(page.getByRole('button', { name: 'docs.google.com' })).toHaveCount(1)
+  })
+
+  // Case V — the blocklist label is static, matching its sibling's grammar, and never
+  // mutates as chips are added or removed (Task 12).
+  test('the blocklist label reads "what to block" and does not change as chips are added or removed', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    await expect(page.getByText('what to block')).toBeVisible()
+    await expect(page.getByText(/^blocking \d+$/)).toHaveCount(0)
+
+    const plusButtons = page.getByRole('button', { name: '+' })
+    await plusButtons.nth(1).click() // the blocking row's own +
+    await page.keyboard.type('addedsite.com')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: 'addedsite.com' })).toBeVisible()
+
+    // The label must still read the static string after the add — a regression here
+    // would mean the deleted onChange handler somehow still fired.
+    await expect(page.getByText('what to block')).toBeVisible()
+    await expect(page.getByText(/^blocking \d+$/)).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Remove addedsite.com' }).click()
+    await expect(page.getByRole('button', { name: /addedsite\.com/ })).toHaveCount(0)
+    await expect(page.getByText('what to block')).toBeVisible()
   })
 
   test('a long site list scrolls inside the chip row instead of growing the popup unbounded', async ({ context, extensionId, freshAccount }) => {

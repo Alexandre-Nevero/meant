@@ -449,6 +449,33 @@ recomputes when the popup itself re-renders, never on a live per-second timer.
 51. Start a session with `no cycles` selected. **Pass:** no `... min left` text renders
     anywhere in the popup.
 
+### V — Blocking UI: the interstitial names the domain, the popup label stops mismatching its sibling (Task 12)
+
+Two gaps from the Task 11 design pass. First, `blocked.html` read `?d=<domain>` into JS
+but never rendered it — a user who lands there without having just typed the blocked URL
+(a stale tab, a link, a bookmark) had no on-screen confirmation of what got blocked. The
+fix folds the domain into the page's existing bottom-most, lowest-emphasis line rather
+than adding a new element: `remainingText(session)` now returns
+`` `${domain} — ${timeText}` `` (falling back to `timeText` alone if `domain` is falsy),
+rendered by the unchanged `.m-row-figure` node. Same three elements as before
+(`.m-sentence`, `.m-meta`, `.m-row-figure`), same "no session" early return, no new
+class/color/motion. Second, the idle popup's blocklist group was headed by a live count,
+`` blocking ${blockedValues.length} ``, updated on every add/remove — its sibling group
+directly above it (`where it happens`) uses a plain static label with no count. The fix
+replaces the count with the literal `'what to block'` and deletes the `onChange` handler
+that used to rewrite it; `onRemove` (still needed for standing-list removal) is unchanged.
+The running-state summary line (`blocking: x, y, z`) is untouched — it does a different
+job and was already out of scope for this pass.
+
+52. Start a session with a blocked domain configured, then navigate a tab to that domain.
+    **Pass:** the redirect lands on `blocked.html`, and the muted bottom line reads
+    `<domain> — N minutes left` (or `N minutes in` for an open-ended session) — the domain
+    now appears in the same line, same size, same color as the time text always has.
+53. Open the idle popup. **Pass:** the blocklist group's header reads `what to block`, not
+    a number. Add a domain via its own `+` input, then remove it. **Pass:** the header text
+    never changes through either action — it stays the literal string `what to block`
+    throughout.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
