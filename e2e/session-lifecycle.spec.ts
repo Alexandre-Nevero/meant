@@ -99,33 +99,25 @@ test.describe('session lifecycle', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
-  test('a non-hardcoded work site still accumulates tracked minutes', async ({ context, extensionId, freshAccount }) => {
+  test('a blocked domain not in the old hardcoded list is still redirected to blocked.html', async ({ context, extensionId, freshAccount }) => {
+    // Regression test for Task 1: declarativeNetRequest redirect requires host permission
+    // for the target domain. github.com was not in the old manifest's hardcoded host_permissions,
+    // so this test verifies the fix allows redirect to work for non-hardcoded domains.
     const page = await context.newPage()
     await freshAccount(page)
     await pairAndOpenPopup(page, extensionId)
-    await addBlockedDomain(page, 'example.org') // reuses the existing helper, a non-hardcoded distraction domain
-    await page.locator('input.m-field').first().fill('tracking test')
+    await addBlockedDomain(page, 'github.com') // not in old hardcoded host_permissions
+    await page.locator('input.m-field').first().fill('blocking test')
     await page.getByRole('button', { name: 'Start' }).click()
 
-    const sessionId: string = await page.evaluate(
-      () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
-    )
+    const blockedPage = await context.newPage()
+    await blockedPage.bringToFront()
+    await blockedPage.goto('https://github.com')
 
-    const workPage = await context.newPage()
-    await workPage.bringToFront()
-    await workPage.goto('https://example.com') // example.com, not example.org — this is a WORK site check, not the blocked one
-    await workPage.waitForTimeout(2_000)
+    // Verify the redirect rule executed and the page landed on blocked.html
+    await expect(blockedPage).toHaveURL(/blocked\.html\?d=github\.com/)
 
     await page.bringToFront()
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-
-    await expect
-      .poll(async () => {
-        const res = await page.request.get(`/review/${sessionId}`)
-        return res.ok() ? await res.text() : ''
-      }, { timeout: 5_000 })
-      .toMatch(/example\.com/)
-    // Explicitly NOT asserting "0 min" is absent by string match — assert the row exists at all,
-    // since a genuinely-tracked site must appear in the per-domain rows regardless of exact seconds.
   })
 })

@@ -143,22 +143,29 @@ can't simulate that specific load path, so it joins `docs/qa-recipe-browser-veri
 Part C as human-only, not because it's hard to script but because the test harness's
 own loading mechanism is a different code path than a real user's install.
 
-### `chrome.tabs.query()` redacts `tab.url` for non-permitted origins, breaking tracking and blocking (2026-09-07, Task 1 fix)
+### Declarative Net Request redirect rule required host permission for target domain (2026-09-07, Task 1 fix)
 
 `extension/manifest.json`'s `host_permissions` only listed a hardcoded set of distraction
-domains. This had two consequences: (1) `extension/sw.js`'s `activeDomain()` (line 52–60),
-which calls `chrome.tabs.query()`, received redacted `tab.url` values for any origin
-outside that list, causing it to return `null` and losing tracking data for user-configured
-work sites; (2) Chrome's declarativeNetRequest `redirect` action requires host permission
-for the target domain, so a user-typed blocked domain outside the hardcoded list would
-silently fail to redirect even though the rule installed without error — the redirect rule
-would fire, but Chrome would refuse to execute the redirect to `blocked.html` because the
-extension lacked host permission for the target origin.
+domains. Chrome's declarativeNetRequest `redirect` action requires host permission for
+the target domain it redirects to — in this case, the domain being blocked must have a
+matching host permission, or the redirect silently fails. A user-typed blocked domain
+outside the hardcoded list would have an installed redirect rule that fires but does
+not execute; the rule would check the request domain and match, but Chrome would refuse
+to execute the redirect to `blocked.html` because the extension lacked host permission
+for that origin. (Per Chrome's docs on `chrome.tabs.query()`, the `tabs` permission
+alone is sufficient for unredacted `tab.url` — host_permissions are OR'd with this, not
+required, so tracking via `activeDomain()` in sw.js:52–60 was never broken by this gap.)
+
+**Note on initial investigation:** An earlier test ("a non-hardcoded work site still
+accumulates tracked minutes") passed against both old and new manifests, proving it was
+a false-positive. The original symptom that `docs.google.com` showed 0 minutes tracked
+remains unexplained; it may not reflect a bug at all and should be re-investigated
+separately if it recurs.
 
 **Fix:** Broadened `host_permissions` from the hardcoded list to `["<all_urls>"]` and
-`web_accessible_resources[0].matches` to `["<all_urls>"]`, matching the content script's
-already-existing `<all_urls>` scope. This is no new category of trust the user hadn't
-already granted (the content script was already injected everywhere); it only widens the
-scope for tab URL inspection and resource accessibility. Task 1 adds a test (`e2e/session-lifecycle.spec.ts`,
-"a non-hardcoded work site still accumulates tracked minutes") that confirms tracking
-works for non-hardcoded domains.
+`web_accessible_resources[0].matches` to `["<all_urls>"]` — the necessary change for
+`redirect` actions to work on non-hardcoded domains. This is no new category of trust
+(the content script was already injected at `<all_urls>`); it only enables redirect
+targeting for additional origins. Task 1 adds a regression test (`e2e/session-lifecycle.spec.ts`,
+"a blocked domain not in the old hardcoded list is still redirected to blocked.html")
+that verifies blocking works for non-hardcoded domains and fails against the old manifest.

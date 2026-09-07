@@ -90,6 +90,12 @@ resolve that ambiguity for real here.
     in the service worker context. **Pass:** one rule per configured blocked domain,
     `condition.requestDomains` matches the normalized (not raw-typed) form.
 15. Visit one of the blocked domains in a new tab. **Pass:** redirected to `blocked.html`.
+    (This uses a domain already in the old hardcoded `host_permissions` list.)
+15a. Regression test (Task 1): Start a *new* session configured to block a domain that
+     was *not* in the old manifest's hardcoded `host_permissions` list (e.g. `github.com`).
+     Visit that domain in a new tab. **Pass:** redirected to `blocked.html` (verifies that
+     the broadened `host_permissions` allows `redirect` rules to execute for non-hardcoded
+     domains; this test fails against the pre-fix manifest).
 16. Sentence lock, without waiting 60 real seconds: directly set
     `session.startedAt` in `chrome.storage.local` to "now" for the editable case and to
     ">60s ago" for the locked case, then open the popup fresh for each and read the
