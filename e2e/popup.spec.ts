@@ -122,4 +122,28 @@ test.describe('popup, idle state', () => {
     await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
   })
+
+  test('two typos in a phrase each get suggestions in sequence without oscillation', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const plusButtons = page.getByRole('button', { name: '+' })
+    await plusButtons.first().click()
+    await page.keyboard.type('gmial, docz')
+    await page.keyboard.press('Enter')
+    // First suggestion should be for the first bad token (gmial → gmail)
+    await expect(page.getByText('did you mean gmail? Press Enter to use it')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com' })).toHaveCount(0) // nothing added yet
+
+    await page.keyboard.press('Enter') // accept first suggestion
+    // Second Enter should show the second suggestion (docz → docs), not revert to gmial
+    await expect(page.getByText('did you mean docs? Press Enter to use it')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com' })).toHaveCount(0) // still nothing added, still atomic
+
+    await page.keyboard.press('Enter') // accept second suggestion
+    // Final Enter should resolve both corrected chips
+    await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
+  })
 })

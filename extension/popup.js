@@ -98,6 +98,7 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
         let text = input.value
         if (pendingSuggestion && text === pendingSuggestion.rawText) {
           text = text.replace(pendingSuggestion.badToken, pendingSuggestion.suggestion)
+          input.value = text
         }
         if (!text.trim()) {
           settled = true
