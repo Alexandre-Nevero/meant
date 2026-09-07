@@ -175,17 +175,28 @@ test.describe('session lifecycle', () => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairAndOpenPopup(page, extensionId)
+
+    // Bring workPage back to focus RIGHT BEFORE Start, so it's the active tab
+    // at the moment startSession() runs. Then immediately check session.slice.domain
+    // without any further tab switches — this isolates startSession's own seed from
+    // the pre-existing onActivated listener (which would otherwise also seed the
+    // domain and mask a missing fix).
+    await workPage.bringToFront()
     await page.locator('input.m-field').first().fill('seed test')
     await page.getByRole('button', { name: 'Start' }).click()
+
+    // Read internal state directly, immediately after Start returns — proves that
+    // startSession's seed is working, independent of any subsequent tab-activation events.
+    await expect
+      .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session?.slice?.domain)))))
+      .toBe('example.com')
 
     const sessionId: string = await page.evaluate(
       () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
     )
 
-    // Bring the ALREADY-OPEN tab back to front — no *new* tab-activation event, since it
-    // was already the active tab before Start was even clicked. If startSession doesn't
-    // seed the domain itself, nothing here would ever attribute time to example.com.
-    await workPage.bringToFront()
+    // Stay on the already-focused tab long enough for time to accumulate — the 2 second
+    // wait is needed to cross the 1-second floor that attribution.js uses for event emission.
     await workPage.waitForTimeout(2_000)
 
     await page.bringToFront()
