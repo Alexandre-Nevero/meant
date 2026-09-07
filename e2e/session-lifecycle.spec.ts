@@ -166,4 +166,36 @@ test.describe('session lifecycle', () => {
       }, { timeout: 5_000 })
       .not.toMatch(new RegExp(extensionId))
   })
+
+  test('the already-focused tab starts accumulating attention time immediately on Start, with no tab switch needed', async ({ context, extensionId, freshAccount }) => {
+    const workPage = await context.newPage()
+    await workPage.goto('https://example.com')
+    await workPage.bringToFront()
+
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairAndOpenPopup(page, extensionId)
+    await page.locator('input.m-field').first().fill('seed test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const sessionId: string = await page.evaluate(
+      () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+    )
+
+    // Bring the ALREADY-OPEN tab back to front — no *new* tab-activation event, since it
+    // was already the active tab before Start was even clicked. If startSession doesn't
+    // seed the domain itself, nothing here would ever attribute time to example.com.
+    await workPage.bringToFront()
+    await workPage.waitForTimeout(2_000)
+
+    await page.bringToFront()
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+    await expect
+      .poll(async () => {
+        const res = await page.request.get(`/review/${sessionId}`)
+        return res.ok() ? await res.text() : ''
+      }, { timeout: 5_000 })
+      .toMatch(/example\.com/)
+  })
 })

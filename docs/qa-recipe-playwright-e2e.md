@@ -289,6 +289,24 @@ silently filters non-HTTP(S) schemes.
     must match the extension ID to be meaningful, so the test constructs it dynamically
     from `extensionId` rather than hardcoding.)
 
+### M — Already-focused tab seeding on session start (Task 2 fix)
+
+`startSession()` in `extension/sw.js` calls `transition()` to seed the session's time slice
+with whatever tab is currently focused, so an already-active tab gets tracked immediately
+without needing a separate tab-switch event afterward. Without this seed, a user who starts
+a session on a tab and never switches tabs would see zero minutes attributed to that domain
+(until a 30s TICK alarm fires, if the user stays idle — or never, if they stay active).
+
+41. Create a page open on `https://example.com` and bring it to focus. Create a second
+    page and pair a device on it, navigate to the extension's popup. Fill in a sentence
+    and click Start. Bring the already-open `example.com` tab back to focus. Wait 2 seconds
+    (long enough for the attribution timer to emit an event). Bring the popup back to focus,
+    stop the session via `chrome.runtime.sendMessage({type: 'stop'})`. **Pass:** fetch the
+    review page via `GET /review/:id`, and confirm it contains the string `example.com`
+    in its HTML. (The 2-second wait is empirically necessary: `extension/lib/attribution.js`
+    floors milliseconds to whole seconds, so a shorter wait would never emit an event, and
+    a test that checks this fix would pass falsely even without the fix.)
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

@@ -108,6 +108,11 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
     companionState: 'settled',
   })
   await chrome.alarms.create(TICK, { periodInMinutes: 0.5 })
+  // Seed the slice with whatever tab is ALREADY focused right now — without this, an
+  // already-active tab gets zero attention time until some other event (tab switch,
+  // URL update, window focus change, or a 30s alarm tick) happens to fire next, which
+  // may never happen if the user just stays on the same tab.
+  await transition({ mode: 'attention', domain: await activeDomain() })
   try {
     const { ruleIds, domains } = await installRules(blockedDomains)
     const s = await getSession()

@@ -156,11 +156,13 @@ for that origin. (Per Chrome's docs on `chrome.tabs.query()`, the `tabs` permiss
 alone is sufficient for unredacted `tab.url` — host_permissions are OR'd with this, not
 required, so tracking via `activeDomain()` in sw.js:52–60 was never broken by this gap.)
 
-**Note on initial investigation:** An earlier test ("a non-hardcoded work site still
-accumulates tracked minutes") passed against both old and new manifests, proving it was
-a false-positive. The original symptom that `docs.google.com` showed 0 minutes tracked
-remains unexplained; it may not reflect a bug at all and should be re-investigated
-separately if it recurs.
+**Update (2026-09-08):** confirmed the real cause. `startSession` (`extension/sw.js`)
+never called `transition()` — it seeded `slice: emptySlice(now)` with `domain: null`
+regardless of whatever tab was actually focused when Start was clicked. An already-active
+tab got zero attention time until some *other* event fired (tab switch, URL update, window
+focus change, or a 30s alarm tick while idle) — which never happens if the user simply
+stays on the same tab. Fixed by seeding the slice with the real active tab's domain
+immediately in `startSession`, right after the session is written to storage.
 
 **Fix:** Broadened `host_permissions` from the hardcoded list to `["<all_urls>"]` and
 `web_accessible_resources[0].matches` to `["<all_urls>"]` — the necessary change for
