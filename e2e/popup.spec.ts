@@ -14,6 +14,51 @@ async function pairPopup(page: import('@playwright/test').Page, extensionId: str
   await page.reload()
 }
 
+// Task 6 nav row: clicking a nav button must actually fire chrome.tabs.create with the
+// right URL, not just render — same "did a real tab open" pattern outcome-in-popup.spec.ts
+// uses for the negative case (no tab), applied here for the positive case.
+//
+// The target URL itself is verified by spying on chrome.tabs.create's argument, rather
+// than reading the opened tab's final URL: the web app's own '/' route redirects an
+// authenticated session straight to /dashboard server-side (app/page.tsx:
+// `if (userId) redirect('/dashboard')`), which every test account here is (freshAccount
+// signs in). So "meant.app"'s landed URL is legitimately /dashboard too — reading it back
+// would make the two buttons indistinguishable. The spy sidesteps that: it captures the
+// exact URL popup.js asked for, before any server-side redirect gets a say.
+async function armTabsCreateSpy(page: import('@playwright/test').Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __tabUrls?: string[] }
+    if (w.__tabUrls) return // already armed on this page instance
+    w.__tabUrls = []
+    const orig = chrome.tabs.create.bind(chrome.tabs)
+    chrome.tabs.create = ((opts: chrome.tabs.CreateProperties, cb?: (tab: chrome.tabs.Tab) => void) => {
+      w.__tabUrls!.push(opts.url ?? '')
+      return orig(opts, cb as never)
+    }) as typeof chrome.tabs.create
+  })
+}
+
+async function clickAndExpectNewTab(
+  page: import('@playwright/test').Page,
+  context: import('@playwright/test').BrowserContext,
+  buttonName: string,
+  expectedUrl: string,
+) {
+  await armTabsCreateSpy(page)
+  const before = context.pages().length
+  const [newPage] = await Promise.all([
+    context.waitForEvent('page'),
+    page.getByRole('button', { name: buttonName }).click(),
+  ])
+  await newPage.waitForLoadState()
+  expect(context.pages().length).toBe(before + 1) // a real new tab actually opened
+
+  const calledUrl = await page.evaluate(() => (window as unknown as { __tabUrls: string[] }).__tabUrls.at(-1))
+  expect(calledUrl).toBe(expectedUrl) // chrome.tabs.create was asked for the right URL
+
+  return newPage
+}
+
 // Case C — the idle popup's rendering and interactions, against the real extension.
 test.describe('popup, idle state', () => {
   test('renders the approved layout: sentence, duration, cycle, site rows, Start', async ({ context, extensionId, freshAccount }) => {
@@ -41,9 +86,17 @@ test.describe('popup, idle state', () => {
     const markBackground = await page.locator('.m-mark').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
     expect(markBackground).not.toBe('none')
 
-    // Task 6: nav row present in the idle view too.
+    // Task 6: nav row present in the idle view too, and both buttons actually open a
+    // real tab at the right URL (chrome.tabs.create), not just render.
     await expect(page.getByRole('button', { name: 'History' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'meant.app' })).toBeVisible()
+
+    const historyPage = await clickAndExpectNewTab(page, context, 'History', 'http://localhost:3000/dashboard')
+    expect(historyPage.url()).toContain('/dashboard')
+    await historyPage.close()
+
+    const landingPage = await clickAndExpectNewTab(page, context, 'meant.app', 'http://localhost:3000/')
+    await landingPage.close()
   })
 
   test('multi-select chips toggle independently, not exclusively', async ({ context, extensionId, freshAccount }) => {
@@ -174,6 +227,13 @@ test.describe('popup, running state', () => {
     await expect(page.getByText(/^blocking: .*example\.org/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'History' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'meant.app' })).toBeVisible()
+
+    const historyPage = await clickAndExpectNewTab(page, context, 'History', 'http://localhost:3000/dashboard')
+    expect(historyPage.url()).toContain('/dashboard')
+    await historyPage.close()
+
+    const landingPage = await clickAndExpectNewTab(page, context, 'meant.app', 'http://localhost:3000/')
+    await landingPage.close()
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
