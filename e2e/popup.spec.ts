@@ -91,4 +91,35 @@ test.describe('popup, idle state', () => {
       .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v) => r(v.session)))))
       .toBeTruthy()
   })
+
+  test('typing a phrase resolves multiple aliases at once, atomically', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const plusButtons = page.getByRole('button', { name: '+' })
+    await plusButtons.first().click()
+    await page.keyboard.type('docs, gmail, and chatgpt')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'chatgpt.com' })).toBeVisible()
+  })
+
+  test('a typo in a phrase blocks the whole phrase and offers a correction', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const plusButtons = page.getByRole('button', { name: '+' })
+    await plusButtons.first().click()
+    await page.keyboard.type('docs, gmial')
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('did you mean gmail? Press Enter to use it')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'docs.google.com' })).toHaveCount(0) // atomic — nothing added yet
+
+    await page.keyboard.press('Enter') // accepts the standing suggestion
+    await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
+  })
 })

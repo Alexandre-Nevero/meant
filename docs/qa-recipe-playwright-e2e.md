@@ -83,6 +83,13 @@ resolve that ambiguity for real here.
 13. Click Start with no other input beyond a typed sentence. **Pass:** `res.ok` true,
     `chrome.storage.local.session` populated, `POST /api/sessions` fires (check via
     `page.on('request')` or by querying the DB row afterward).
+14. Type a multi-domain phrase into the "+" input (e.g. `docs, gmail, and chatgpt`), press
+    Enter. **Pass:** all three domains resolve to their aliases and appear as chips
+    (e.g. `docs.google.com`, `gmail.com`, `chatgpt.com`), atomically — all or nothing.
+15. Type a phrase with a typo (e.g. `docs, gmial`), press Enter. **Pass:** error message
+    "did you mean gmail? Press Enter to use it" appears; no chips are added yet (atomic
+    rejection). Press Enter again to accept the suggestion. **Pass:** the corrected phrase
+    resolves and both chips appear (`docs.google.com`, `gmail.com`).
 
 ### D — Session lifecycle, block rules, and the sentence lock (D34)
 

@@ -1,6 +1,7 @@
 import { post, get, apiBase } from './api.js'
 import { isEditable } from './lib/sentence-lock.js'
 import { normalizeDomain } from './lib/normalize-domain.js'
+import { resolveSitePhrase } from './lib/resolve-sites.js'
 
 const root = document.getElementById('root')
 
@@ -69,38 +70,83 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
     plusButton.addEventListener('click', () => {
       const input = el('input', 'm-chip')
       input.type = 'text'
-      input.placeholder = 'domain.com'
-      input.style.width = '96px'
+      input.placeholder = 'domain.com, or "gmail, docs"'
+      input.style.width = '160px'
+      const error = el('p', 'm-meta', '')
+      error.hidden = true
       plusButton.replaceWith(input)
+      input.after(error)
       input.focus()
 
-      // Blur fires after Escape/Enter replace the input (removing a focused element blurs
-      // it), so `settled` stops that from double-committing or overriding a discard.
       let settled = false
-      const commit = () => {
-        if (settled) return
-        settled = true
-        const v = normalizeDomain(input.value)
-        input.replaceWith(plusButton)
-        if (v && !selected.has(v)) {
-          selected.add(v)
-          addChip(v)
-          if (onChange) onChange(currentValue())
-        }
+      let pendingSuggestion = null
+
+      function showError(message) {
+        error.textContent = message
+        error.hidden = false
       }
+      function clearError() {
+        error.hidden = true
+        pendingSuggestion = null
+      }
+
+      // Returns true on success (input closed, chips added or nothing typed), false if it
+      // stayed open showing an error — the blur handler uses this to re-focus rather than
+      // let a bad phrase silently vanish.
+      const attemptCommit = () => {
+        if (settled) return true
+        let text = input.value
+        if (pendingSuggestion && text === pendingSuggestion.rawText) {
+          text = text.replace(pendingSuggestion.badToken, pendingSuggestion.suggestion)
+        }
+        if (!text.trim()) {
+          settled = true
+          error.remove()
+          input.replaceWith(plusButton)
+          return true
+        }
+        const result = resolveSitePhrase(text)
+        if (!result.ok) {
+          pendingSuggestion = result.suggestion
+            ? { rawText: input.value, badToken: result.badToken, suggestion: result.suggestion }
+            : null
+          showError(
+            result.suggestion
+              ? `did you mean ${result.suggestion}? Press Enter to use it`
+              : `"${result.badToken}" isn't a known site — type the full domain`,
+          )
+          return false
+        }
+        settled = true
+        error.remove()
+        input.replaceWith(plusButton)
+        let changed = false
+        for (const domain of result.domains) {
+          if (!selected.has(domain)) {
+            selected.add(domain)
+            addChip(domain)
+            changed = true
+          }
+        }
+        if (changed && onChange) onChange(currentValue())
+        return true
+      }
+
       const discard = () => {
         if (settled) return
         settled = true
+        error.remove()
         input.replaceWith(plusButton)
       }
 
+      input.addEventListener('input', clearError)
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') discard()
-        else if (e.key === 'Enter') commit()
+        else if (e.key === 'Enter') attemptCommit()
       })
-      // Clicking Start (or anywhere else) without pressing Enter first must not silently
-      // drop what was typed — blur commits exactly like Enter. Only Escape discards.
-      input.addEventListener('blur', commit)
+      input.addEventListener('blur', () => {
+        if (!attemptCommit()) input.focus()
+      })
     })
     row.append(plusButton)
   }
