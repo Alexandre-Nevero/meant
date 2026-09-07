@@ -371,6 +371,21 @@ verifies the fix wires the approved fixture value into the shipped stylesheet.
     `design/fixtures/ledger.html` and `design/canvas/Ledger.dc.html` — not a new design
     decision, just a missing implementation detail.)
 
+### R — Away row clarifying copy
+
+The away row on the review page (representing time when the screen was locked, idle, or
+the browser window was not in focus) lacked a clarifying hover tooltip. Users seeing "away"
+without context might misunderstand what it tracks. The fix adds a `title` attribute to
+the away row's `<div>` explaining the meaning via hover-only disclosure, with no new visible
+text (per the design invariant that rows need no inline labels).
+
+47. Start a session, then inject an away event directly via `POST /api/events` with
+    `{kind: 'away', domain: null, seconds: 120}` (deterministic, no real idle/focus timing
+    needed). Stop the session and fetch its review page via `GET /review/:id`. **Pass:** the
+    away row's container `<div>` has a `title` attribute matching `/not measured/i`,
+    confirming the hover explanation is present. **Pass:** no new visible text appears on the
+    page (the explanation is hover-only, not a new paragraph or label).
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
@@ -394,7 +409,7 @@ fine to me" judgment calls, since severity triage belongs to whoever reads the r
   `freshAccount()` helper (signup with a random email, returns the page + credentials).
 - `e2e/setup-lists.spec.ts` (case A), `e2e/pairing.spec.ts` (B), `e2e/popup.spec.ts` (C),
   `e2e/session-lifecycle.spec.ts` (D), `e2e/offline.spec.ts` (E), `e2e/companion.spec.ts`
-  (F), `e2e/review.spec.ts` (G), `e2e/session-elapsed.spec.ts` (H),
+  (F), `e2e/review.spec.ts` (G, R), `e2e/session-elapsed.spec.ts` (H),
   `e2e/session-recovery.spec.ts` (I, manages its own persistent-context lifecycle rather
   than using the shared fixture, since it needs to close and relaunch the browser),
   `e2e/outcome-in-popup.spec.ts` (J), `e2e/popup.spec.ts` (K, folded into the existing

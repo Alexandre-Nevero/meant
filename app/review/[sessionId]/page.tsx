@@ -44,7 +44,7 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
       ))}
 
       {data.awaySeconds > 0 && (
-        <div className="m-row">
+        <div className="m-row" title="Time not measured — your screen was locked or idle, or you left the browser.">
           <span className="m-row-bar" data-kind="away" />
           <span className="m-row-domain">away</span>
           <span className="m-row-figure">{minutes(data.awaySeconds)} min</span>

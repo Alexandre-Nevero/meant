@@ -47,3 +47,36 @@ test('review page normalizes www. off tracked domains and has no redundant off-b
   const apiData = await apiRes.json()
   expect(apiData.topAttention.some((r: any) => r.domain === 'example.com')).toBe(true)
 })
+
+// Case R — away row clarifying copy
+test('the away row explains what "away" means via a hover title, not new visible text', async ({ context, extensionId, freshAccount }) => {
+  const setupPage = await context.newPage()
+  await freshAccount(setupPage)
+  const mint = await setupPage.request.post('/api/pair')
+  const { code } = await mint.json()
+  const claim = await setupPage.request.post('/api/pair/claim', { data: { code } })
+  const { token, deviceId } = await claim.json()
+  await setupPage.goto(`chrome-extension://${extensionId}/popup.html`)
+  await setupPage.evaluate(({ token, deviceId }) => new Promise<void>((r) => chrome.storage.local.set({ token, deviceId }, () => r())), { token, deviceId })
+  await setupPage.reload()
+  await setupPage.locator('input.m-field').first().fill('away copy test')
+  await setupPage.getByRole('button', { name: 'Start' }).click()
+
+  const sessionId: string = await setupPage.evaluate(
+    () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+  )
+
+  // Inject a real away event directly via the same API sw.js's own flush() uses —
+  // deterministic, no dependency on real idle/focus timing.
+  await context.request.post('/api/events', {
+    headers: { authorization: `Bearer ${token}` },
+    data: { sessionId, events: [{ kind: 'away', domain: null, seconds: 120, at: new Date().toISOString() }] },
+  })
+
+  await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+  const reviewPage = await context.newPage()
+  await reviewPage.goto(`/review/${sessionId}`)
+  const awayRow = reviewPage.locator('.m-row:has([data-kind="away"])')
+  await expect(awayRow).toHaveAttribute('title', /not measured/i)
+})
