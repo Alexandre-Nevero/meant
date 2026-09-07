@@ -98,4 +98,34 @@ test.describe('session lifecycle', () => {
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
+
+  test('a non-hardcoded work site still accumulates tracked minutes', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairAndOpenPopup(page, extensionId)
+    await addBlockedDomain(page, 'example.org') // reuses the existing helper, a non-hardcoded distraction domain
+    await page.locator('input.m-field').first().fill('tracking test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const sessionId: string = await page.evaluate(
+      () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+    )
+
+    const workPage = await context.newPage()
+    await workPage.bringToFront()
+    await workPage.goto('https://example.com') // example.com, not example.org — this is a WORK site check, not the blocked one
+    await workPage.waitForTimeout(2_000)
+
+    await page.bringToFront()
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+    await expect
+      .poll(async () => {
+        const res = await page.request.get(`/review/${sessionId}`)
+        return res.ok() ? await res.text() : ''
+      }, { timeout: 5_000 })
+      .toMatch(/example\.com/)
+    // Explicitly NOT asserting "0 min" is absent by string match — assert the row exists at all,
+    // since a genuinely-tracked site must appear in the per-domain rows regardless of exact seconds.
+  })
 })

@@ -142,3 +142,23 @@ ever fires for a real, UI-loaded unpacked extension remains unverified — Playw
 can't simulate that specific load path, so it joins `docs/qa-recipe-browser-verification.md`
 Part C as human-only, not because it's hard to script but because the test harness's
 own loading mechanism is a different code path than a real user's install.
+
+### `chrome.tabs.query()` redacts `tab.url` for non-permitted origins, breaking tracking and blocking (2026-09-07, Task 1 fix)
+
+`extension/manifest.json`'s `host_permissions` only listed a hardcoded set of distraction
+domains. This had two consequences: (1) `extension/sw.js`'s `activeDomain()` (line 52–60),
+which calls `chrome.tabs.query()`, received redacted `tab.url` values for any origin
+outside that list, causing it to return `null` and losing tracking data for user-configured
+work sites; (2) Chrome's declarativeNetRequest `redirect` action requires host permission
+for the target domain, so a user-typed blocked domain outside the hardcoded list would
+silently fail to redirect even though the rule installed without error — the redirect rule
+would fire, but Chrome would refuse to execute the redirect to `blocked.html` because the
+extension lacked host permission for the target origin.
+
+**Fix:** Broadened `host_permissions` from the hardcoded list to `["<all_urls>"]` and
+`web_accessible_resources[0].matches` to `["<all_urls>"]`, matching the content script's
+already-existing `<all_urls>` scope. This is no new category of trust the user hadn't
+already granted (the content script was already injected everywhere); it only widens the
+scope for tab URL inspection and resource accessibility. Task 1 adds a test (`e2e/session-lifecycle.spec.ts`,
+"a non-hardcoded work site still accumulates tracked minutes") that confirms tracking
+works for non-hardcoded domains.
