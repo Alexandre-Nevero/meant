@@ -1,5 +1,4 @@
-import { deviceFromRequest } from '@/lib/device-auth'
-import { currentUserId } from '@/lib/auth/session'
+import { requestUserId } from '@/lib/device-auth'
 import { normalizeDomain } from '@/lib/domains'
 import { sql } from '@/lib/db'
 
@@ -8,15 +7,6 @@ import { sql } from '@/lib/db'
 // route dynamic. Without this, GET can be treated as cacheable, serving a stale
 // unauthorized/authorized verdict for a token that was just revoked or just paired.
 export const dynamic = 'force-dynamic'
-
-// The extension (device token) and the web app (session cookie) both need this route —
-// try the device token first since that's the unambiguous, stateless check, and fall
-// back to the browser's session cookie only when there isn't one.
-async function resolveUserId(req: Request): Promise<string | null> {
-  const device = await deviceFromRequest(req)
-  if (device) return device.user_id
-  return currentUserId()
-}
 
 function normalizeList(input: unknown): string[] {
   if (!Array.isArray(input)) return []
@@ -28,7 +18,7 @@ function normalizeList(input: unknown): string[] {
 }
 
 export async function GET(req: Request) {
-  const userId = await resolveUserId(req)
+  const userId = await requestUserId(req)
   if (!userId) return Response.json({ error: 'unauthorized' }, { status: 401 })
 
   const rows = await sql`
@@ -43,7 +33,7 @@ export async function GET(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const userId = await resolveUserId(req)
+  const userId = await requestUserId(req)
   if (!userId) return Response.json({ error: 'unauthorized' }, { status: 401 })
 
   const body = await req.json().catch(() => null)

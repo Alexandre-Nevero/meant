@@ -1,7 +1,6 @@
 import { deviceFromRequest } from '@/lib/device-auth'
+import { UUID as UUID_RE } from '@/lib/review-data'
 import { sql } from '@/lib/db'
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function POST(req: Request) {
   const device = await deviceFromRequest(req)
