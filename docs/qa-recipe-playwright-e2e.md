@@ -386,6 +386,29 @@ text (per the design invariant that rows need no inline labels).
     confirming the hover explanation is present. **Pass:** no new visible text appears on the
     page (the explanation is hover-only, not a new paragraph or label).
 
+### S — Site chip removal, wired to the standing list (Task 8)
+
+`chipGroup` in `extension/popup.js` only ever toggled a chip's `aria-pressed` state — there
+was no way to actually delete a work/blocked site from the standing list, only to
+deselect it for the current session (it would keep reappearing as an unselected chip on
+every future popup open, sourced from `GET /api/lists`). The fix adds a `removable`/
+`onRemove` option (default `false`, so the duration and cycle pickers — the other two
+`chipGroup` call sites, neither of which passes `removable` — render byte-for-byte as
+before): a removable chip shows a trailing " ×" and a `Remove <label>` accessible name;
+clicking it deletes the chip from local state and calls `onRemove(domain)`, which does a
+read-filter-write against `PUT /api/lists` (no backend change — the route already accepts
+device-token auth via `requestUserId()`).
+
+48. Pre-seed the account's server-side `workSites` list with a domain directly via
+    `PUT /api/lists` (not by adding it live through the popup's own "+" input — a domain
+    only ever added client-side within the same test would make every assertion below
+    trivially true even if removal never reached the server; confirmed by mutation
+    testing, where a no-op `removeFromList` still passed against the weaker version of
+    this test). Open the popup. **Pass:** a `Remove <domain>` button is visible. Click it.
+    **Pass:** the chip is gone from the DOM immediately. **Pass:** `GET /api/lists` no
+    longer includes the domain (polled, confirming the server-side standing list changed,
+    not just local render state). Reload the popup. **Pass:** the chip does not reappear.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

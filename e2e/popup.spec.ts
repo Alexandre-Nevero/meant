@@ -186,6 +186,36 @@ test.describe('popup, idle state', () => {
     await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
   })
 
+  test('a site chip can be removed, not just toggled off, and it does not reappear on reload', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    // Pre-seed a real, server-persisted work site (rather than adding it live via the "+"
+    // input) so the assertions below check genuine standing-list removal — a domain that
+    // was only ever added to local/client state within this same test would make "gone
+    // from the server list" and "doesn't reappear on reload" trivially true even if
+    // removal never actually reached the server (confirmed by mutation testing: a no-op
+    // removeFromList still passed every assertion when the domain was added client-side).
+    await page.request.put('/api/lists', { data: { workSites: ['gmail.com'], distractSites: [] } })
+    await pairPopup(page, extensionId)
+
+    await expect(page.getByRole('button', { name: /gmail\.com/ })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Remove gmail.com' }).click()
+    await expect(page.getByRole('button', { name: /gmail\.com/ })).toHaveCount(0)
+
+    // Confirm it's gone from the server-side standing list too, not just local render state.
+    await expect
+      .poll(async () => {
+        const res = await page.request.get('/api/lists')
+        const body = await res.json()
+        return body.workSites.includes('gmail.com')
+      }, { timeout: 5_000 })
+      .toBe(false)
+
+    await page.reload()
+    await expect(page.getByRole('button', { name: /gmail\.com/ })).toHaveCount(0)
+  })
+
   test('two typos in a phrase each get suggestions in sequence without oscillation', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)

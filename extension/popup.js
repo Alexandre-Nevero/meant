@@ -29,9 +29,12 @@ function show(...nodes) {
  *  `options[0]` unless `value` is given. Pass `{ multi: true, value: [...] }` for independent
  *  per-chip toggling, defaulting to that starting set. Pass `{ addable: true }` (multi-select
  *  only) to append a '+' chip that turns into a text input for adding a new option at runtime
- *  — the site rows' pool isn't fixed ahead of time. `onChange(value)` fires after every click
- *  or add. Keeps the `<button aria-pressed>` pattern (design.md §8). */
-function chipGroup(options, { mono = false, multi = false, value, addable = false, onChange } = {}) {
+ *  — the site rows' pool isn't fixed ahead of time. Pass `{ removable: true, onRemove }` (multi
+ *  only) to render each chip with a trailing " ×" and a "Remove <label>" accessible name; a
+ *  click removes it from local state and calls `onRemove(value)` instead of toggling.
+ *  `onChange(value)` fires after every click or add. Keeps the `<button aria-pressed>` pattern
+ *  (design.md §8). */
+function chipGroup(options, { mono = false, multi = false, value, addable = false, removable = false, onChange, onRemove } = {}) {
   const row = el('div', 'm-chip-row')
   const selected = multi ? new Set(value ?? []) : null
   let single = multi ? null : (value ?? options[0]?.value)
@@ -42,11 +45,19 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
   }
 
   function addChip(v, label = v) {
-    const chip = el('button', 'm-chip', label)
+    const chip = el('button', 'm-chip', removable ? `${label} ×` : label)
     chip.type = 'button'
     chip.dataset.mono = String(mono)
+    if (removable) chip.setAttribute('aria-label', `Remove ${label}`)
     chip.setAttribute('aria-pressed', String(multi ? selected.has(v) : single === v))
     chip.addEventListener('click', () => {
+      if (removable) {
+        selected.delete(v)
+        chip.remove()
+        if (onRemove) onRemove(v)
+        if (onChange) onChange(currentValue())
+        return
+      }
       if (multi) {
         if (selected.has(v)) selected.delete(v)
         else selected.add(v)
@@ -244,6 +255,15 @@ async function fetchLists() {
   }
 }
 
+async function removeFromList(kind, domain) {
+  const res = await fetchLists()
+  const next = {
+    workSites: kind === 'work' ? res.workSites.filter((d) => d !== domain) : res.workSites,
+    distractSites: kind === 'distract' ? res.distractSites.filter((d) => d !== domain) : res.distractSites,
+  }
+  await post('/api/lists', next, { method: 'PUT' })
+}
+
 function unpaired(message) {
   const mark = el('p', 'm-mark', '')
   mark.dataset.state = 'idle'
@@ -314,7 +334,10 @@ async function idle() {
   // First ever session: workSites from the API, none pre-selected.
   const workSiteValues = lastChoice ? lastChoice.workSites : []
   const workSiteOptions = [...new Set([...knownWorkSites, ...workSiteValues])].map((d) => ({ label: d, value: d }))
-  const workSites = chipGroup(workSiteOptions, { multi: true, addable: true, value: workSiteValues })
+  const workSites = chipGroup(workSiteOptions, {
+    multi: true, addable: true, removable: true, value: workSiteValues,
+    onRemove: (domain) => removeFromList('work', domain),
+  })
 
   // First ever session: blockedDomains defaults to the whole standing distract list.
   const blockedValues = lastChoice ? lastChoice.blockedDomains : distractSites
@@ -323,8 +346,10 @@ async function idle() {
   const blocked = chipGroup(blockedOptions, {
     multi: true,
     addable: true,
+    removable: true,
     value: blockedValues,
     onChange: (v) => { blockingLabel.textContent = `blocking ${v.length}` },
+    onRemove: (domain) => removeFromList('distract', domain),
   })
 
   // data-chip-layout, not a class: the class contract is frozen at 13 fixed classes plus
