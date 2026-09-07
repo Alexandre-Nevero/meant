@@ -112,7 +112,8 @@ resolve that ambiguity for real here.
     /api/sessions/:id` fires with the new `intention`; re-fetching the session confirms
     the DB value changed.
 18. Stop the session. **Pass:** `chrome.storage.local.session` is null, dynamic rules are
-    cleared, a new tab opens to `/review/:id`.
+    cleared. (Superseded by Task 4 / Case J: no tab opens anymore — a `pendingReview`
+    marker is set instead, and the outcome renders in the popup on next open.)
 
 ### E — Offline resilience (Task 3)
 
@@ -171,9 +172,10 @@ call.
     wait). Re-arm the real `TICK` alarm to fire imminently
     (`chrome.alarms.create('meant-tick', {delayInMinutes: 0.01})` from the service worker)
     rather than waiting for its natural ~30s period. **Pass:** the session clears itself
-    from storage without any popup interaction, a new tab opens to `/review/:id`, and the
-    block rules it installed are gone — confirming `endReason: 'elapsed'` runs the same
-    cleanup as a manual stop, not a partial version of it.
+    from storage without any popup interaction, and the block rules it installed are
+    gone — confirming `endReason: 'elapsed'` runs the same cleanup as a manual stop, not
+    a partial version of it. (Superseded by Task 4 / Case J: no tab opens — same
+    `pendingReview` marker as a manual stop.)
 29. (Folded into Case D's own rule-installation test.) After a manual stop, re-read
     `chrome.declarativeNetRequest.getDynamicRules()`. **Pass:** empty. The original version
     of this suite only checked that rules got *installed* on Start, never that they got
@@ -200,6 +202,32 @@ behavior for a real user's UI-loaded install either way).
     `--load-extension` CLI loading is a different code path from that. See
     `docs/qa-recipe-browser-verification.md` Part C.
 
+### J — The outcome question moves into the popup (Task 4)
+
+An explicit user decision reversed Case D step 18 and Case H step 28's own pass criteria:
+stopping or elapsing a session no longer opens a browser tab to `/review/:id` at all. The
+"Did you...? Yes / Not yet" question and the per-site elapsed summary now render inside
+the popup itself, the next time it's opened — driven by a `pendingReview` marker in
+`chrome.storage.local` and a new `GET /api/sessions/:id/review` JSON route
+(`lib/review-data.ts` is the shared query both that route and the web `/review/:id` page
+now call). The full web page still exists and still works on its own; nothing pushes it
+at you anymore.
+
+32. Start a session, click Stop. **Pass:** no new tab opens (`context.pages().length`
+    unchanged 500ms after the click — long enough for a would-be `chrome.tabs.create` to
+    have fired).
+33. Reload the popup (`popup.html` closes/reopens between real popup opens, so a reload is
+    the honest simulation). **Pass:** the outcome view renders — `.m-rate` "Did you?", the
+    intention sentence if one was set, and `Yes`/`Not yet` buttons, both `.m-answer`,
+    styled identically (PRODUCT.md's Yes/Not-yet invariant).
+34. Click `Yes`. **Pass:** `PATCH /api/sessions/:id/outcome` fires with the device
+    Authorization header (not a Clerk cookie — the popup has no browser session), the
+    popup re-renders showing `Good. That's N of N.`, and a `Done` button. Click `Done`.
+    **Pass:** `pendingReview` is cleared from storage and the popup returns to idle.
+35. `GET /api/sessions/:id/review` with the device token. **Pass:** 200, JSON body matches
+    the `ReviewData` shape (`topAttention`, `awaySeconds`, `blockedAttempts`, `outcome`,
+    `finished`, `answered`). Same request unauthenticated. **Pass:** 401.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
@@ -225,4 +253,5 @@ fine to me" judgment calls, since severity triage belongs to whoever reads the r
   `e2e/session-lifecycle.spec.ts` (D), `e2e/offline.spec.ts` (E), `e2e/companion.spec.ts`
   (F), `e2e/review.spec.ts` (G), `e2e/session-elapsed.spec.ts` (H),
   `e2e/session-recovery.spec.ts` (I, manages its own persistent-context lifecycle rather
-  than using the shared fixture, since it needs to close and relaunch the browser).
+  than using the shared fixture, since it needs to close and relaunch the browser),
+  `e2e/outcome-in-popup.spec.ts` (J).

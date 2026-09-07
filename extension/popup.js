@@ -1,4 +1,4 @@
-import { post, apiBase } from './api.js'
+import { post, get, apiBase } from './api.js'
 import { isEditable } from './lib/sentence-lock.js'
 import { normalizeDomain } from './lib/normalize-domain.js'
 
@@ -361,13 +361,72 @@ function running(session) {
   show(mark, sentenceNode, elapsed, stop)
 }
 
+async function outcome(sessionId) {
+  const mark = el('p', 'm-mark', '')
+  mark.dataset.state = 'ended'
+
+  const res = await get(`/api/sessions/${sessionId}/review`)
+  if (!res.ok || !res.data) {
+    await chrome.storage.local.remove('pendingReview')
+    return idle()
+  }
+  const data = res.data
+
+  const nodes = [mark]
+  if (data.intention) {
+    nodes.push(el('p', 'm-meta', 'You meant to'), el('p', 'm-sentence', data.intention))
+  } else {
+    nodes.push(el('p', 'm-meta', "You didn't say what you meant to do."))
+  }
+  for (const row of data.topAttention) {
+    nodes.push(el('p', 'm-meta', `${row.domain} — ${Math.round(row.seconds / 60)} min`))
+  }
+  if (data.awaySeconds > 0) {
+    nodes.push(el('p', 'm-meta', `away — ${Math.round(data.awaySeconds / 60)} min`))
+  }
+  if (data.blockedAttempts > 0) {
+    nodes.push(el('p', 'm-meta', `${data.blockedAttempts} blocked attempts`))
+  }
+
+  if (data.outcome === 'unanswered') {
+    nodes.push(el('p', 'm-rate', 'Did you?'))
+    const yes = el('button', 'm-answer', 'Yes')
+    const notYet = el('button', 'm-answer', 'Not yet')
+    const answer = async (value) => {
+      yes.disabled = true
+      notYet.disabled = true
+      await post(`/api/sessions/${sessionId}/outcome`, { outcome: value }, { method: 'PATCH' })
+      // pendingReview stays set — re-render the same outcome view so the resolved
+      // "Good/Noted" message shows; only the Done button below clears the marker.
+      render()
+    }
+    yes.addEventListener('click', () => answer('yes'))
+    notYet.addEventListener('click', () => answer('no'))
+    nodes.push(yes, notYet)
+  } else {
+    nodes.push(el('p', 'm-meta', data.outcome === 'yes'
+      ? `Good. That's ${data.finished} of ${data.answered}.`
+      : 'Noted. It carries over.'))
+    const done = el('button', 'm-btn', 'Done')
+    done.dataset.variant = 'quiet'
+    done.addEventListener('click', async () => {
+      await chrome.storage.local.remove('pendingReview')
+      render()
+    })
+    nodes.push(done)
+  }
+
+  show(...nodes)
+}
+
 async function render() {
-  const { token, session, unpairedReason } = await chrome.storage.local.get(['token', 'session', 'unpairedReason'])
+  const { token, session, unpairedReason, pendingReview } = await chrome.storage.local.get(['token', 'session', 'unpairedReason', 'pendingReview'])
   if (!token) {
     if (unpairedReason) await chrome.storage.local.remove('unpairedReason')
     return unpaired(unpairedReason)
   }
   if (session) return running(session)
+  if (pendingReview) return outcome(pendingReview.sessionId)
   await idle()
 }
 

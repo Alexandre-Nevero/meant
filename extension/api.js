@@ -7,6 +7,27 @@ export async function apiBase() {
   return DEFAULT_API_BASE
 }
 
+export async function get(path) {
+  const base = await apiBase()
+  const { token } = await chrome.storage.local.get('token')
+  try {
+    const res = await fetch(base + path, {
+      headers: { ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    })
+    if (res.status === 401 && token) {
+      await chrome.storage.local.set({
+        token: null,
+        deviceId: null,
+        session: null,
+        unpairedReason: 'This device was disconnected from your account. Pair again.',
+      })
+    }
+    return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) }
+  } catch {
+    return { ok: false, offline: true }
+  }
+}
+
 export async function post(path, body, { method = 'POST', queue: shouldQueue = true } = {}) {
   const base = await apiBase()
   const { token } = await chrome.storage.local.get('token')

@@ -201,6 +201,34 @@ button, input, select { font: inherit; color: inherit; }
  * 16px → 14px, design/canvas/PopupIdle.dc.html). */
 [data-surface="popup"] .m-btn { padding: 14px 0; }
 
+/* ---------- .m-answer / .m-rate — the outcome question (Task 4: rendered in the popup) ----------
+ * Ported from app/globals.css, popup-sized, with no transition/transform on either rule —
+ * the popup animates nothing (PRODUCT.md invariant), unlike the web app's versions which
+ * have a press-scale on non-popup surfaces. */
+
+.m-answer {
+  flex: 1;
+  padding: 16px 0;
+  font-family: var(--m-body);
+  font-size: 16px;
+  letter-spacing: var(--m-tracking);
+  color: var(--m-ink);
+  background: transparent;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-button);
+  cursor: pointer;
+}
+.m-answer:disabled { opacity: 0.5; cursor: default; }
+[data-surface="popup"] .m-answer { padding: 14px 0; }
+
+.m-rate {
+  margin: 0;
+  font-family: var(--m-display);
+  font-weight: 600;
+  letter-spacing: var(--m-tracking-tight);
+}
+[data-surface="popup"] .m-rate { font-size: 28px; line-height: 1.05; }
+
 /* ---------- .m-row / .m-row-bar — the step list ---------- */
 
 .m-row {

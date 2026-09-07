@@ -60,7 +60,8 @@ test('a timed session ends itself once its planned duration elapses', async ({ c
     }, { timeout: 70_000, intervals: [2_000] })
     .toBeNull()
 
-  // endSession('elapsed') opens a review tab and removes the block rules it installed.
+  // endSession('elapsed') no longer opens a tab (Task 4) — it just sets pendingReview and
+  // removes the block rules it installed. /review/:id itself still resolves on its own.
   await expect
     .poll(async () => {
       const res = await page.request.get(`/review/${sessionId}`)

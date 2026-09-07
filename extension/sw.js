@@ -1,4 +1,4 @@
-import { post, apiBase } from './api.js'
+import { post } from './api.js'
 import { BLOCKLISTS } from './blocklists.js'
 import { advance, emptySlice, idleMode, IDLE_DETECTION_S } from './lib/attribution.js'
 
@@ -136,12 +136,7 @@ export async function endSession(endReason) {
   }
 
   if (endReason === 'stopped' || endReason === 'elapsed') {
-    try {
-      const base = await apiBase()
-      await chrome.tabs.create({ url: `${base}/review/${session.sessionId}` })
-    } catch {
-      // A failed tab open must not make a cleanly ended session look failed.
-    }
+    await chrome.storage.local.set({ pendingReview: { sessionId: session.sessionId } })
   }
 
   return { ok: true }
