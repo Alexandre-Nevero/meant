@@ -120,4 +120,21 @@ test.describe('session lifecycle', () => {
     await page.bringToFront()
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
+
+  test('a tab already open on a domain being blocked gets swept to blocked.html on Start', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairAndOpenPopup(page, extensionId)
+
+    const alreadyOpen = await context.newPage()
+    await alreadyOpen.goto('https://example.org') // open BEFORE Start, on the domain we're about to block
+
+    await addBlockedDomain(page, 'example.org')
+    await page.locator('input.m-field').first().fill('sweep test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    await expect(alreadyOpen).toHaveURL(/blocked\.html/, { timeout: 3_000 })
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
 })

@@ -7,7 +7,7 @@ const RULE_ID_BASE = 1000
 
 async function installRules(listNames) {
   const domains = [...new Set((listNames ?? []).flatMap((name) => BLOCKLISTS[name] ?? [name]))]
-  if (domains.length === 0) return []
+  if (domains.length === 0) return { ruleIds: [], domains: [] }
 
   const existing = await chrome.declarativeNetRequest.getDynamicRules()
   await chrome.declarativeNetRequest.updateDynamicRules({
@@ -22,7 +22,7 @@ async function installRules(listNames) {
       condition: { requestDomains: [domain], resourceTypes: ['main_frame'] },
     })),
   })
-  return domains.map((_, i) => RULE_ID_BASE + i)
+  return { ruleIds: domains.map((_, i) => RULE_ID_BASE + i), domains }
 }
 
 async function removeAllRules() {
@@ -31,6 +31,27 @@ async function removeAllRules() {
   await chrome.declarativeNetRequest.updateDynamicRules({
     removeRuleIds: existing.map((r) => r.id),
   })
+}
+
+// declarativeNetRequest only intercepts NEW navigation requests — a tab already loaded on a
+// domain that just became blocked keeps working until it happens to navigate again. Sweep
+// every open tab once, right after the rules install, so "Start" is honest immediately.
+async function sweepOpenTabs(domains) {
+  if (domains.length === 0) return
+  const tabs = await chrome.tabs.query({})
+  for (const tab of tabs) {
+    if (!tab.id || !tab.url) continue
+    let hostname
+    try {
+      hostname = bareHostname(tab.url)
+    } catch {
+      continue
+    }
+    if (hostname && domains.includes(hostname)) {
+      const url = chrome.runtime.getURL(`blocked.html?d=${encodeURIComponent(hostname)}`)
+      chrome.tabs.update(tab.id, { url }).catch(() => {})
+    }
+  }
 }
 
 export async function getSession() {
@@ -79,9 +100,10 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
   })
   await chrome.alarms.create(TICK, { periodInMinutes: 0.5 })
   try {
-    const ruleIds = await installRules(blockedDomains)
+    const { ruleIds, domains } = await installRules(blockedDomains)
     const s = await getSession()
     await chrome.storage.local.set({ session: { ...s, ruleIds } })
+    await sweepOpenTabs(domains)
   } catch (error) {
     console.error('startSession: installRules failed', error)
     await endSession('stopped')
