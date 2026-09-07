@@ -426,6 +426,29 @@ compact cluster without dominating the popup.
     row appears as a compact ~4-line chip grid with an internal scrollbar, not a tall
     tower of wrapping chips extending past the Start button.)
 
+### U — Cycle phase display in the running popup (Task 10)
+
+The running popup showed elapsed minutes but no sense of where you sit in a configured
+work/break cycle. The fix adds a pure `cyclePhase(session)` helper (`session.cycle` +
+`session.startedAt` in, `{phase, elapsedInPhaseMs, phaseMs, remainingMinutes}` or `null`
+out) and wires it into `running()`: a phase line (`"work — 15 min left"` /
+`"break — 3 min left"`) plus a two-segment fill in the existing `.m-mark:not(:empty)`
+band (`.m-row-bar[data-kind="attention-1"]` for elapsed-in-phase,
+`[data-kind="remainder"]` for what's left) — the same proportional-band construction
+already used elsewhere, no new class. Read-only display only: `extension/lib/
+attribution.js`'s undriven `'break'` mode stays undriven; break time keeps being
+tracked as ordinary attention/away exactly as before. No cycle configured ⇒ no phase
+line, no band. No `chrome.storage.onChanged` listener was added — the display only
+recomputes when the popup itself re-renders, never on a live per-second timer.
+
+50. Start a session with the picker's `25/5` preset. **Pass:** a `work — N min left` line
+    is visible. Push `session.startedAt` back 26 minutes via `chrome.storage.local` (25/5
+    cycle: 26 min elapsed lands 1 min into the break phase — `posInCycle` (1,560,000ms)
+    ≥ `workMs` (1,500,000ms)) and reload. **Pass:** the line now reads
+    `break — N min left`.
+51. Start a session with `no cycles` selected. **Pass:** no `... min left` text renders
+    anywhere in the popup.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

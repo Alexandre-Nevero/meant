@@ -420,13 +420,49 @@ async function idle() {
   show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect, navRow())
 }
 
+// Pure computation, no chrome.* API — which phase (work/break) the elapsed time
+// currently falls into, and how much of it remains. Read-only display only: this does
+// NOT drive extension/lib/attribution.js's 'break' mode, which stays undriven exactly
+// as it is today.
+function cyclePhase(session) {
+  if (!session.cycle) return null
+  const { work, break: brk } = session.cycle
+  const cycleMs = (work + brk) * 60_000
+  const workMs = work * 60_000
+  const elapsedMs = Date.now() - new Date(session.startedAt).getTime()
+  const posInCycle = ((elapsedMs % cycleMs) + cycleMs) % cycleMs // guard against a negative elapsed edge case
+  if (posInCycle < workMs) {
+    return { phase: 'work', elapsedInPhaseMs: posInCycle, phaseMs: workMs, remainingMinutes: Math.ceil((workMs - posInCycle) / 60_000) }
+  }
+  return { phase: 'break', elapsedInPhaseMs: posInCycle - workMs, phaseMs: brk * 60_000, remainingMinutes: Math.ceil((cycleMs - posInCycle) / 60_000) }
+}
+
 function running(session) {
   const mark = el('p', 'm-mark', '')
   mark.dataset.state = 'running'
 
+  const phase = cyclePhase(session)
+  if (phase) {
+    // Reuse the SAME .m-mark:not(:empty) proportional-band construction already used
+    // for the review page's attention band (lib/band.ts's DOM shape, ported here since
+    // this file has no bundler/TS/React) — a filled portion for elapsed-in-phase, a
+    // dashed 'remainder' portion for what's left. No new class, no animation, no
+    // ticking — this recomputes only when the popup itself re-renders (it has no
+    // chrome.storage.onChanged listener), never on a live per-second timer.
+    const filled = el('span', 'm-row-bar')
+    filled.dataset.kind = 'attention-1'
+    filled.style.flex = String(phase.elapsedInPhaseMs)
+    const remainder = el('span', 'm-row-bar')
+    remainder.dataset.kind = 'remainder'
+    remainder.style.flex = String(Math.max(phase.phaseMs - phase.elapsedInPhaseMs, 1))
+    mark.append(filled, remainder)
+  }
+
   const startedAt = new Date(session.startedAt).getTime()
   const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000)
   const elapsed = el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
+
+  const phaseLine = phase ? el('p', 'm-meta', `${phase.phase} — ${phase.remainingMinutes} min left`) : null
 
   const blockedList = session.blockedDomains?.length
     ? el('p', 'm-meta', `blocking: ${session.blockedDomains.join(', ')}`)
@@ -458,7 +494,7 @@ function running(session) {
     sentenceNode = el('p', 'm-sentence', session.intention)
   }
 
-  show(mark, sentenceNode, elapsed, ...(blockedList ? [blockedList] : []), stop, navRow())
+  show(mark, sentenceNode, elapsed, ...(phaseLine ? [phaseLine] : []), ...(blockedList ? [blockedList] : []), stop, navRow())
 }
 
 async function outcome(sessionId) {
