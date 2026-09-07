@@ -34,6 +34,16 @@ test.describe('popup, idle state', () => {
     // 50/10 is the documented first-ever-session default (Task 6 brief, Step 3) — not
     // "no cycles"; a wrong assumption on my own first pass through this suite.
     await expect(page.getByRole('button', { name: '50/10' })).toHaveAttribute('aria-pressed', 'true')
+
+    // Task 6: the idle mark must render the same decorative gradient glyph as
+    // running/ended, not a blank outline (the CSS bug — data-state="idle" was
+    // missing from the ::after selector).
+    const markBackground = await page.locator('.m-mark').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
+    expect(markBackground).not.toBe('none')
+
+    // Task 6: nav row present in the idle view too.
+    await expect(page.getByRole('button', { name: 'History' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'meant.app' })).toBeVisible()
   })
 
   test('multi-select chips toggle independently, not exclusively', async ({ context, extensionId, freshAccount }) => {
@@ -145,5 +155,26 @@ test.describe('popup, idle state', () => {
     // Final Enter should resolve both corrected chips
     await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
+  })
+})
+
+// Case K — the running popup's own nav row and blocked-sites visibility (Task 6 brief).
+test.describe('popup, running state', () => {
+  test('shows a blocking line for the configured domains, plus History/meant.app', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    await page.getByRole('button', { name: '+' }).nth(1).click() // the blocking row's own +
+    await page.keyboard.type('example.org')
+    await page.keyboard.press('Enter')
+    await page.locator('input.m-field').first().fill('running state test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    await expect(page.getByText(/^blocking: .*example\.org/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'History' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'meant.app' })).toBeVisible()
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 })

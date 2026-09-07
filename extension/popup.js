@@ -155,6 +155,22 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
   return { row, get value() { return currentValue() } }
 }
 
+function navRow() {
+  const row = el('div', 'm-chip-row')
+  const history = el('button', 'm-btn', 'History')
+  history.dataset.variant = 'quiet'
+  history.addEventListener('click', async () => {
+    chrome.tabs.create({ url: (await apiBase()) + '/dashboard' })
+  })
+  const landing = el('button', 'm-btn', 'meant.app')
+  landing.dataset.variant = 'quiet'
+  landing.addEventListener('click', async () => {
+    chrome.tabs.create({ url: (await apiBase()) + '/' })
+  })
+  row.append(history, landing)
+  return row
+}
+
 function cyclePresetKey(cycle) {
   if (!cycle) return 'none'
   const preset = CYCLE_PRESETS.find((p) => p.work === cycle.work && p.break === cycle.break)
@@ -368,7 +384,7 @@ async function idle() {
     render()
   })
 
-  show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect)
+  show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect, navRow())
 }
 
 function running(session) {
@@ -378,6 +394,10 @@ function running(session) {
   const startedAt = new Date(session.startedAt).getTime()
   const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000)
   const elapsed = el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
+
+  const blockedList = session.blockedDomains?.length
+    ? el('p', 'm-meta', `blocking: ${session.blockedDomains.join(', ')}`)
+    : null
 
   const stop = el('button', 'm-btn', 'Stop')
   stop.dataset.variant = 'quiet'
@@ -405,7 +425,7 @@ function running(session) {
     sentenceNode = el('p', 'm-sentence', session.intention)
   }
 
-  show(mark, sentenceNode, elapsed, stop)
+  show(mark, sentenceNode, elapsed, ...(blockedList ? [blockedList] : []), stop, navRow())
 }
 
 async function outcome(sessionId) {

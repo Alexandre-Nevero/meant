@@ -72,8 +72,8 @@ button, input, select { font: inherit; color: inherit; }
   box-sizing: border-box;
   position: relative;
 }
-.m-mark[data-state="idle"],
 .m-mark[data-state="empty"] { background: transparent; }
+.m-mark:empty[data-state="idle"]::after,
 .m-mark:empty[data-state="running"]::after,
 .m-mark:empty[data-state="ended"]::after {
   content: '';

@@ -235,6 +235,33 @@ at you anymore.
     the `ReviewData` shape (`topAttention`, `awaySeconds`, `blockedAttempts`, `outcome`,
     `finished`, `answered`). Same request unauthenticated. **Pass:** 401.
 
+### K — The idle mark's missing glyph, and popup navigation (Task 6)
+
+`extension/meant.css`'s `.m-mark` drew its decorative gradient `::after` only for
+`data-state="running"`/`"ended"` — `idle()` (the state seen dozens of times a day, the
+popup opened with no session running) rendered a bare outlined rectangle with no fill.
+Fixed by adding `data-state="idle"` to the `::after` selector and removing `idle` from the
+blank-background rule (`data-state="empty"`, used only by the dashboard's true-empty
+state, is untouched — it stays blank on purpose). Same commit adds a `navRow()` (History /
+`meant.app` links, reusing `.m-btn[data-variant="quiet"]` and `.m-chip-row`, no new class)
+to both `idle()` and `running()`, and a read-only `blocking: <domains>` line
+(`.m-meta`) to `running()`, sourced from `session.blockedDomains`.
+
+36. Open the popup with no session running (idle view). **Pass:** `.m-mark`'s `::after`
+    has a real `background-image` (the three-tint clay gradient), not `none` — check via
+    `getComputedStyle(el, '::after').backgroundImage`. Visually: the same glyph as the
+    running/ended mark, not a blank outline.
+37. Still in the idle view. **Pass:** a `History` and a `meant.app` button are both visible
+    (`.m-btn[data-variant="quiet"]`, in a `.m-chip-row` after `Disconnect this device`).
+38. Configure at least one blocked domain and Start a session. **Pass:** the running view
+    shows a `blocking: <domain list>` line (`.m-meta`, right after the elapsed-time line)
+    matching the configured domains, plus the same `History`/`meant.app` buttons after
+    `Stop`.
+39. **Visual, human/screenshot check:** at the popup's real 360px width, confirm nothing
+    animates — no `transition`/`transform` introduced anywhere in this task's CSS or JS
+    (PRODUCT.md: the popup animates nothing) — and the two nav buttons render at a
+    reasonable size without wrapping awkwardly.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
@@ -261,4 +288,5 @@ fine to me" judgment calls, since severity triage belongs to whoever reads the r
   (F), `e2e/review.spec.ts` (G), `e2e/session-elapsed.spec.ts` (H),
   `e2e/session-recovery.spec.ts` (I, manages its own persistent-context lifecycle rather
   than using the shared fixture, since it needs to close and relaunch the browser),
-  `e2e/outcome-in-popup.spec.ts` (J).
+  `e2e/outcome-in-popup.spec.ts` (J), `e2e/popup.spec.ts` (K, folded into the existing
+  idle-state test plus a new running-state describe block).
