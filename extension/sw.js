@@ -296,15 +296,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true
 })
 
-chrome.runtime.onInstalled.addListener(async () => {
-  await removeAllRules()
-})
-
-chrome.runtime.onStartup.addListener(async () => {
+// Confirmed empirically (not assumed): for an unpacked extension, Chromium fires
+// onInstalled (reason 'update') on every relaunch, never onStartup — the official docs
+// don't state this explicitly for the browser-restart case, only for chrome.runtime.reload().
+// A real user's own "Load unpacked" install may behave differently (unverified — that
+// specific case needs a human, not Playwright); rather than gamble on which event actually
+// fires for them, both listeners run the same recovery so a live session can never leak
+// regardless of which one Chromium chooses.
+async function recoverStaleSession() {
   const session = await getSession()
   if (session) await endSession('recovered')
   else await removeAllRules()
-})
+}
+
+chrome.runtime.onInstalled.addListener(recoverStaleSession)
+chrome.runtime.onStartup.addListener(recoverStaleSession)
 
 // The tick alarm only runs during a session, so without this a queued session-end PATCH
 // (e.g. the browser closed offline) would otherwise wait for the next session to sync.

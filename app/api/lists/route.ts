@@ -3,6 +3,12 @@ import { currentUserId } from '@/lib/auth/session'
 import { normalizeDomain } from '@/lib/domains'
 import { sql } from '@/lib/db'
 
+// deviceFromRequest reads the raw Request's own headers, not next/headers()'s
+// cookies()/headers() — the APIs Next's static analysis actually watches for to mark a
+// route dynamic. Without this, GET can be treated as cacheable, serving a stale
+// unauthorized/authorized verdict for a token that was just revoked or just paired.
+export const dynamic = 'force-dynamic'
+
 // The extension (device token) and the web app (session cookie) both need this route —
 // try the device token first since that's the unambiguous, stateless check, and fall
 // back to the browser's session cookie only when there isn't one.

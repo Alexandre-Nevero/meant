@@ -102,3 +102,43 @@ the project root) fetched newer cached versions (1232/1234) that didn't satisfy 
 pinned dependency. Had to install from inside `~/gstack` itself, where the pinned
 `playwright-core` version lives, so the install resolves the exact revision the tool
 was built against.
+
+### The companion's design reversed from "coach, not a pet" to Orbit (2026-09-05)
+
+PRODUCT.md's original companion spec (0.2 amendment) was explicit and reasoned:
+"It is a coach, not a pet. This audience screen-shares with clients." State was gaze/
+posture only, never color; 80-120px; no visible acknowledgment of a return from drift
+("nothing good happens on screen during a session... shown only in the review").
+
+An external reference sheet ("MEANT Companion -- Orbit") was supplied mid-build showing
+a 28px orbital dot, color-coded ring states, and a visible "Return: ring collapses,
+acknowledges your refocus" animation -- conflicting with all three specifics above.
+Surfaced the conflict directly, quoting PRODUCT.md, before writing any code. Owner
+chose full Orbit adoption over the documented spec, explicitly asking for PRODUCT.md
+to be updated rather than left to silently drift out of sync with the shipped code.
+
+Implemented: extension/companion-overlay.js rebuilt at 28px, ring presence/style (not
+hue) tells state, one 0.6s return-pulse plays on drift-to-focus transition. PRODUCT.md's
+"The companion, specifically" section rewritten to match, with this entry as the record
+of why. The prior gaze/capsule design is recoverable from git history before this date.
+
+### `chrome.runtime.onStartup` never fires for an unpacked extension loaded via `--load-extension` (2026-09-07)
+
+Wrote an E2E test for the browser-restart recovery path (`extension/sw.js`'s
+`onStartup` listener, which was supposed to end any session still running when the
+browser reopens). Instrumented both `onInstalled` and `onStartup` with a storage
+counter across a real close-and-relaunch of a persistent Chromium context (same
+profile dir, not a fresh one) — confirmed `onInstalled` fires on *every* relaunch and
+`onStartup` never fires at all, at least under Playwright's `--load-extension` CLI
+loading. Chrome's own docs don't state whether this generalizes to a real user's
+manual "Load unpacked" install across ordinary restarts (only that
+`chrome.runtime.reload()` counts as an update) — checked developer.chrome.com
+directly rather than assume, and it's silent on the browser-restart case.
+
+Given the uncertainty, didn't bet on either event: `recoverStaleSession()` is now
+registered on both `onInstalled` and `onStartup`, so a live session can't leak
+regardless of which one Chromium actually fires for a given user. Whether `onStartup`
+ever fires for a real, UI-loaded unpacked extension remains unverified — Playwright
+can't simulate that specific load path, so it joins `docs/qa-recipe-browser-verification.md`
+Part C as human-only, not because it's hard to script but because the test harness's
+own loading mechanism is a different code path than a real user's install.

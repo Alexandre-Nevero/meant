@@ -82,9 +82,14 @@ surface — not guessed:
 | Item | Why it's human-only |
 |---|---|
 | **chrome.idle away detection** (Task 2) — lock the screen ~70s | Real OS-level idle/lock state. No CDP/Playwright API drives this from outside the OS. |
-| **Offline session start** (Task 3) — DevTools → Network → Offline, on the *service worker* | `browse` has no documented offline/throttle command, and even if it did, the target is the extension's background service worker context, not a normal page `browse` attaches to. |
 | **The Task 7 permission spike** — `chrome.permissions.request({origins})` from the popup: resolve or hang? | This is a real product-decision spike, not just a click. It needs a human watching whether a native prompt appears and what happens after — `dialog-accept` doesn't reach Chrome's own permission UI. |
-| **Real toolbar-icon click → Start → sidePanel opens** | The `chrome.sidePanel.open()` call requires a genuine user gesture (a real click), which the direct `chrome-extension://.../popup.html` navigation in Part B doesn't provide — Part B verifies the popup *renders* correctly, not this specific gesture-bound behavior. |
+| **`chrome.runtime.onStartup` firing for a real, manually "Load unpacked" install, across an ordinary restart** | Playwright's own extension testing loads unpacked via the `--load-extension` CLI flag, which behaves differently — confirmed empirically (`docs/dead-ends.md`, 2026-09-07) that it fires `onInstalled` on every relaunch, never `onStartup`. Whether a real UI-loaded install fires `onStartup` on an ordinary restart is undocumented and can't be simulated this way. (Low product risk regardless: `extension/sw.js` now runs the same session-recovery logic on both events.) |
+
+`browse` has no offline/throttle command, but this is no longer a gap: `e2e/offline.spec.ts`
+(Playwright) now automates the offline-session-start and reconnect-then-sync cases directly
+against the extension's real service worker. The old sidePanel-gesture item is gone too —
+the companion no longer uses `chrome.sidePanel`, see the Orbit-redesign entry in
+`docs/dead-ends.md` (2026-09-05).
 
 Record results from both parts (B and C) in `docs/dead-ends.md`, per this project's own rule —
 the Task 7 spike's result belongs there either way it comes out.
