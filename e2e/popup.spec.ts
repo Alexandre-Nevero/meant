@@ -68,18 +68,18 @@ test.describe('popup, idle state', () => {
     await pairPopup(page, extensionId)
 
     await expect(page.getByPlaceholder('')).toBeVisible() // the sentence field
-    await expect(page.getByRole('button', { name: '25 min' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '50 min' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'until I stop' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '25/5' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'no cycles' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '25 min', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '50 min', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'until I stop', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '25/5', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'no cycles', exact: true })).toBeVisible()
     await expect(page.getByText('where it happens')).toBeVisible()
     await expect(page.getByText('what to block')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Start' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
 
     // 50/10 is the documented first-ever-session default (Task 6 brief, Step 3) — not
     // "no cycles"; a wrong assumption on my own first pass through this suite.
-    await expect(page.getByRole('button', { name: '50/10' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: '50/10', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
     // Task 6: the idle mark must render the same decorative gradient glyph as
     // running/ended, not a blank outline (the CSS bug — data-state="idle" was
@@ -89,8 +89,8 @@ test.describe('popup, idle state', () => {
 
     // Task 6: nav row present in the idle view too, and both buttons actually open a
     // real tab at the right URL (chrome.tabs.create), not just render.
-    await expect(page.getByRole('button', { name: 'History' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'meant.app' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'meant.app', exact: true })).toBeVisible()
 
     const historyPage = await clickAndExpectNewTab(page, context, 'History', 'http://localhost:3000/dashboard')
     expect(historyPage.url()).toContain('/dashboard')
@@ -110,8 +110,8 @@ test.describe('popup, idle state', () => {
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    const fiftyChip = page.getByRole('button', { name: '50 min' })
-    const twentyFiveChip = page.getByRole('button', { name: '25 min' })
+    const fiftyChip = page.getByRole('button', { name: '50 min', exact: true })
+    const twentyFiveChip = page.getByRole('button', { name: '25 min', exact: true })
 
     // 50/10 is the documented first-ever-session cycle default, but the duration default
     // is '25 min' (see idle()'s chipGroup call) — confirm the starting state first.
@@ -132,20 +132,20 @@ test.describe('popup, idle state', () => {
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    const plusButtons = page.getByRole('button', { name: '+' })
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
 
     // Enter path, with scheme/path/case survival — the exact reviewer-found regression case.
     await plusButtons.first().click()
     await page.keyboard.type('HTTPS://Gmail.COM/inbox')
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com', exact: true })).toBeVisible()
 
     // Blur path (click elsewhere, no Enter) — the fix-round bug: this used to silently drop it.
     await plusButtons.first().click()
     await page.keyboard.type('www.notion.so')
-    await page.getByRole('button', { name: 'Start' }).click({ trial: true }).catch(() => {}) // move focus without submitting
+    await page.getByRole('button', { name: 'Start', exact: true }).click({ trial: true }).catch(() => {}) // move focus without submitting
     await page.locator('body').click({ position: { x: 5, y: 5 } })
-    await expect(page.getByRole('button', { name: 'notion.so' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'notion.so', exact: true })).toBeVisible()
   })
 
   test('Start creates a session', async ({ context, extensionId, freshAccount }) => {
@@ -154,7 +154,7 @@ test.describe('popup, idle state', () => {
     await pairPopup(page, extensionId)
 
     await page.locator('input.m-field').first().fill('finish the e2e suite')
-    await page.getByRole('button', { name: 'Start' }).click()
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
 
     await expect
       .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v) => r(v.session)))))
@@ -166,13 +166,13 @@ test.describe('popup, idle state', () => {
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    const plusButtons = page.getByRole('button', { name: '+' })
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
     await plusButtons.first().click()
     await page.keyboard.type('docs, gmail, and chatgpt')
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'chatgpt.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'docs.google.com', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'chatgpt.com', exact: true })).toBeVisible()
   })
 
   test('a typo in a phrase blocks the whole phrase and offers a correction', async ({ context, extensionId, freshAccount }) => {
@@ -180,16 +180,51 @@ test.describe('popup, idle state', () => {
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    const plusButtons = page.getByRole('button', { name: '+' })
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
     await plusButtons.first().click()
     await page.keyboard.type('docs, gmial')
     await page.keyboard.press('Enter')
     await expect(page.getByText('did you mean gmail? Press Enter to use it')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'docs.google.com' })).toHaveCount(0) // atomic — nothing added yet
+    await expect(page.getByRole('button', { name: 'docs.google.com', exact: true })).toHaveCount(0) // atomic — nothing added yet
 
     await page.keyboard.press('Enter') // accepts the standing suggestion
-    await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'docs.google.com', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com', exact: true })).toBeVisible()
+  })
+
+  // Regression: Task 8's `removable: true` made every chip click delete the site, with no
+  // way left to toggle a known site's inclusion for just this session — the pre-existing
+  // toggle-off behaviour the fix restores. The chip body (toggle) and the trailing "×"
+  // (delete) are now separate sibling click targets on the same visual chip.
+  test('clicking a known site chip body toggles it for this session without deleting it from the account list', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    // Pre-seed a real, server-persisted work site so "still on the server list" checks
+    // genuine standing-list survival, not just that the client-side render didn't drop it.
+    await page.request.put('/api/lists', { data: { workSites: ['gmail.com'], distractSites: [] } })
+    await pairPopup(page, extensionId)
+
+    const chip = page.getByRole('button', { name: 'gmail.com', exact: true })
+    await expect(chip).toHaveAttribute('aria-pressed', 'false') // known site, not pre-selected this session
+
+    await chip.click()
+    await expect(chip).toHaveAttribute('aria-pressed', 'true')
+
+    // Still on the server-side standing list — a toggle must never call onRemove.
+    const stillListed = async () => {
+      const res = await page.request.get('/api/lists')
+      const body = await res.json()
+      return body.workSites.includes('gmail.com')
+    }
+    await expect.poll(stillListed).toBe(true)
+
+    await chip.click() // toggle back off
+    await expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await expect.poll(stillListed).toBe(true)
+
+    // Survives reload too — a toggle is session-local, never a standing-list mutation.
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'gmail.com', exact: true })).toBeVisible()
   })
 
   test('a site chip can be removed, not just toggled off, and it does not reappear on reload', async ({ context, extensionId, freshAccount }) => {
@@ -204,9 +239,9 @@ test.describe('popup, idle state', () => {
     await page.request.put('/api/lists', { data: { workSites: ['gmail.com'], distractSites: [] } })
     await pairPopup(page, extensionId)
 
-    await expect(page.getByRole('button', { name: /gmail\.com/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com', exact: true })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Remove gmail.com' }).click()
+    await page.getByRole('button', { name: 'Remove gmail.com', exact: true }).click()
     await expect(page.getByRole('button', { name: /gmail\.com/ })).toHaveCount(0)
 
     // Confirm it's gone from the server-side standing list too, not just local render state.
@@ -227,23 +262,23 @@ test.describe('popup, idle state', () => {
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    const plusButtons = page.getByRole('button', { name: '+' })
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
     await plusButtons.first().click()
     await page.keyboard.type('gmial, docz')
     await page.keyboard.press('Enter')
     // First suggestion should be for the first bad token (gmial → gmail)
     await expect(page.getByText('did you mean gmail? Press Enter to use it')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'gmail.com' })).toHaveCount(0) // nothing added yet
+    await expect(page.getByRole('button', { name: 'gmail.com', exact: true })).toHaveCount(0) // nothing added yet
 
     await page.keyboard.press('Enter') // accept first suggestion
     // Second Enter should show the second suggestion (docz → docs), not revert to gmial
     await expect(page.getByText('did you mean docs? Press Enter to use it')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'gmail.com' })).toHaveCount(0) // still nothing added, still atomic
+    await expect(page.getByRole('button', { name: 'gmail.com', exact: true })).toHaveCount(0) // still nothing added, still atomic
 
     await page.keyboard.press('Enter') // accept second suggestion
     // Final Enter should resolve both corrected chips
-    await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'gmail.com', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'docs.google.com', exact: true })).toBeVisible()
   })
 
   // Fix round: "doc" is a substring of the earlier valid token "docs" — a naive string
@@ -255,16 +290,16 @@ test.describe('popup, idle state', () => {
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    const plusButtons = page.getByRole('button', { name: '+' })
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
     await plusButtons.first().click()
     await page.keyboard.type('docs, doc')
     await page.keyboard.press('Enter')
     await expect(page.getByText('did you mean docs? Press Enter to use it')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'docs.google.com' })).toHaveCount(0) // atomic — nothing added yet
+    await expect(page.getByRole('button', { name: 'docs.google.com', exact: true })).toHaveCount(0) // atomic — nothing added yet
 
     await page.keyboard.press('Enter') // accepts the standing suggestion
     // Deduplicated to a single chip, not oscillating forever and never resolving.
-    await expect(page.getByRole('button', { name: 'docs.google.com' })).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'docs.google.com', exact: true })).toHaveCount(1)
   })
 
   // Case V — the blocklist label is static, matching its sibling's grammar, and never
@@ -277,18 +312,18 @@ test.describe('popup, idle state', () => {
     await expect(page.getByText('what to block')).toBeVisible()
     await expect(page.getByText(/^blocking \d+$/)).toHaveCount(0)
 
-    const plusButtons = page.getByRole('button', { name: '+' })
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
     await plusButtons.nth(1).click() // the blocking row's own +
     await page.keyboard.type('addedsite.com')
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('button', { name: 'addedsite.com' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'addedsite.com', exact: true })).toBeVisible()
 
     // The label must still read the static string after the add — a regression here
     // would mean the deleted onChange handler somehow still fired.
     await expect(page.getByText('what to block')).toBeVisible()
     await expect(page.getByText(/^blocking \d+$/)).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Remove addedsite.com' }).click()
+    await page.getByRole('button', { name: 'Remove addedsite.com', exact: true }).click()
     await expect(page.getByRole('button', { name: /addedsite\.com/ })).toHaveCount(0)
     await expect(page.getByText('what to block')).toBeVisible()
   })
@@ -298,7 +333,7 @@ test.describe('popup, idle state', () => {
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    const plusButtons = page.getByRole('button', { name: '+' })
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
     for (let i = 0; i < 15; i++) {
       await plusButtons.first().click()
       await page.keyboard.type(`site${i}.example.com`)
@@ -319,15 +354,15 @@ test.describe('popup, running state', () => {
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    await page.getByRole('button', { name: '+' }).nth(1).click() // the blocking row's own +
+    await page.getByRole('button', { name: '+', exact: true }).nth(1).click() // the blocking row's own +
     await page.keyboard.type('example.org')
     await page.keyboard.press('Enter')
     await page.locator('input.m-field').first().fill('running state test')
-    await page.getByRole('button', { name: 'Start' }).click()
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
 
     await expect(page.getByText(/^blocking: .*example\.org/)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'History' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'meant.app' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'meant.app', exact: true })).toBeVisible()
 
     const historyPage = await clickAndExpectNewTab(page, context, 'History', 'http://localhost:3000/dashboard')
     expect(historyPage.url()).toContain('/dashboard')
@@ -345,9 +380,9 @@ test.describe('popup, running state', () => {
     await pairPopup(page, extensionId)
 
     // 25/5 is already the picker's own preset (CYCLE_PRESETS[0]).
-    await page.getByRole('button', { name: '25/5' }).click()
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
     await page.locator('input.m-field').first().fill('cycle test')
-    await page.getByRole('button', { name: 'Start' }).click()
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
 
     await expect(page.getByText(/^work — \d+ min left$/)).toBeVisible()
 
@@ -371,9 +406,9 @@ test.describe('popup, running state', () => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: 'no cycles' }).click()
+    await page.getByRole('button', { name: 'no cycles', exact: true }).click()
     await page.locator('input.m-field').first().fill('no cycle test')
-    await page.getByRole('button', { name: 'Start' }).click()
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
 
     await expect(page.getByText(/min left$/)).toHaveCount(0)
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))

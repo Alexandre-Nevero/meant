@@ -476,6 +476,38 @@ job and was already out of scope for this pass.
     never changes through either action — it stays the literal string `what to block`
     throughout.
 
+### W — A removable chip splits into a toggle body and a separate delete "×" (Task 8 fix)
+
+Case S's `removable: true` fix was itself a regression: it made *every* click on a
+removable chip call `onRemove` and permanently delete the site from the standing list —
+the per-session toggle behaviour (`aria-pressed`, include/exclude a known site just for
+this session) was gone entirely for the work/blocked site rows. Since `idle()` renders
+every standing-list site as a chip whether or not it's selected this session, clicking an
+unpressed known site to include it now destroyed it from the account instead. The fix
+splits the two actions onto two sibling `<button class="m-chip">` elements sharing a
+`div[data-chip-item="removable"]` wrapper (never nested — a `<button>` inside a `<button>`
+is invalid HTML): the chip body keeps its plain label and toggles `aria-pressed` exactly
+like the non-removable case, while a small trailing `.m-chip[data-chip-role="delete"]`
+("×", `aria-label="Remove <label>"`) does the real `onRemove` deletion. `onChange` fires
+after either action, same as before. The duration and cycle pickers (the two non-removable
+`chipGroup` call sites) render byte-for-byte as before — a single `.m-chip` button, no
+wrapper, no second element.
+
+54. Pre-seed a server-side work site via `PUT /api/lists`, open the popup. **Pass:** its
+    chip shows `aria-pressed="false"` (a known site, not selected this session). Click the
+    chip body (its label). **Pass:** `aria-pressed` flips to `"true"`; `GET /api/lists`
+    still includes the domain (polled). Click the body again. **Pass:** `aria-pressed`
+    flips back to `"false"`, and the domain is still on the server-side list — a toggle
+    never mutates the standing list either direction. Reload. **Pass:** the chip is still
+    there.
+55. Same setup. Click the separate `Remove <domain>` button (the trailing "×", not the
+    label). **Pass:** the chip is gone from the DOM immediately, and `GET /api/lists` no
+    longer includes the domain (polled). Reload. **Pass:** it does not reappear.
+56. Open the duration picker and the cycle picker. **Pass:** each option is a single
+    `.m-chip` button with no adjacent second element, and clicking one still toggles
+    `aria-pressed` exclusively among its siblings exactly as before — these two call sites
+    never pass `removable` and are unaffected by this fix.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

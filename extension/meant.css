@@ -170,6 +170,14 @@ button, input, select { font: inherit; color: inherit; }
 .m-chip[aria-pressed="true"] { color: var(--m-ink); border-color: var(--m-ink); }
 .m-chip[data-mono="true"] { font-family: var(--m-figure); font-size: 12px; }
 
+/* Removable chips (Task 8) split into two sibling buttons — toggle body + delete "×" —
+ * sharing this wrapper so they move together in the flex-wrap row without nesting one
+ * button inside another. The delete affordance is deliberately smaller/quieter than the
+ * toggle body so the two click targets read as visually distinct. */
+[data-chip-item="removable"] { display: inline-flex; align-items: center; gap: 2px; }
+.m-chip[data-chip-role="delete"] { padding: 8px 10px; color: var(--m-ink-3); }
+.m-chip[data-chip-role="delete"]:hover { color: var(--m-ink); border-color: var(--m-ink); }
+
 /* Task 6: "where it happens" and "blocking N" read as one related cluster (the site chips)
  * rather than two unrelated rows that happen to be adjacent — a tighter internal gap than the
  * rest of #root's row-groups, per design/canvas/PopupIdle.dc.html. Popup-only: no other

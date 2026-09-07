@@ -30,10 +30,13 @@ function show(...nodes) {
  *  per-chip toggling, defaulting to that starting set. Pass `{ addable: true }` (multi-select
  *  only) to append a '+' chip that turns into a text input for adding a new option at runtime
  *  — the site rows' pool isn't fixed ahead of time. Pass `{ removable: true, onRemove }` (multi
- *  only) to render each chip with a trailing " ×" and a "Remove <label>" accessible name; a
- *  click removes it from local state and calls `onRemove(value)` instead of toggling.
- *  `onChange(value)` fires after every click or add. Keeps the `<button aria-pressed>` pattern
- *  (design.md §8). */
+ *  only) to split each chip into two sibling buttons sharing a `div[data-chip-item]` wrapper
+ *  (never nested — a `<button>` inside a `<button>` is invalid HTML): the chip body still
+ *  toggles per-session inclusion via `aria-pressed`, exactly like the non-removable case, while
+ *  a small trailing `.m-chip[data-chip-role="delete"]` ("×", `aria-label="Remove <label>"`)
+ *  deletes it from local state and calls `onRemove(value)` — the real standing-list removal.
+ *  `onChange(value)` fires after every click (toggle or delete) or add. Keeps the
+ *  `<button aria-pressed>` pattern (design.md §8). */
 function chipGroup(options, { mono = false, multi = false, value, addable = false, removable = false, onChange, onRemove } = {}) {
   const row = el('div', 'm-chip-row')
   const selected = multi ? new Set(value ?? []) : null
@@ -45,19 +48,11 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
   }
 
   function addChip(v, label = v) {
-    const chip = el('button', 'm-chip', removable ? `${label} ×` : label)
+    const chip = el('button', 'm-chip', label)
     chip.type = 'button'
     chip.dataset.mono = String(mono)
-    if (removable) chip.setAttribute('aria-label', `Remove ${label}`)
     chip.setAttribute('aria-pressed', String(multi ? selected.has(v) : single === v))
     chip.addEventListener('click', () => {
-      if (removable) {
-        selected.delete(v)
-        chip.remove()
-        if (onRemove) onRemove(v)
-        if (onChange) onChange(currentValue())
-        return
-      }
       if (multi) {
         if (selected.has(v)) selected.delete(v)
         else selected.add(v)
@@ -68,7 +63,29 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
       }
       if (onChange) onChange(currentValue())
     })
-    row.insertBefore(chip, plusButton)
+
+    if (!removable) {
+      row.insertBefore(chip, plusButton)
+      return chip
+    }
+
+    // Two sibling click targets, one visual chip: the body toggles (above), the "×"
+    // deletes from the standing list. A wrapper keeps them moving together in the
+    // flex-wrap row without nesting one button inside another.
+    const del = el('button', 'm-chip', '×')
+    del.type = 'button'
+    del.dataset.chipRole = 'delete'
+    del.setAttribute('aria-label', `Remove ${label}`)
+    del.addEventListener('click', () => {
+      selected.delete(v)
+      wrap.remove()
+      if (onRemove) onRemove(v)
+      if (onChange) onChange(currentValue())
+    })
+    const wrap = el('div')
+    wrap.dataset.chipItem = 'removable'
+    wrap.append(chip, del)
+    row.insertBefore(wrap, plusButton)
     return chip
   }
 
