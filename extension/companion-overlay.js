@@ -1,17 +1,24 @@
 // The companion, floating on the page instead of docked in a side panel — present
 // only while a session is running, draggable, and gone the instant the session ends.
+// Visual language: the "Orbit" reference (a minimal orbital dot, states told by ring
+// presence/style, never by color) — deliberately adopted over the prior 3.1 companion
+// spec (docs/dead-ends.md and PRODUCT.md record the reversal and why).
+//
 // Runs on <all_urls> (content_scripts), so it's a Shadow DOM: an arbitrary host page's
 // own CSS must never leak in, and this widget's styles must never leak out onto the
 // page. Token values are redeclared on :host rather than read from design/tokens.css,
-// because :root on the host page has no MEANT tokens to inherit from.
+// because :root on the host page has no MEANT tokens to inherit from. Colors reuse
+// --m-ink/--m-clay/--m-ground — this codebase's rule is tokens-first, one palette,
+// never a component's own hex value, even when matching an external reference.
 
 const DEFAULT_POSITION = { right: 24, bottom: 24 }
-const SIZE = 104
+const SIZE = 28
 
 let hostEl = null
 let shadow = null
-let capsule = null
+let dot = null
 let dragState = null
+let returnTimer = null
 
 function css() {
   return `
@@ -19,11 +26,7 @@ function css() {
       --m-ground: #F3F1EE;
       --m-ink: #14120F;
       --m-clay: #C75B39;
-      --m-r-panel: 20px;
-      --m-stroke: 1.5px;
-      --m-stroke-loud: 2px;
       --m-ease: cubic-bezier(0.23, 1, 0.32, 1);
-      --m-dur-rise: 280ms;
       all: initial;
       position: fixed;
       z-index: 2147483647;
@@ -34,53 +37,66 @@ function css() {
       :host { --m-ground: #14120F; --m-ink: #F3F1EE; --m-clay: #E06B44; }
     }
     * { box-sizing: border-box; }
-    .capsule {
+
+    /* Three nodes, each one job — the same split the prior design used, for the same
+     * reason: a running CSS animation overrides a transition on the same property
+     * of the same element, so the ring's state-change transition and the dot's
+     * always-on breathing animation cannot live on one node. */
+    .dot-wrap {
       position: relative;
       width: 100%;
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--m-ground);
-      border: var(--m-stroke) solid var(--m-ink);
-      border-radius: var(--m-r-panel);
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
       cursor: grab;
       touch-action: none;
     }
-    .capsule[data-dragging="true"] { cursor: grabbing; }
-    .capsule::after {
-      content: '';
+    .dot-wrap[data-dragging="true"] { cursor: grabbing; }
+
+    /* .ring — presence + style tells the state. Never a color change (an orbit that
+     * changes hue reads as a status light, not a witness) — solid vs. dashed vs. none. */
+    .ring {
       position: absolute;
-      inset: -1px;
-      border: var(--m-stroke-loud) solid var(--m-ink);
-      border-radius: inherit;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid var(--m-clay);
       opacity: 0;
-      transition: opacity var(--m-dur-rise) var(--m-ease);
+      transition: opacity 220ms var(--m-ease);
     }
-    .capsule[data-state="drifting"]::after { opacity: 1; }
-    .gaze {
-      width: 44px;
-      height: 30px;
-      transform: translateY(27px) scaleY(0.333);
-      transition: transform var(--m-dur-rise) var(--m-ease);
+    .dot-wrap[data-state="focus"] .ring { opacity: 0.55; }
+    .dot-wrap[data-state="drift"] .ring {
+      opacity: 1;
+      border-style: dashed;
+      animation: pulse-drift 1.2s ease-out infinite;
     }
-    .capsule[data-state="drifting"] .gaze { transform: translateY(0) scaleY(1); }
-    .aperture {
-      width: 100%;
-      height: 100%;
-      background: var(--m-clay);
-      border-radius: 15px;
-      animation: breathe 4.2s ease-in-out infinite, blink 6.7s linear infinite;
+    .dot-wrap[data-returning="true"] .ring {
+      opacity: 1;
+      border-style: solid;
+      animation: return-pulse 0.6s ease-out;
+    }
+    @keyframes pulse-drift {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+    @keyframes return-pulse {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* .dot — aliveness, sub-perceptual, always on. */
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--m-ink);
+      animation: breathe 1.6s ease-in-out infinite;
     }
     @keyframes breathe {
-      0%, 100% { opacity: 0.92; transform: scaleY(1); }
-      50% { opacity: 1; transform: scaleY(1.06); }
+      0%, 100% { transform: scale(1); opacity: 0.92; }
+      50% { transform: scale(1.12); opacity: 1; }
     }
-    @keyframes blink {
-      0%, 96%, 100% { opacity: 1; }
-      97.5% { opacity: 0.15; }
-    }
+
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; }
     }
@@ -112,8 +128,8 @@ async function positionHost() {
 function startDrag(e) {
   const rect = hostEl.getBoundingClientRect()
   dragState = { offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top }
-  capsule.dataset.dragging = 'true'
-  capsule.setPointerCapture(e.pointerId)
+  dot.dataset.dragging = 'true'
+  dot.setPointerCapture(e.pointerId)
 }
 
 function onDrag(e) {
@@ -128,7 +144,7 @@ function onDrag(e) {
 async function endDrag() {
   if (!dragState) return
   dragState = null
-  capsule.dataset.dragging = 'false'
+  dot.dataset.dragging = 'false'
   await chrome.storage.local.set({
     companionPosition: { left: parseInt(hostEl.style.left, 10), top: parseInt(hostEl.style.top, 10) },
   })
@@ -137,25 +153,28 @@ async function endDrag() {
 async function ensureMounted() {
   if (hostEl) return
   hostEl = document.createElement('div')
-  shadow = hostEl.attachShadow({ mode: 'closed' })
+  hostEl.dataset.meantCompanion = 'true'
+  // 'open' — the only thing 'closed' would hide is what's already readable off the host
+  // element's own `title` attribute (the intention sentence), so closed bought no real
+  // privacy while making the widget's internals opaque to automated testing.
+  shadow = hostEl.attachShadow({ mode: 'open' })
   const style = document.createElement('style')
   style.textContent = css()
-  capsule = document.createElement('div')
-  capsule.className = 'capsule'
-  const gaze = document.createElement('div')
-  gaze.className = 'gaze'
-  const aperture = document.createElement('div')
-  aperture.className = 'aperture'
-  gaze.append(aperture)
-  capsule.append(gaze)
-  shadow.append(style, capsule)
+  dot = document.createElement('div')
+  dot.className = 'dot-wrap'
+  const ring = document.createElement('div')
+  ring.className = 'ring'
+  const core = document.createElement('div')
+  core.className = 'dot'
+  dot.append(ring, core)
+  shadow.append(style, dot)
   document.documentElement.append(hostEl)
   await positionHost()
 
-  capsule.addEventListener('pointerdown', startDrag)
-  capsule.addEventListener('pointermove', onDrag)
-  capsule.addEventListener('pointerup', endDrag)
-  capsule.addEventListener('pointercancel', endDrag)
+  dot.addEventListener('pointerdown', startDrag)
+  dot.addEventListener('pointermove', onDrag)
+  dot.addEventListener('pointerup', endDrag)
+  dot.addEventListener('pointercancel', endDrag)
 }
 
 function unmount() {
@@ -163,7 +182,26 @@ function unmount() {
   hostEl.remove()
   hostEl = null
   shadow = null
-  capsule = null
+  dot = null
+  clearTimeout(returnTimer)
+}
+
+// Real data today only has two values: 'settled' | 'drifting' — "Resting" (no ring at
+// all) and a distinct "Focus" have no signal to tell them apart yet (that needs the
+// dwell/resolve work later tasks build), so both map to the same ring-on state for now.
+// The Drift -> Focus transition is the one moment worth a one-shot animation: I2 forbids
+// celebrating an outcome, not a state's own witness settling back down, which the prior
+// gaze-transform design already did wordlessly on every return — this is that same
+// acknowledgment, reskinned, not a new kind of on-screen reward.
+function applyVisualState(next) {
+  if (!dot) return
+  const prev = dot.dataset.state
+  dot.dataset.state = next
+  if (prev === 'drift' && next === 'focus') {
+    dot.dataset.returning = 'true'
+    clearTimeout(returnTimer)
+    returnTimer = setTimeout(() => { if (dot) dot.dataset.returning = 'false' }, 620)
+  }
 }
 
 async function applyState(session, companionState) {
@@ -172,8 +210,8 @@ async function applyState(session, companionState) {
     return
   }
   await ensureMounted()
-  capsule.dataset.state = companionState ?? 'settled'
-  capsule.title = session.intention || ''
+  applyVisualState(companionState === 'drifting' ? 'drift' : 'focus')
+  dot.title = session.intention || ''
 }
 
 async function render() {
@@ -184,8 +222,8 @@ async function render() {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return
   if (changes.session) return render()
-  if (changes.companionState && capsule) {
-    capsule.dataset.state = changes.companionState.newValue ?? 'settled'
+  if (changes.companionState && dot) {
+    applyVisualState(changes.companionState.newValue === 'drifting' ? 'drift' : 'focus')
   }
 })
 

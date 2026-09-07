@@ -88,13 +88,34 @@ Breaking one is a bug, not a preference.
 
 ## The companion, specifically
 
-- **Aliveness is breathing and blinking.** A slow scale/opacity cycle plus a rare irregular blink. Sub-perceptual, always on, never reads as animation.
-- **State is gaze and posture, never action.** Facing your work is the good state — it is a posture, not an event, which is how there can be a positive state without a reward. Turning to face you is the drift signal. One rotation. No sound, no words, no colour change.
-- **Motion budget:** three noticeable movements per 25-minute session, none in the first 60 seconds. Breathing and blinking do not count.
-- **It is a coach, not a pet.** This audience screen-shares with clients.
-- **It reads at 80–120px** in a side panel or a floating window, and gaze must read at that size — and at video resolution, on a phone, for someone following a build along.
-- **One tap on it** says what it can see and where that goes. The companion is the consent surface, not the anaesthetic that makes being watched feel warm.
-- **Note for design:** the toolkit calls the mark *"a real chart, not a logo shaped like one."* A chart cannot have gaze. If the companion is the mark, the mark stops being a chart. Take that fork deliberately. `.m-mark[data-state]` already declares five states including `drifting`, which nothing in the code has ever set.
+**Reflects the Orbit reversal (2026-09-05).** Everything below superseded the prior
+gaze/capsule spec deliberately, on direct instruction, not by drift — the previous
+version is preserved in git history (`extension/meant.css` before this date) and in
+`docs/dead-ends.md`. The "screen-shares with clients" concern that motivated the old
+"coach, not pet" framing was not re-litigated; the owner chose to accept it.
+
+- **It is a pet, not a coach.** A minimal orbital dot at the edge of the page — 28px,
+  bottom-right by default, draggable. Presence over posture.
+- **State is ring presence and style, not color.** Resting: dot only, no ring. Focus
+  (the session's steady state): a solid ring. Drift: the same ring, dashed. The ring
+  never changes hue between states — clay is the only accent color the companion ever
+  uses, at any state — so "state" reads as a shape change, not a status light.
+- **Return gets one visible acknowledgment.** A 0.6s ring-collapse pulse plays once, on
+  the transition back from drift, then the ring settles back to solid. This is a
+  deliberate, narrow exception to "nothing good happens on screen during a session" —
+  scoped to the companion's own witness settling, not an outcome celebration; the
+  prior gaze-transform design already moved visibly on every return, this reskins the
+  same acknowledgment rather than introducing a new kind of on-screen reward.
+- **Aliveness is breathing, not blinking.** A continuous, slow scale/opacity cycle on
+  the dot itself (~1.6s), sub-perceptual, always on. The prior design's rare blink is
+  not carried over.
+- **It reads at 28px**, not 80–120px — legible as a small, ambient presence, not a
+  focal element competing with the page underneath it.
+- **Note for design:** the toolkit's "a real chart, not a logo shaped like one" framing
+  for `.m-mark` no longer describes the companion, since the companion is no longer
+  built from `.m-mark`'s primitives at all (`extension/companion-overlay.js`, a
+  self-contained Shadow DOM). That tension is resolved by separation, not by a fork
+  inside one class.
 
 ---
 
