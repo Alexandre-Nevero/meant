@@ -1180,10 +1180,16 @@ this project's own CLAUDE.md mandates the `impeccable` skill for exactly this ("
 world, new surface, or a redesign → /impeccable"). This task's job is to run that process
 correctly and implement whatever it produces, not to guess at pixel values here.
 
-**Files:** determined by the impeccable design output — likely `design/tokens.css` (if new
-tokens are needed), `extension/meant.css`, `app/globals.css` (mark is shared vocabulary
-between the extension and the web app — check both), `extension/popup.js` (navigation
-affordance), and possibly a new small view function in `popup.js` for whatever the
+**Scope, per explicit user instruction:** the logo/mark change applies ONLY to the
+extension's own popup (`extension/meant.css`'s `.m-mark`) — the web app's `.m-mark`
+(`app/globals.css`) stays exactly as it is. Do not touch `app/globals.css`'s mark rules
+or any web-app surface (dashboard, review page, landing) that renders `.m-mark`.
+
+**Files:** determined by the impeccable design output — likely `design/tokens.css` (only
+if a genuinely new token is needed — check first whether the existing palette already
+covers it), `extension/meant.css` (the mark, extension-only per the scope note above),
+`extension/popup.js` (navigation affordance), and possibly a new small view function in
+`popup.js` for whatever the
 navigation reveals (session history, blocked-sites list, or a link out — scope is part of
 what impeccable's process should resolve, not assumed here).
 
