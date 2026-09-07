@@ -55,12 +55,12 @@ export function resolveSitePhrase(text) {
     .split(/,| and /i)
     .map((t) => t.trim())
     .filter(Boolean)
-  if (tokens.length === 0) return { ok: false, badToken: '' }
+  if (tokens.length === 0) return { ok: false, badToken: '', badIndex: -1 }
 
   const domains = []
-  for (const token of tokens) {
-    const result = resolveToken(token)
-    if (!result.ok) return { ok: false, badToken: result.badToken, suggestion: result.suggestion }
+  for (let i = 0; i < tokens.length; i++) {
+    const result = resolveToken(tokens[i])
+    if (!result.ok) return { ok: false, badToken: result.badToken, badIndex: i, suggestion: result.suggestion }
     if (!domains.includes(result.domain)) domains.push(result.domain)
   }
   return { ok: true, domains }

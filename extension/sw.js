@@ -41,12 +41,7 @@ async function sweepOpenTabs(domains) {
   const tabs = await chrome.tabs.query({})
   for (const tab of tabs) {
     if (!tab.id || !tab.url) continue
-    let hostname
-    try {
-      hostname = bareHostname(tab.url)
-    } catch {
-      continue
-    }
+    const hostname = safeHostname(tab.url)
     if (hostname && domains.includes(hostname)) {
       const url = chrome.runtime.getURL(`blocked.html?d=${encodeURIComponent(hostname)}`)
       chrome.tabs.update(tab.id, { url }).catch(() => {})
@@ -70,14 +65,21 @@ function bareHostname(url) {
   return (hostname.startsWith('www.') ? hostname.slice(4) : hostname) || null
 }
 
-async function activeDomain() {
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-  if (!tab?.url) return null
+// bareHostname throws on an unparseable URL (e.g. chrome://, about:blank) — every call
+// site just wants the bare hostname or null, never the exception. One shared guard
+// instead of each site repeating its own try/catch.
+function safeHostname(url) {
   try {
-    return bareHostname(tab.url)
+    return bareHostname(url)
   } catch {
     return null
   }
+}
+
+async function activeDomain() {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+  if (!tab?.url) return null
+  return safeHostname(tab.url)
 }
 
 export async function startSession({ intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle }) {
@@ -106,7 +108,11 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
     await sweepOpenTabs(domains)
   } catch (error) {
     console.error('startSession: installRules failed', error)
-    await endSession('stopped')
+    // Distinct from 'stopped'/'elapsed': this session never actually ran (and was never
+    // POSTed, since that fire-and-forget happens after this try/catch) — its GET would
+    // always 404, so it must never earn a pendingReview marker either. endSession's own
+    // `endReason === 'stopped' || endReason === 'elapsed'` check is what gates that.
+    await endSession('start-failed')
     return { ok: false, error: String(error) }
   }
 
@@ -229,11 +235,7 @@ chrome.tabs.onActivated.addListener(async () => {
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!changeInfo.url || !tab.active) return
-  try {
-    await transition({ mode: 'attention', domain: bareHostname(changeInfo.url) })
-  } catch {
-    await transition({ mode: 'attention', domain: null })
-  }
+  await transition({ mode: 'attention', domain: safeHostname(changeInfo.url) })
 })
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {

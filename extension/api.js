@@ -19,6 +19,7 @@ export async function get(path) {
         token: null,
         deviceId: null,
         session: null,
+        pendingReview: null,
         unpairedReason: 'This device was disconnected from your account. Pair again.',
       })
     }
@@ -47,6 +48,7 @@ export async function post(path, body, { method = 'POST', queue: shouldQueue = t
         token: null,
         deviceId: null,
         session: null,
+        pendingReview: null,
         unpairedReason: 'This device was disconnected from your account. Pair again.',
       })
     }

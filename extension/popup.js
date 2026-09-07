@@ -97,7 +97,13 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
         if (settled) return true
         let text = input.value
         if (pendingSuggestion && text === pendingSuggestion.rawText) {
-          text = text.replace(pendingSuggestion.badToken, pendingSuggestion.suggestion)
+          // Replace by TOKEN POSITION, not a raw string .replace() — a bad token that is
+          // itself a substring of an earlier valid token (e.g. "doc" inside "docs") would
+          // otherwise get hit at the wrong spot and oscillate forever. Split the same way
+          // resolveSitePhrase does internally (extension/lib/resolve-sites.js).
+          const tokens = text.split(/,| and /i).map((t) => t.trim())
+          tokens[pendingSuggestion.badIndex] = pendingSuggestion.suggestion
+          text = tokens.join(', ')
           input.value = text
         }
         if (!text.trim()) {
@@ -109,7 +115,7 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
         const result = resolveSitePhrase(text)
         if (!result.ok) {
           pendingSuggestion = result.suggestion
-            ? { rawText: input.value, badToken: result.badToken, suggestion: result.suggestion }
+            ? { rawText: input.value, badIndex: result.badIndex, suggestion: result.suggestion }
             : null
           showError(
             result.suggestion
@@ -380,7 +386,9 @@ async function idle() {
     // what matters for "I want this device paired to nothing" — the same shape as
     // the automatic 401 path in api.js, applied on purpose instead of on rejection.
     await post('/api/device', undefined, { method: 'DELETE', queue: false })
-    await chrome.storage.local.set({ token: null, deviceId: null, session: null })
+    // pendingReview too: a stale marker from a previous account/device must never show
+    // someone else's (or a revoked device's) outcome question after a fresh pairing.
+    await chrome.storage.local.set({ token: null, deviceId: null, session: null, pendingReview: null })
     render()
   })
 
@@ -433,6 +441,18 @@ async function outcome(sessionId) {
   mark.dataset.state = 'ended'
 
   const res = await get(`/api/sessions/${sessionId}/review`)
+  // Transient (offline, or the server itself is down): the review data may just be
+  // unreachable right now, not gone — don't discard pendingReview on the first network
+  // hiccup. Only a genuine 404/401 (below) is treated as final.
+  if (res.offline || (typeof res.status === 'number' && res.status >= 500)) {
+    const done = el('button', 'm-btn', 'Done')
+    done.dataset.variant = 'quiet'
+    done.addEventListener('click', async () => {
+      await chrome.storage.local.remove('pendingReview')
+      render()
+    })
+    return show(mark, el('p', 'm-meta', "Can't reach it right now."), done)
+  }
   if (!res.ok || !res.data) {
     await chrome.storage.local.remove('pendingReview')
     return idle()
@@ -469,7 +489,7 @@ async function outcome(sessionId) {
     }
     yes.addEventListener('click', () => answer('yes'))
     notYet.addEventListener('click', () => answer('no'))
-    nodes.push(yes, notYet)
+    nodes.push(yes, notYet, navRow())
   } else {
     nodes.push(el('p', 'm-meta', data.outcome === 'yes'
       ? `Good. That's ${data.finished} of ${data.answered}.`
@@ -480,7 +500,7 @@ async function outcome(sessionId) {
       await chrome.storage.local.remove('pendingReview')
       render()
     })
-    nodes.push(done)
+    nodes.push(done, navRow())
   }
 
   show(...nodes)

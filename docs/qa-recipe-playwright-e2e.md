@@ -83,13 +83,18 @@ resolve that ambiguity for real here.
 13. Click Start with no other input beyond a typed sentence. **Pass:** `res.ok` true,
     `chrome.storage.local.session` populated, `POST /api/sessions` fires (check via
     `page.on('request')` or by querying the DB row afterward).
-14. Type a multi-domain phrase into the "+" input (e.g. `docs, gmail, and chatgpt`), press
+13a. Type a multi-domain phrase into the "+" input (e.g. `docs, gmail, and chatgpt`), press
     Enter. **Pass:** all three domains resolve to their aliases and appear as chips
     (e.g. `docs.google.com`, `gmail.com`, `chatgpt.com`), atomically — all or nothing.
-15. Type a phrase with a typo (e.g. `docs, gmial`), press Enter. **Pass:** error message
+13b. Type a phrase with a typo (e.g. `docs, gmial`), press Enter. **Pass:** error message
     "did you mean gmail? Press Enter to use it" appears; no chips are added yet (atomic
     rejection). Press Enter again to accept the suggestion. **Pass:** the corrected phrase
     resolves and both chips appear (`docs.google.com`, `gmail.com`).
+13c. Fix round: type a phrase where the bad token is a substring of an earlier valid token
+    (`docs, doc`), press Enter. **Pass:** suggestion "did you mean docs? Press Enter to use
+    it" appears; press Enter again — resolves to a single deduplicated `docs.google.com`
+    chip rather than oscillating forever (a naive string `.replace()` call would keep
+    rewriting the "doc" inside "docs" instead of the bad token's own position).
 
 ### D — Session lifecycle, block rules, and the sentence lock (D34)
 
@@ -234,6 +239,12 @@ at you anymore.
 35. `GET /api/sessions/:id/review` with the device token. **Pass:** 200, JSON body matches
     the `ReviewData` shape (`topAttention`, `awaySeconds`, `blockedAttempts`, `outcome`,
     `finished`, `answered`). Same request unauthenticated. **Pass:** 401.
+35a. Fix round: start a session while offline, stop it while STILL offline (so its
+    `POST /api/sessions` never synced — this GET is genuinely unreachable, not a real
+    404/401). Reopen the popup, still offline. **Pass:** shows "Can't reach it right now."
+    with a `Done` button, NOT a silent revert to the idle "What do you mean to do?" screen
+    (`pendingReview` must survive a transient/offline failure). Click `Done`. **Pass:**
+    `pendingReview` clears and the popup now correctly shows idle.
 
 ### K — The idle mark's missing glyph, and popup navigation (Task 6)
 

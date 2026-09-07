@@ -209,6 +209,27 @@ test.describe('popup, idle state', () => {
     await expect(page.getByRole('button', { name: 'gmail.com' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'docs.google.com' })).toBeVisible()
   })
+
+  // Fix round: "doc" is a substring of the earlier valid token "docs" — a naive string
+  // .replace() call hits the "doc" INSIDE "docs" instead of the bad token itself,
+  // producing "docss, doc" forever (oscillates, never resolves). The fix replaces by
+  // token position instead.
+  test('a bad token that is a substring of another valid token corrects without oscillating', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const plusButtons = page.getByRole('button', { name: '+' })
+    await plusButtons.first().click()
+    await page.keyboard.type('docs, doc')
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('did you mean docs? Press Enter to use it')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'docs.google.com' })).toHaveCount(0) // atomic — nothing added yet
+
+    await page.keyboard.press('Enter') // accepts the standing suggestion
+    // Deduplicated to a single chip, not oscillating forever and never resolving.
+    await expect(page.getByRole('button', { name: 'docs.google.com' })).toHaveCount(1)
+  })
 })
 
 // Case K — the running popup's own nav row and blocked-sites visibility (Task 6 brief).

@@ -34,3 +34,32 @@ test('stopping a session shows the outcome question in the popup, opens no tab',
   await page.getByRole('button', { name: 'Yes' }).click()
   await expect(page.getByText(/Good\. That's \d+ of \d+\./)).toBeVisible()
 })
+
+// Fix round: a session started AND stopped while offline never reaches the server
+// (POST /api/sessions is still queued), so its pendingReview marker's GET is genuinely
+// unreachable, not a real 404/401. That must show as a dismissable transient failure,
+// not silently revert to idle and lose the outcome question forever.
+test('an offline-started-and-stopped session shows a transient failure, not a silent revert to idle', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairAndOpenPopup(page, extensionId)
+
+  await context.setOffline(true)
+  await page.locator('input.m-field').first().fill('offline outcome test')
+  await page.getByRole('button', { name: 'Start' }).click()
+  await expect(page.getByText(/min elapsed/)).toBeVisible({ timeout: 3_000 })
+
+  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+  // Still offline: reopening the popup must show the transient message, not idle.
+  await page.reload()
+  await expect(page.getByText("Can't reach it right now.")).toBeVisible()
+  await expect(page.getByText('What do you mean to do?')).toHaveCount(0)
+  const doneButton = page.getByRole('button', { name: 'Done' })
+  await expect(doneButton).toBeVisible()
+
+  await doneButton.click()
+  await expect(page.getByText('What do you mean to do?')).toBeVisible()
+
+  await context.setOffline(false)
+})
