@@ -153,11 +153,17 @@ test.describe('floating companion', () => {
     await expect(dotWrap).toHaveAttribute('data-state', 'focus')
 
     // A real navigation to a known-distraction domain, not a manual companionState write —
-    // this is what actually exercises updateCompanion's own call site. `waitUntil: 'commit'`
-    // (not the default 'load') since only the URL-change event matters here — waiting for
-    // youtube.com's own full page load would make this test slow and network-flaky for no
-    // reason.
-    await page.goto('https://youtube.com', { waitUntil: 'commit' })
+    // this is what actually exercises updateCompanion's own call site via
+    // chrome.tabs.onUpdated. Routed locally instead of hitting the real youtube.com:
+    // a genuine request to it resets under this suite's repeated automated traffic
+    // (confirmed: consistent net::ERR_CONNECTION_RESET), and when a top-level
+    // navigation genuinely fails, Chrome replaces the document with its own error
+    // interstitial — destroying the companion content script this test asserts on,
+    // not just leaving the previous page in place. Fulfilling the request locally
+    // makes the navigation (and the URL change chrome.tabs.onUpdated sees) succeed
+    // deterministically, with no real network dependency at all.
+    await page.route('https://youtube.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }))
+    await page.goto('https://youtube.com')
     await expect(dotWrap).toHaveAttribute('data-state', 'drift', { timeout: 3_000 })
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
@@ -196,11 +202,19 @@ test.describe('floating companion', () => {
     const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
     await expect(dotWrap).toHaveAttribute('data-state', 'focus')
 
-    // A real navigation (no DNR rule actually installed for it here, so it loads for
-    // real) — this is what exercises updateCompanion's session.blockedDomains check on a
-    // domain that IS a known distraction category member (BLOCKLISTS' 'video' category)
-    // but that this session's own blockedDomains says is already handled, not drift.
-    await page.goto('https://youtube.com', { waitUntil: 'commit' })
+    // A real navigation (no DNR rule actually installed for it here) — this is what
+    // exercises updateCompanion's session.blockedDomains check on a domain that IS a
+    // known distraction category member (BLOCKLISTS' 'video' category) but that this
+    // session's own blockedDomains says is already handled, not drift. Routed locally
+    // for the same reason as the sibling drift test above: a real request to
+    // youtube.com resets under this suite's repeated automated traffic, and Chrome
+    // replaces the document (destroying the companion) rather than leaving the
+    // previous page in place — routing removes the real-network dependency entirely.
+    await page.route('https://youtube.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }))
+    await page.goto('https://youtube.com')
+    // This is a negative assertion (drift must NOT fire) — a bare expect() would pass
+    // instantly on the pre-navigation 'focus' value without giving updateCompanion's
+    // async storage write a chance to run, so give it real time before checking.
     await page.waitForTimeout(500)
     await expect(dotWrap).toHaveAttribute('data-state', 'focus') // still focus, not drift
 
