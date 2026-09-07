@@ -216,10 +216,15 @@ test.describe('popup, idle state', () => {
       const body = await res.json()
       return body.workSites.includes('gmail.com')
     }
+    // Give any (would-be, buggy) fire-and-forget removal PUT a real chance to land
+    // before we check — expect.poll passes on its first matching sample, so without
+    // this wait a regression could still pass on a lucky early poll.
+    await page.waitForTimeout(500)
     await expect.poll(stillListed).toBe(true)
 
     await chip.click() // toggle back off
     await expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await page.waitForTimeout(500)
     await expect.poll(stillListed).toBe(true)
 
     // Survives reload too — a toggle is session-local, never a standing-list mutation.
