@@ -345,6 +345,20 @@ bottom-right corner.
     recorded in the wide window — confirming the stored position holds its relative place
     instead of being reclamped against the narrower window's own smaller width.
 
+### P — Landing page CTA swap based on auth state (Task 5)
+
+The landing page (`/`) used to redirect a signed-in visitor to `/dashboard`. This fix shows
+the same pitch to both signed-in and signed-out visitors, but swaps only the call-to-action:
+signed-out sees the sign-in form, signed-in sees a "Go to your dashboard" link.
+
+44. Sign up and land on `/dashboard`. Navigate directly to `/`. **Pass:** the hero text
+    "Every other focus app has to ask whether you were focused." is visible, and a
+    `href="/dashboard"` link with text "Go to your dashboard" is present in the hero
+    section. No email input field is visible (verifying the auth form is not rendered).
+45. In a fresh browser context, navigate to `/` unsigned-out. **Pass:** the hero text is
+    visible, a sign-in form with an email input field (in the hero section) is present,
+    and no "Go to your dashboard" link is visible.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
