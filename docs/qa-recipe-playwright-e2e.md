@@ -258,16 +258,21 @@ state, is untouched — it stays blank on purpose). Same commit adds a `navRow()
 to both `idle()` and `running()`, and a read-only `blocking: <domains>` line
 (`.m-meta`) to `running()`, sourced from `session.blockedDomains`.
 
+**Superseded by Task 5 (Case AG below):** `navRow()`'s buttons moved from full-width text
+buttons at the bottom into a top-right icon-only header row next to the mark. Items 37/38
+below are updated in place (not duplicated) to match; the original bottom-row placement no
+longer exists.
+
 36. Open the popup with no session running (idle view). **Pass:** `.m-mark`'s `::after`
     has a real `background-image` (the three-tint clay gradient), not `none` — check via
     `getComputedStyle(el, '::after').backgroundImage`. Visually: the same glyph as the
     running/ended mark, not a blank outline.
-37. Still in the idle view. **Pass:** a `History` and a `meant.app` button are both visible
-    (`.m-btn[data-variant="quiet"]`, in a `.m-chip-row` after `Disconnect this device`).
+37. Still in the idle view. **Pass:** a `View session history` button and an `Open
+    meant.app` button (by `aria-label`, icon-only — see Case AG) are both visible, inside
+    `[data-popup-header="true"]`.
 38. Configure at least one blocked domain and Start a session. **Pass:** the running view
     shows a `blocking: <domain list>` line (`.m-meta`, right after the elapsed-time line)
-    matching the configured domains, plus the same `History`/`meant.app` buttons after
-    `Stop`.
+    matching the configured domains, plus the same header icon buttons.
 39. **Visual, human/screenshot check:** at the popup's real 360px width, confirm nothing
     animates — no `transition`/`transform` introduced anywhere in this task's CSS or JS
     (PRODUCT.md: the popup animates nothing) — and the two nav buttons render at a
@@ -751,6 +756,45 @@ plain CSS border exactly as before.
     session (still within the grace window, no time-shift), clicking into the intention
     field confirmed the input's `:focus-visible` outline renders fully intact around the
     pill's edge on all four sides, not clipped by the new SVG.
+
+### AG — History/meant.app moved into a top-right icon header row (Task 5)
+
+Case K's `navRow()` used to render `History`/`meant.app` as two full-width text buttons at
+the very bottom of the popup, after `Disconnect this device`/`Stop`. This moves them into
+a new `[data-popup-header="true"]` row sitting beside the existing `.m-mark` glyph, top of
+the popup: `header(mark)` wraps `mark` and `navRow()` together and replaces `mark` as the
+first argument to both `idle()`'s and `running()`'s final `show(...)` call (the trailing
+`navRow()` argument is dropped from each, since `navRow()` now runs inside `header()`
+instead). `navRow()`'s own buttons are now icon-only: "History" reuses the existing
+`.m-mark[data-state="ended"]` glyph (`markGlyph()` — no new icon system, per this
+product's own rule that the mark is the only icon this product has) and "meant.app" gets
+one small hand-drawn SVG matching this codebase's one existing precedent for a custom
+glyph (`app/page.tsx`'s beat-arrow: `stroke="currentColor" stroke-width="1.5"
+stroke-linecap="round" stroke-linejoin="round" fill="none"`). Both buttons carry a real
+`aria-label` (`View session history` / `Open meant.app`) since they now carry no visible
+text. No new class: `data-popup-header` is an attribute, and `.m-mark`/`.m-btn`/
+`.m-chip-row` are reused, not extended.
+
+73. E2E test: `e2e/popup.spec.ts` "History and meant.app render as icon buttons in a header
+    row, top-right, not full-width text buttons at the bottom". Pair the popup (idle
+    view). **Pass:** `[data-popup-header="true"]` is visible and contains both a `View
+    session history` button and an `Open meant.app` button; the `View session history`
+    button has no visible text (`toHaveText('')`) and the `Open meant.app` button contains
+    exactly one `<svg>`; within the header, the `.m-chip-row`'s bounding box sits to the
+    right of the `.m-mark`'s (mark left, icons right).
+    Visual check (temp spec deleted after): screenshotted both the idle and the running
+    popup at 360px width. Confirmed on both: the mark glyph and the two icon buttons sit on
+    one row at the top, mark left, icons right, nothing overlapping or misaligned; each
+    icon button renders inside its own `.m-btn[data-variant="quiet"]` pill border, reading
+    as clearly clickable even with no visible text; the old full-width `History`/
+    `meant.app` text buttons are gone from the bottom of both views (idle now ends with
+    `Start`/`Disconnect this device`, running now ends with `Stop`, no nav row after
+    either).
+    Existing tests updated to match (not left broken): `e2e/popup.spec.ts`'s two prior
+    call sites that asserted on the buttons' old visible text names (`History`/
+    `meant.app`) now target the `aria-label`s instead, and one prior test's
+    `page.locator('.m-mark')` (previously unique) is scoped to `[data-state="idle"]` now
+    that the reused History icon is a second `.m-mark` on the same page.
 
 ## What Sonnet writes vs. what Haiku runs
 

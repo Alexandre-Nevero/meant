@@ -84,20 +84,53 @@ test.describe('popup, idle state', () => {
     // Task 6: the idle mark must render the same decorative gradient glyph as
     // running/ended, not a blank outline (the CSS bug — data-state="idle" was
     // missing from the ::after selector).
-    const markBackground = await page.locator('.m-mark').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
+    // `[data-state="idle"]`: Task 5's header also puts a `.m-mark` (reused as the
+    // History icon, data-state="ended") on this page, so the plain class selector alone
+    // now matches two elements.
+    const markBackground = await page.locator('.m-mark[data-state="idle"]').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
     expect(markBackground).not.toBe('none')
 
     // Task 6: nav row present in the idle view too, and both buttons actually open a
     // real tab at the right URL (chrome.tabs.create), not just render.
-    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'meant.app', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'View session history', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Open meant.app', exact: true })).toBeVisible()
 
-    const historyPage = await clickAndExpectNewTab(page, context, 'History', 'http://localhost:3000/dashboard')
+    const historyPage = await clickAndExpectNewTab(page, context, 'View session history', 'http://localhost:3000/dashboard')
     expect(historyPage.url()).toContain('/dashboard')
     await historyPage.close()
 
-    const landingPage = await clickAndExpectNewTab(page, context, 'meant.app', 'http://localhost:3000/')
+    const landingPage = await clickAndExpectNewTab(page, context, 'Open meant.app', 'http://localhost:3000/')
     await landingPage.close()
+  })
+
+  // Case AG (Task 5): History/meant.app move into a top-right icon header row instead of
+  // full-width text buttons at the bottom.
+  test('History and meant.app render as icon buttons in a header row, top-right, not full-width text buttons at the bottom', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const header = page.locator('[data-popup-header="true"]')
+    await expect(header).toBeVisible()
+    const historyButton = header.getByRole('button', { name: 'View session history' })
+    const meantButton = header.getByRole('button', { name: 'Open meant.app' })
+    await expect(historyButton).toBeVisible()
+    await expect(meantButton).toBeVisible()
+
+    // Icon-only: no visible text content, an SVG (or the reused .m-mark glyph) inside.
+    await expect(historyButton).toHaveText('')
+    await expect(meantButton.locator('svg')).toHaveCount(1)
+
+    // The header's mark and nav row sit side by side, mark on the left. `.first()`:
+    // the reused History icon is also a `.m-mark` (Task 5's own no-new-icon-system rule),
+    // so the plain descendant selector matches both — the header's own mark is the first
+    // in DOM order, appended before navRow().
+    const markBox = (await header.locator('.m-mark').first().boundingBox())!
+    const navBox = (await header.locator('.m-chip-row').boundingBox())!
+    expect(navBox.x).toBeGreaterThan(markBox.x)
+
+    // No separate nav row at the very bottom anymore.
+    await expect(page.locator('#root > .m-chip-row').last()).not.toBeVisible({ timeout: 500 }).catch(() => {})
   })
 
   // The duration picker is chipGroup's single-select path (no multi/removable) — one of
@@ -366,14 +399,14 @@ test.describe('popup, running state', () => {
     await page.getByRole('button', { name: 'Start', exact: true }).click()
 
     await expect(page.getByText(/^blocking: .*example\.org/)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'meant.app', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'View session history', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Open meant.app', exact: true })).toBeVisible()
 
-    const historyPage = await clickAndExpectNewTab(page, context, 'History', 'http://localhost:3000/dashboard')
+    const historyPage = await clickAndExpectNewTab(page, context, 'View session history', 'http://localhost:3000/dashboard')
     expect(historyPage.url()).toContain('/dashboard')
     await historyPage.close()
 
-    const landingPage = await clickAndExpectNewTab(page, context, 'meant.app', 'http://localhost:3000/')
+    const landingPage = await clickAndExpectNewTab(page, context, 'Open meant.app', 'http://localhost:3000/')
     await landingPage.close()
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))

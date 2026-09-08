@@ -232,6 +232,18 @@ button, input, select { font: inherit; color: inherit; }
  * 16px → 14px, design/canvas/PopupIdle.dc.html). */
 [data-surface="popup"] .m-btn { padding: 14px 0; }
 
+/* ---------- [data-popup-header] — mark + nav icons, top-right (Task 5) ---------- */
+[data-popup-header] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+[data-popup-header] .m-chip-row { gap: 8px; }
+[data-popup-header] .m-btn {
+  width: auto;
+  padding: 8px;
+}
+
 /* ---------- .m-answer / .m-rate — the outcome question (Task 4: rendered in the popup) ----------
  * Ported from app/globals.css, popup-sized, with no transition/transform on either rule —
  * the popup animates nothing (PRODUCT.md invariant), unlike the web app's versions which

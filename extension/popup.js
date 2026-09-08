@@ -191,18 +191,42 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
 
 function navRow() {
   const row = el('div', 'm-chip-row')
-  const history = el('button', 'm-btn', 'History')
+  const history = el('button', 'm-btn')
   history.dataset.variant = 'quiet'
+  history.setAttribute('aria-label', 'View session history')
+  history.append(markGlyph())
   history.addEventListener('click', async () => {
     chrome.tabs.create({ url: (await apiBase()) + '/dashboard' })
   })
-  const landing = el('button', 'm-btn', 'meant.app')
+  const landing = el('button', 'm-btn')
   landing.dataset.variant = 'quiet'
+  landing.setAttribute('aria-label', 'Open meant.app')
+  landing.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M6 2H2v10h10V8M8 2h4v4M12 2 6 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>'
   landing.addEventListener('click', async () => {
     chrome.tabs.create({ url: (await apiBase()) + '/' })
   })
   row.append(history, landing)
   return row
+}
+
+// The "History" icon reuses the existing decorative mark glyph (the same
+// .m-mark[data-state="ended"] already used everywhere a completed/past session is
+// represented) — no new icon system, per this product's own explicit rule that the mark
+// is the only icon this product has.
+function markGlyph() {
+  const glyph = el('p', 'm-mark', '')
+  glyph.dataset.state = 'ended'
+  return glyph
+}
+
+// Top-right header: the popup's own mark glyph beside the (now icon-only) nav row.
+// data-popup-header, not a new class — the class contract stays frozen (13 fixed classes
+// plus .m-chip/.m-chip-row/.m-companion-*).
+function header(mark) {
+  const wrap = el('div')
+  wrap.dataset.popupHeader = 'true'
+  wrap.append(mark, navRow())
+  return wrap
 }
 
 function cyclePresetKey(cycle) {
@@ -433,7 +457,7 @@ async function idle() {
     render()
   })
 
-  show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect, navRow())
+  show(header(mark), label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect)
 }
 
 // Pure computation, no chrome.* API — which phase (work/break) the elapsed time
@@ -542,7 +566,7 @@ function running(session) {
     })
   }
 
-  show(mark, pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop, navRow())
+  show(header(mark), pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop)
 }
 
 async function outcome(sessionId) {
