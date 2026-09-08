@@ -12,7 +12,7 @@
 // never a component's own hex value, even when matching an external reference.
 
 const DEFAULT_POSITION = { right: 24, bottom: 24 }
-const SIZE = 28
+const SIZE = 36
 
 let hostEl = null
 let shadow = null
@@ -24,7 +24,6 @@ function css() {
   return `
     :host {
       --m-ground: #F3F1EE;
-      --m-ink: #14120F;
       --m-clay: #C75B39;
       --m-ease: cubic-bezier(0.23, 1, 0.32, 1);
       all: initial;
@@ -32,9 +31,14 @@ function css() {
       z-index: 2147483647;
       width: ${SIZE}px;
       height: ${SIZE}px;
+      animation: wake 360ms var(--m-ease);
     }
     @media (prefers-color-scheme: dark) {
-      :host { --m-ground: #14120F; --m-ink: #F3F1EE; --m-clay: #E06B44; }
+      :host { --m-ground: #14120F; }
+    }
+    @keyframes wake {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
     * { box-sizing: border-box; }
 
@@ -84,12 +88,17 @@ function css() {
       100% { transform: scale(1.6); opacity: 0; }
     }
 
-    /* .dot — aliveness, sub-perceptual, always on. */
+    /* .dot — aliveness, sub-perceptual, always on. Fixed --m-clay fill, not --m-ink:
+     * --m-ink used to flip near-black/near-white under prefers-color-scheme, which
+     * reflects the user's OS setting, not the actual page's background — a dark-mode
+     * user on an ordinary light page got a near-invisible near-white dot. --m-clay
+     * (orange in both schemes) has working contrast against both a light and a dark
+     * background, so visibility no longer depends on guessing the host page's colors. */
     .dot {
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      background: var(--m-ink);
+      background: var(--m-clay);
       animation: breathe 1.6s ease-in-out infinite;
     }
     @keyframes breathe {

@@ -543,6 +543,25 @@ and apply the CTA-swap pattern to the new nav locations instead of the old inlin
     inline signup flow, both now sign up via `/sign-in`, not `/` — confirmed by the full
     suite passing end to end, since nearly every spec depends on one of these two paths.
 
+### Y — Companion redesign: contrast-safe color, larger size, wake animation
+
+The companion overlay dot's color was bound to `prefers-color-scheme`, which reflects the
+user's OS/browser setting, not the actual page's background — so a dark-mode user navigating
+to a light-background page got an invisible near-white dot. The fix makes the dot use a
+fixed --m-clay (orange) color that has working contrast against both light and dark
+backgrounds. The companion also grows from 28px to 36px and gains a one-shot scale+fade
+"wake" animation on mount.
+
+60. Start a session, open a new tab, and emulate dark color scheme on that tab. **Pass:**
+    the companion dot's computed `backgroundColor` is `rgb(199, 91, 57)` (--m-clay,
+    `#C75B39`), not a color that flips with the color-scheme media query. This confirms
+    visibility no longer depends on guessing the page's background colors.
+61. After starting a session, open a new tab. **Pass:** the companion's bounding box width
+    and height are both 36px (not the old 28px), confirming the size increase. Also check
+    that the host element has active animations when measured (via
+    `getAnimations({ subtree: false }).length > 0`), confirming the wake animation runs
+    on mount — the animation scales from 0.5 to 1 over 360ms with an easing curve.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
