@@ -1,4 +1,5 @@
 import { sql } from '@/lib/db'
+import { EXTENSION_ID_SHAPE } from '@/lib/band'
 
 export type ReviewRow = { kind: string; domain: string | null; seconds: number; hits: number }
 export type ReviewData = {
@@ -30,7 +31,7 @@ export async function getReviewData(sessionId: string, userId: string): Promise<
      order by seconds desc`) as ReviewRow[]
 
   const topAttention = rows
-    .filter((r) => r.kind === 'attention' && r.domain)
+    .filter((r) => r.kind === 'attention' && r.domain && !EXTENSION_ID_SHAPE.test(r.domain))
     .slice(0, 3)
     .map((r) => ({ domain: r.domain as string, seconds: r.seconds }))
   const awaySeconds = rows

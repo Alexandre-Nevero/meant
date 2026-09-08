@@ -647,6 +647,29 @@ own border that it isn't clipped in practice; no padding/scoping change was need
 66. Start a session with `no cycles` selected. **Pass:** `[data-timer-pill="true"]` is
     visible but contains no `.m-mark` at all, and no `... min left` text renders anywhere.
 
+### AC — Extension-ID-shaped domains excluded from review page (Task 1 fix)
+
+Case L (step 40) verified that the live-tracking filter in `extension/sw.js` prevents
+chrome-extension:// URLs from being tracked as domains. This case verifies the server-side
+defence-in-depth filter in `lib/review-data.ts`'s `getReviewData()` — even if historical
+data or a filter bypass accidentally recorded an extension ID as a domain, it never appears
+on the review page's per-domain row list. The shape filter (EXTENSION_ID_SHAPE: exactly 32
+chars, a-p only, no dots) is tested both in isolation (unit test) and end-to-end (E2E test
+injecting real data), proving it excludes junk extension IDs while still including legitimate
+dotless domains like `localhost`.
+
+67. Unit test: `test/review-data.test.js` verifies the exact filter condition that
+    `getReviewData()` uses in its `topAttention` computation. **Pass:** a test row array
+    containing one real domain (`chatgpt.com`) and one extension-ID-shaped junk entry
+    (`emnalgngpciahekjdcgpbgnhmkpjhlhi`, 32 a-p chars) filters to just the real domain when
+    the shape guard `/^[a-p]{32}$/` is applied. A separate assertion confirms `localhost`
+    (another dotless domain, real and legitimate) still passes the same filter.
+68. E2E test: `e2e/review.spec.ts` Case AA. Start a session, inject two attention events
+    directly via `POST /api/events` (one real domain, one extension-ID-shaped string),
+    stop the session, navigate to the review page. **Pass:** `chatgpt.com` is visible on the
+    page (injected real data shows up), and the extension-ID string never appears anywhere
+    in the DOM (`toHaveCount(0)`), confirming the server-side filter is wired and working.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

@@ -10,7 +10,7 @@ export type Segment = { kind: 'attention-1' | 'attention-2' | 'attention-3' | 'a
 // dot" rule would be wrong here: this codebase has real, legitimate dotless tracked
 // domains (localhost) that must not be excluded — this targets the specific
 // extension-ID shape instead.
-const EXTENSION_ID_SHAPE = /^[a-p]{32}$/
+export const EXTENSION_ID_SHAPE = /^[a-p]{32}$/
 
 /** Attention rows for one session → band segments: top 3 domains by time, then away.
  * Takes the raw shape `sql` returns (untyped rows), not a declared row type. */
