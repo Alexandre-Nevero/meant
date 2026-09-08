@@ -267,4 +267,83 @@ test.describe('session lifecycle', () => {
       }, { timeout: 5_000 })
       .toMatch(/example\.com/)
   })
+
+  test('a tab sitting on the block page navigates back to the real site once the session ends', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairAndOpenPopup(page, extensionId)
+    await addBlockedDomain(page, 'example.net')
+    await page.locator('input.m-field').first().fill('revert test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const [sw] = context.serviceWorkers()
+    await expect
+      .poll(
+        async () =>
+          (await sw.evaluate(() => chrome.declarativeNetRequest.getDynamicRules())).some((r: any) =>
+            r.condition.requestDomains?.includes('example.net'),
+          ),
+        { timeout: 10_000, intervals: [200] },
+      )
+      .toBe(true)
+
+    const blockedPage = await context.newPage()
+    await blockedPage.bringToFront()
+    await blockedPage.goto('https://example.net')
+    await expect(blockedPage).toHaveURL(/blocked\.html\?d=example\.net/)
+
+    await page.bringToFront()
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+    // The tab that was sitting on blocked.html must navigate back to the real site —
+    // declarativeNetRequest only intercepts NEW navigations, so removing the rule alone
+    // (already covered by an existing test) never un-redirects an already-redirected tab.
+    await expect(blockedPage).toHaveURL('https://example.net/', { timeout: 5_000 })
+  })
+
+  test('a block page for a domain NOT in the ending session\'s own blockedDomains is left alone', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairAndOpenPopup(page, extensionId)
+    await addBlockedDomain(page, 'example.net')
+    await page.locator('input.m-field').first().fill('first session')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const [sw] = context.serviceWorkers()
+    await expect
+      .poll(
+        async () =>
+          (await sw.evaluate(() => chrome.declarativeNetRequest.getDynamicRules())).some((r: any) =>
+            r.condition.requestDomains?.includes('example.net'),
+          ),
+        { timeout: 10_000, intervals: [200] },
+      )
+      .toBe(true)
+
+    const blockedPage = await context.newPage()
+    await blockedPage.bringToFront()
+    await blockedPage.goto('https://example.net')
+    await expect(blockedPage).toHaveURL(/blocked\.html\?d=example\.net/)
+
+    // sweepBlockedTabsBack is scoped to the ending session's OWN blockedDomains — a real
+    // stale tab left over from an earlier, already-ended session is one way this could go
+    // wrong, but the underlying guard is simpler and directly testable: does the function
+    // check membership in the CURRENT session's list at all? Clear this session's own
+    // blockedDomains right before it ends and confirm blockedPage is untouched — proving
+    // the sweep is genuinely scoped, not a blanket "sweep every blocked.html tab" pass.
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        chrome.storage.local.get('session', ({ session }: any) => {
+          session.blockedDomains = [] // this session (about to end) blocks NOTHING anymore
+          chrome.storage.local.set({ session }, () => resolve())
+        })
+      })
+    })
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+    // blockedPage must NOT have been swept — session.blockedDomains no longer includes
+    // example.net, so this session's own end must not touch it.
+    await page.waitForTimeout(500)
+    await expect(blockedPage).toHaveURL(/blocked\.html\?d=example\.net/)
+  })
 })

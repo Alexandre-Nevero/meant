@@ -583,6 +583,34 @@ dashboard's ledger container width.
     `[data-surface="ledger"]` rule's own approved values — same max-width, margin, padding,
     flex layout, and gap for literal visual parity between the two "history" surfaces.)
 
+### AA — A blocked tab reverts to the real site once its session ends (Task 4 fix)
+
+`endSession()` already removed all `declarativeNetRequest` block rules on Stop/elapsed/
+recovery, but a tab already sitting on `blocked.html?d=<domain>` (redirected there mid-
+session) never navigated back — `declarativeNetRequest` only intercepts *new* navigation
+attempts, so removing the rule alone never un-redirects a tab that's already redirected.
+The fix adds `sweepBlockedTabsBack(domains)` (mirroring `sweepOpenTabs`'s shape, the
+inverse direction), called from `endSession()`'s `finally` block, scoped to that session's
+own `blockedDomains` only — a stale `blocked.html` tab left over from an earlier,
+already-ended session must not get swept by a *different* session's own end. One ordering
+detail mattered in practice, found only by running the test against the brief's literal
+ordering and watching it still fail: `removeAllRules()` must run *before* the sweep, not
+after — the sweep's own `tabs.update` navigation is itself a new navigation attempt, so if
+the block rule is still installed at that instant, `declarativeNetRequest` redirects the
+sweep's own navigation right back to the exact same `blocked.html` URL, which looks
+indistinguishable from nothing happening at all.
+
+63. Start a session with a blocked domain configured, navigate a tab to that domain so it
+    lands on `blocked.html`. Click Stop. **Pass:** that tab navigates to the real
+    `https://<domain>/` within 5 seconds — no popup interaction beyond Stop, no further
+    navigation on that tab.
+64. Same setup, but immediately before Stop, clear `session.blockedDomains` to `[]` directly
+    in `chrome.storage.local` (simulating a session that no longer blocks that domain by
+    the time it ends). **Pass:** the blocked tab is left untouched — still on
+    `blocked.html?d=<domain>` half a second later — confirming the sweep checks membership
+    in the *ending* session's own current `blockedDomains`, not a blanket sweep of every
+    `blocked.html` tab regardless of which session's domains it belongs to.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
