@@ -566,13 +566,17 @@ fixed --m-clay (orange) color that has working contrast against both light and d
 backgrounds. The companion also grows from 28px to 36px and gains a one-shot scale+fade
 "wake" animation on mount.
 
+**Superseded by Case AD (Task 2, next round):** the size described below grew again,
+36px → 52px. Step 61's pass criteria have been updated in place to match; the 28px → 36px
+framing above is left as historical context for why the size-increase test exists at all.
+
 60. Start a session, open a new tab, and emulate dark color scheme on that tab. **Pass:**
     the companion dot's computed `backgroundColor` is `rgb(199, 91, 57)` (--m-clay,
     `#C75B39`), not a color that flips with the color-scheme media query. This confirms
     visibility no longer depends on guessing the page's background colors.
 61. After starting a session, open a new tab. **Pass:** the companion's bounding box width
-    and height are both 36px (not the old 28px), confirming the size increase. Also check
-    that the host element has active animations when measured (via
+    and height are both 52px (not the old 28px/36px), confirming the size increase. Also
+    check that the host element has active animations when measured (via
     `getAnimations({ subtree: false }).length > 0`), confirming the wake animation runs
     on mount — the animation scales from 0.5 to 1 over 360ms with an easing curve.
 

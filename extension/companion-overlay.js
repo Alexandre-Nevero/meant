@@ -109,6 +109,9 @@ function css() {
       50% { transform: scale(1.12); opacity: 1; }
     }
 
+    /* Deliberate exception to tokens-first: a contrast-critical pill floating over an
+     * arbitrary, unknown page background must not depend on the OS dark-mode preference,
+     * which reflects nothing about the actual page behind it. Do not tokenize these. */
     [data-companion-hover-pill] {
       position: absolute;
       left: 50%;

@@ -194,7 +194,7 @@ function navRow() {
   const history = el('button', 'm-btn')
   history.dataset.variant = 'quiet'
   history.setAttribute('aria-label', 'View session history')
-  history.append(markGlyph())
+  history.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M7 4v3l2 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>'
   history.addEventListener('click', async () => {
     chrome.tabs.create({ url: (await apiBase()) + '/dashboard' })
   })
@@ -207,16 +207,6 @@ function navRow() {
   })
   row.append(history, landing)
   return row
-}
-
-// The "History" icon reuses the existing decorative mark glyph (the same
-// .m-mark[data-state="ended"] already used everywhere a completed/past session is
-// represented) — no new icon system, per this product's own explicit rule that the mark
-// is the only icon this product has.
-function markGlyph() {
-  const glyph = el('p', 'm-mark', '')
-  glyph.dataset.state = 'ended'
-  return glyph
 }
 
 // Top-right header: the popup's own mark glyph beside the (now icon-only) nav row.
@@ -425,7 +415,7 @@ async function idle() {
     if (!res?.ok) {
       console.error('popup: start failed', res, chrome.runtime.lastError)
       start.disabled = false
-      show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start,
+      show(header(mark), label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start,
         el('p', 'm-meta', res?.offline ? 'No connection. A session needs one to start.' : 'Could not start.'))
       return
     }
@@ -534,7 +524,9 @@ function running(session) {
   pillWrap.append(sentenceNode)
   if (phase) {
     requestAnimationFrame(() => {
-      const { width, height } = pillWrap.getBoundingClientRect()
+      pillWrap.style.border = 'none'
+      const width = pillWrap.clientWidth
+      const height = pillWrap.clientHeight
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
       svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;'
@@ -559,7 +551,6 @@ function running(session) {
       const elapsedTrack = track('var(--m-clay)')
       svg.append(remainderTrack, elapsedTrack)
       pillWrap.append(svg)
-      pillWrap.style.border = 'none'
 
       const perimeter = elapsedTrack.getTotalLength()
       const elapsedFraction = phase.elapsedInPhaseMs / phase.phaseMs
@@ -593,7 +584,7 @@ async function outcome(sessionId) {
   }
   const data = res.data
 
-  const nodes = [mark]
+  const nodes = [header(mark)]
   if (data.intention) {
     nodes.push(el('p', 'm-meta', 'You meant to'), el('p', 'm-sentence', data.intention))
   } else {
@@ -623,7 +614,7 @@ async function outcome(sessionId) {
     }
     yes.addEventListener('click', () => answer('yes'))
     notYet.addEventListener('click', () => answer('no'))
-    nodes.push(yes, notYet, navRow())
+    nodes.push(yes, notYet)
   } else {
     nodes.push(el('p', 'm-meta', data.outcome === 'yes'
       ? `Good. That's ${data.finished} of ${data.answered}.`
@@ -634,7 +625,7 @@ async function outcome(sessionId) {
       await chrome.storage.local.remove('pendingReview')
       render()
     })
-    nodes.push(done, navRow())
+    nodes.push(done)
   }
 
   show(...nodes)

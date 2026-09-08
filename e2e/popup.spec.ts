@@ -84,9 +84,6 @@ test.describe('popup, idle state', () => {
     // Task 6: the idle mark must render the same decorative gradient glyph as
     // running/ended, not a blank outline (the CSS bug — data-state="idle" was
     // missing from the ::after selector).
-    // `[data-state="idle"]`: Task 5's header also puts a `.m-mark` (reused as the
-    // History icon, data-state="ended") on this page, so the plain class selector alone
-    // now matches two elements.
     const markBackground = await page.locator('.m-mark[data-state="idle"]').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
     expect(markBackground).not.toBe('none')
 
@@ -117,20 +114,16 @@ test.describe('popup, idle state', () => {
     await expect(historyButton).toBeVisible()
     await expect(meantButton).toBeVisible()
 
-    // Icon-only: no visible text content, an SVG (or the reused .m-mark glyph) inside.
+    // Icon-only: no visible text content, an SVG (the History icon is its own small
+    // clock glyph, distinct from the header's real .m-mark state indicator) inside.
     await expect(historyButton).toHaveText('')
+    await expect(historyButton.locator('svg')).toHaveCount(1)
     await expect(meantButton.locator('svg')).toHaveCount(1)
 
-    // The header's mark and nav row sit side by side, mark on the left. `.first()`:
-    // the reused History icon is also a `.m-mark` (Task 5's own no-new-icon-system rule),
-    // so the plain descendant selector matches both — the header's own mark is the first
-    // in DOM order, appended before navRow().
-    const markBox = (await header.locator('.m-mark').first().boundingBox())!
+    // The header's mark and nav row sit side by side, mark on the left.
+    const markBox = (await header.locator('.m-mark').boundingBox())!
     const navBox = (await header.locator('.m-chip-row').boundingBox())!
     expect(navBox.x).toBeGreaterThan(markBox.x)
-
-    // No separate nav row at the very bottom anymore.
-    await expect(page.locator('#root > .m-chip-row').last()).not.toBeVisible({ timeout: 500 }).catch(() => {})
   })
 
   // Case AH (Task 6): Cycle-preset row visually separates the two duration presets from

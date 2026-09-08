@@ -214,6 +214,8 @@ button, input, select { font: inherit; color: inherit; }
  * options), so it can't be split into two separate groups the way "cluster" wraps two
  * independent label+chipGroup pairs elsewhere in this file — this adds a visual gap
  * before the 3rd chip only, keeping all 4 buttons siblings in the same group. */
+/* Assumes exactly 2 entries in CYCLE_PRESETS (popup.js) before custom/no-cycles — the
+ * gap lands after the 2nd chip on purpose; adding a 3rd preset needs this updated too. */
 [data-surface="popup"] [data-chip-layout="paired"] > .m-chip:nth-child(3) {
   margin-left: 12px;
 }
@@ -246,6 +248,7 @@ button, input, select { font: inherit; color: inherit; }
   align-items: center;
   justify-content: space-between;
 }
+[data-popup-header] .m-mark { margin: 0; }
 [data-popup-header] .m-chip-row { gap: 8px; }
 [data-popup-header] .m-btn {
   width: auto;
