@@ -115,7 +115,7 @@ test('the review page has the same max-width container as the dashboard, not ful
   expect(box!.width).toBeLessThanOrEqual(1000)
 })
 
-// Case AA — extension-ID-shaped domains excluded from per-domain row list
+// Case AC — extension-ID-shaped domains excluded from per-domain row list
 test('the review page never shows an extension-ID-shaped domain in its per-domain row list', async ({ context, extensionId, freshAccount }) => {
   const setupPage = await context.newPage()
   await freshAccount(setupPage)

@@ -664,7 +664,7 @@ dotless domains like `localhost`.
     (`emnalgngpciahekjdcgpbgnhmkpjhlhi`, 32 a-p chars) filters to just the real domain when
     the shape guard `/^[a-p]{32}$/` is applied. A separate assertion confirms `localhost`
     (another dotless domain, real and legitimate) still passes the same filter.
-68. E2E test: `e2e/review.spec.ts` Case AA. Start a session, inject two attention events
+68. E2E test: `e2e/review.spec.ts` Case AC. Start a session, inject two attention events
     directly via `POST /api/events` (one real domain, one extension-ID-shaped string),
     stop the session, navigate to the review page. **Pass:** `chatgpt.com` is visible on the
     page (injected real data shows up), and the extension-ID string never appears anywhere
