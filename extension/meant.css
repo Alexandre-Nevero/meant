@@ -55,7 +55,11 @@ button, input, select { font: inherit; color: inherit; }
   justify-content: center;
   gap: 36px;
 }
-[data-surface="companion"] #root { padding: 26px 22px; gap: 26px; min-height: 100vh; }
+/* Task 6: two more row-groups (cycle, site chips) had to fit under Chrome's ~600px popup
+ * ceiling, so the popup's own spacing tightened below the global default above — scoped here,
+ * not on the unscoped #root rule, so [data-surface="block"] — already fully overridden above —
+ * stays untouched, and no other future surface silently inherits a popup-specific number. */
+[data-surface="popup"] #root { gap: 18px; padding: 20px; }
 
 /* ---------- .m-mark — the mark: a small glyph when empty, a real band when it holds data ---------- */
 
@@ -68,8 +72,7 @@ button, input, select { font: inherit; color: inherit; }
   box-sizing: border-box;
   position: relative;
 }
-.m-mark[data-state="idle"],
-.m-mark[data-state="empty"] { background: transparent; }
+.m-mark:empty[data-state="idle"]::after,
 .m-mark:empty[data-state="running"]::after,
 .m-mark:empty[data-state="ended"]::after {
   content: '';
@@ -109,7 +112,7 @@ button, input, select { font: inherit; color: inherit; }
   border-radius: var(--m-r-field);
   padding: 16px 22px;
 }
-[data-surface="popup"] .m-sentence { font-size: 20px; min-height: 84px; }
+[data-surface="popup"] .m-sentence { font-size: 20px; min-height: 76px; }
 [data-surface="block"] .m-sentence {
   font-size: 44px;
   line-height: 1.2;
@@ -117,13 +120,6 @@ button, input, select { font: inherit; color: inherit; }
   border-radius: var(--m-r-block);
   padding: 44px 56px;
 }
-[data-surface="companion"] .m-sentence {
-  font-size: 16px;
-  border: var(--m-stroke-hair) solid var(--m-rule);
-  border-radius: var(--m-r-panel);
-  padding: 14px 18px;
-}
-
 /* ---------- .m-meta ---------- */
 
 .m-meta { margin: 0; font-size: 13px; line-height: 1.45; color: var(--m-ink-3); }
@@ -146,6 +142,9 @@ button, input, select { font: inherit; color: inherit; }
   min-height: 84px;
 }
 .m-field::placeholder { color: var(--m-ink-3); font-family: var(--m-body); font-size: 15px; }
+/* Task 6: same popup-only tightening as #root above — the sentence field is the one that
+ * pushed the fixture past budget (design/canvas/PopupIdle.dc.html: 84px → 76px). */
+[data-surface="popup"] .m-field { min-height: 76px; }
 .m-field[data-pairing-code="true"] {
   font-family: var(--m-figure);
   font-size: 24px;
@@ -157,7 +156,7 @@ button, input, select { font: inherit; color: inherit; }
 .m-field[data-pairing-code="true"]::placeholder { font-family: var(--m-figure); letter-spacing: 0.1em; font-size: 13px; }
 
 /* chip fields — duration and blocklist pickers */
-.m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; max-height: 132px; overflow-y: auto; }
 .m-chip {
   padding: 8px 14px;
   font-family: var(--m-body);
@@ -170,6 +169,22 @@ button, input, select { font: inherit; color: inherit; }
 }
 .m-chip[aria-pressed="true"] { color: var(--m-ink); border-color: var(--m-ink); }
 .m-chip[data-mono="true"] { font-family: var(--m-figure); font-size: 12px; }
+
+/* Removable chips (Task 8) split into two sibling buttons — toggle body + delete "×" —
+ * sharing this wrapper so they move together in the flex-wrap row without nesting one
+ * button inside another. The delete affordance is deliberately smaller/quieter than the
+ * toggle body so the two click targets read as visually distinct. */
+[data-chip-item="removable"] { display: inline-flex; align-items: center; gap: 2px; }
+.m-chip[data-chip-role="delete"] { padding: 8px 10px; color: var(--m-ink-3); }
+.m-chip[data-chip-role="delete"]:hover { color: var(--m-ink); border-color: var(--m-ink); }
+
+/* Task 6: "where it happens" and "blocking N" read as one related cluster (the site chips)
+ * rather than two unrelated rows that happen to be adjacent — a tighter internal gap than the
+ * rest of #root's row-groups, per design/canvas/PopupIdle.dc.html. Popup-only: no other
+ * surface uses these. `data-chip-layout` (not a 14th class — the class contract is frozen at
+ * 13 fixed classes plus .m-chip/.m-chip-row/.m-companion-*; attribute values stay extensible). */
+[data-surface="popup"] [data-chip-layout="cluster"] { display: flex; flex-direction: column; gap: 12px; }
+[data-surface="popup"] [data-chip-layout="group"] { display: flex; flex-direction: column; gap: 7px; }
 
 /* ---------- .m-btn — no animation on this surface, opened dozens of times a day ---------- */
 
@@ -189,6 +204,37 @@ button, input, select { font: inherit; color: inherit; }
 .m-btn[data-variant="primary"] { background: var(--m-ink); color: var(--m-ground); margin-top: auto; }
 .m-btn[data-variant="quiet"] { background: transparent; color: var(--m-ink); border: var(--m-stroke-hair) solid var(--m-ink); }
 .m-btn:disabled { opacity: 0.5; cursor: default; }
+/* Task 6: same popup-only tightening as #root and .m-field above (Start button padding
+ * 16px → 14px, design/canvas/PopupIdle.dc.html). */
+[data-surface="popup"] .m-btn { padding: 14px 0; }
+
+/* ---------- .m-answer / .m-rate — the outcome question (Task 4: rendered in the popup) ----------
+ * Ported from app/globals.css, popup-sized, with no transition/transform on either rule —
+ * the popup animates nothing (PRODUCT.md invariant), unlike the web app's versions which
+ * have a press-scale on non-popup surfaces. */
+
+.m-answer {
+  flex: 1;
+  padding: 16px 0;
+  font-family: var(--m-body);
+  font-size: 16px;
+  letter-spacing: var(--m-tracking);
+  color: var(--m-ink);
+  background: transparent;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-button);
+  cursor: pointer;
+}
+.m-answer:disabled { opacity: 0.5; cursor: default; }
+[data-surface="popup"] .m-answer { padding: 14px 0; }
+
+.m-rate {
+  margin: 0;
+  font-family: var(--m-display);
+  font-weight: 600;
+  letter-spacing: var(--m-tracking-tight);
+}
+[data-surface="popup"] .m-rate { font-size: 28px; line-height: 1.05; }
 
 /* ---------- .m-row / .m-row-bar — the step list ---------- */
 
@@ -199,8 +245,6 @@ button, input, select { font: inherit; color: inherit; }
   align-items: center;
   padding: 8px 0;
 }
-[data-surface="companion"] .m-row { grid-template-columns: 12px minmax(0, 1fr); gap: 14px; padding: 11px 0; border-bottom: var(--m-stroke-hair) solid var(--m-rule); }
-
 .m-row-bar {
   width: 11px;
   height: 11px;
@@ -223,78 +267,9 @@ button, input, select { font: inherit; color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- the companion — gaze, not a face ----------
- * Three nodes, each doing one job:
- *  .m-companion-capsule  — the outline; only its stroke weight changes (::after cross-fade)
- *  .m-companion-gaze     — position + size, a transform TRANSITION (interruptible, GPU-only)
- *  .m-companion-aperture — aliveness, breathe/blink KEYFRAMES
- * Keyframes and a transform transition can't coexist on one node — a running
- * `animation` overrides any `transition` targeting the same property — so aliveness
- * and gaze position live on different elements. */
-
-.m-companion-capsule {
-  position: relative;
-  width: 104px;
-  height: 104px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: var(--m-stroke) solid var(--m-ink);
-  border-radius: var(--m-r-panel);
-  box-sizing: border-box;
-  margin: 0 auto;
-}
-.m-companion-capsule::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border: var(--m-stroke-loud) solid var(--m-ink);
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity var(--m-dur-rise) var(--m-ease);
-}
-.m-companion-capsule[data-state="drifting"]::after { opacity: 1; }
-
-.m-companion-gaze {
-  width: 44px;
-  height: 30px;
-  transform: translateY(27px) scaleY(0.333);
-  transition: transform var(--m-dur-rise) var(--m-ease);
-}
-.m-companion-capsule[data-state="drifting"] .m-companion-gaze {
-  transform: translateY(0) scaleY(1);
-}
-
-.m-companion-aperture {
-  width: 100%;
-  height: 100%;
-  background: var(--m-clay);
-  border-radius: 15px;
-  animation: m-breathe 4.2s ease-in-out infinite, m-blink 6.7s linear infinite;
-}
-
-@keyframes m-breathe {
-  0%, 100% { opacity: 0.92; transform: scaleY(1); }
-  50% { opacity: 1; transform: scaleY(1.06); }
-}
-@keyframes m-blink {
-  0%, 96%, 100% { opacity: 1; }
-  97.5% { opacity: 0.15; }
-}
-
-.m-companion-disclosure {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-family: var(--m-figure);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--m-ink-3);
-  cursor: pointer;
-  text-align: center;
-  width: 100%;
-}
+/* The companion no longer docks here — extension/companion-overlay.js floats it on the
+ * page itself via a Shadow DOM, self-contained, with its own copy of the same gaze/
+ * aperture visual. Nothing in this file renders it anymore. */
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

@@ -1,11 +1,14 @@
-import { auth } from '@/lib/auth/server'
+import { requestUserId } from '@/lib/device-auth'
+import { UUID } from '@/lib/review-data'
 import { sql } from '@/lib/db'
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// See app/api/lists/route.ts for why this is force-dynamic and why the device token
+// is tried before the Clerk session cookie — the popup now answers this question too,
+// not just the web /review page.
+export const dynamic = 'force-dynamic'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { data: session } = await auth.getSession()
-  const userId = session?.user?.id
+  const userId = await requestUserId(req)
   if (!userId) return Response.json({ error: 'unauthorized' }, { status: 401 })
 
   const { id } = await params

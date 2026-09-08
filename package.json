@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "node --test",
+    "test:e2e": "playwright test",
+    "migrate": "node --env-file-if-exists=.env.local lib/migrate.mjs",
     "tokens": "node -e \"const fs=require('fs');fs.writeFileSync('extension/tokens.css','/* GENERATED — edit design/tokens.css, then npm run tokens */\\n'+fs.readFileSync('design/tokens.css','utf8'))\"",
     "predev": "npm run tokens",
     "prebuild": "npm run tokens",
@@ -18,6 +21,8 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/chrome": "^0.2.8",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

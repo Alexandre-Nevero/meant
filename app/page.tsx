@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation'
 import { currentUserId } from '@/lib/auth/session'
 import { AuthForm } from './auth-form'
 import { Band } from './band'
@@ -20,7 +19,6 @@ const LEDGER_PREVIEW = [
 
 export default async function Home() {
   const userId = await currentUserId()
-  if (userId) redirect('/dashboard')
 
   return (
     <div data-surface="landing">
@@ -48,8 +46,14 @@ export default async function Home() {
           were focused. This one is inside the tab, so it already knows.
         </p>
         <div className="m-landing-auth" id="auth">
-          <p className="m-meta">Sign in or create an account to continue.</p>
-          <AuthForm />
+          {userId ? (
+            <a className="m-btn" data-variant="primary" href="/dashboard">Go to your dashboard</a>
+          ) : (
+            <>
+              <p className="m-meta">Sign in or create an account to continue.</p>
+              <AuthForm />
+            </>
+          )}
           <p className="m-meta">Chrome and Edge. No installer, no admin rights.</p>
         </div>
       </section>
@@ -95,7 +99,11 @@ export default async function Home() {
           </div>
         ))}
         <div className="m-landing-auth">
-          <a className="m-btn" data-variant="primary" href="#auth">Sign in</a>
+          {userId ? (
+            <a className="m-btn" data-variant="primary" href="/dashboard">Go to your dashboard</a>
+          ) : (
+            <a className="m-btn" data-variant="primary" href="#auth">Sign in</a>
+          )}
           <p className="m-meta">Your sessions stay in your account. There is no team view.</p>
         </div>
       </section>

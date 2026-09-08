@@ -2,24 +2,19 @@
   "manifest_version": 3,
   "name": "MEANT",
   "version": "0.1.0",
-  "permissions": ["declarativeNetRequest", "tabs", "storage", "alarms", "sidePanel"],
-  "side_panel": { "default_path": "sidepanel.html" },
-  "host_permissions": [
-    "http://localhost:3000/*",
-    "*://*.x.com/*", "*://*.twitter.com/*", "*://*.facebook.com/*", "*://*.instagram.com/*",
-    "*://*.reddit.com/*", "*://*.linkedin.com/*", "*://*.tiktok.com/*",
-    "*://*.youtube.com/*", "*://*.twitch.tv/*", "*://*.netflix.com/*",
-    "*://*.news.ycombinator.com/*", "*://*.bbc.co.uk/*", "*://*.cnn.com/*", "*://*.theguardian.com/*"
+  "permissions": ["declarativeNetRequest", "tabs", "storage", "alarms", "idle"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["companion-overlay.js"],
+      "run_at": "document_idle"
+    }
   ],
   "web_accessible_resources": [
     {
       "resources": ["blocked.html"],
-      "matches": [
-        "*://*.x.com/*", "*://*.twitter.com/*", "*://*.facebook.com/*", "*://*.instagram.com/*",
-        "*://*.reddit.com/*", "*://*.linkedin.com/*", "*://*.tiktok.com/*",
-        "*://*.youtube.com/*", "*://*.twitch.tv/*", "*://*.netflix.com/*",
-        "*://*.news.ycombinator.com/*", "*://*.bbc.co.uk/*", "*://*.cnn.com/*", "*://*.theguardian.com/*"
-      ]
+      "matches": ["<all_urls>"]
     }
   ],
   "background": { "service_worker": "sw.js", "type": "module" },

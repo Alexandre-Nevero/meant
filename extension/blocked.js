@@ -12,11 +12,10 @@ function el(tag, className, text) {
 
 function remainingText(session) {
   const elapsedMs = Date.now() - new Date(session.startedAt).getTime()
-  if (session.plannedMinutes == null) {
-    return `${Math.floor(elapsedMs / 60000)} minutes in`
-  }
-  const leftMs = Math.max(0, session.plannedMinutes * 60000 - elapsedMs)
-  return `${Math.ceil(leftMs / 60000)} minutes left`
+  const timeText = session.plannedMinutes == null
+    ? `${Math.floor(elapsedMs / 60000)} minutes in`
+    : `${Math.ceil(Math.max(0, session.plannedMinutes * 60000 - elapsedMs) / 60000)} minutes left`
+  return domain ? `${domain} — ${timeText}` : timeText
 }
 
 // A single read, not a ticking clock — toolkit §9 refuses "a countdown that ticks."
