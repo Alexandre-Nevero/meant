@@ -37,7 +37,9 @@ export const test = base.extend<Fixtures>({
     await use(async (page: Page) => {
       const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`
       const password = 'e2e-test-password-1'
-      await page.goto('/')
+      // Sign-in/sign-up lives at /sign-in, not the landing page itself — the landing
+      // page (/) never carries an inline auth form.
+      await page.goto('/sign-in')
       // The signup form is the second <form> on the page (Fields() is shared by both;
       // signup adds a leading Name field) — scope by the "Create an account" button
       // text rather than a brittle nth-of-type guess.
