@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 
-async function pairAndStart(page: import('@playwright/test').Page, extensionId: string) {
+async function pairAndStart(page: import('@playwright/test').Page, extensionId: string, intention = 'companion test') {
   const mint = await page.request.post('/api/pair')
   const { code } = await mint.json()
   const claim = await page.request.post('/api/pair/claim', { data: { code } })
@@ -10,7 +10,7 @@ async function pairAndStart(page: import('@playwright/test').Page, extensionId: 
     return new Promise<void>((resolve) => chrome.storage.local.set({ token, deviceId }, () => resolve()))
   }, { token, deviceId })
   await page.reload()
-  await page.locator('input.m-field').first().fill('companion test')
+  await page.locator('input.m-field').first().fill(intention)
   await page.getByRole('button', { name: 'Start' }).click()
 }
 
@@ -280,6 +280,33 @@ test.describe('floating companion', () => {
     const box = (await page.locator(HOST_SELECTOR).boundingBox())!
     expect(box.width).toBe(52)
     expect(box.height).toBe(52)
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('hovering the companion reveals a pill showing the intention, styled and positioned above the dot', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId, 'write the quarterly report')
+
+    const page = await context.newPage()
+    await page.goto('https://example.com')
+    const host = page.locator(HOST_SELECTOR)
+    const pill = host.locator('[data-companion-hover-pill="true"]')
+
+    await expect(pill).toHaveCSS('opacity', '0')
+
+    const dotWrap = host.locator('.dot-wrap')
+    await dotWrap.hover()
+    await expect(pill).toHaveCSS('opacity', '1', { timeout: 1_000 })
+    await expect(pill).toHaveText('write the quarterly report')
+
+    const dotBox = (await host.boundingBox())!
+    const pillBox = (await pill.boundingBox())!
+    expect(pillBox.y + pillBox.height).toBeLessThan(dotBox.y) // pill sits above the dot
+
+    await page.mouse.move(0, 0) // move away, outside the companion entirely
+    await expect(pill).toHaveCSS('opacity', '0', { timeout: 1_000 })
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })

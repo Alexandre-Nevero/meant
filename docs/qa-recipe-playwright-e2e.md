@@ -684,6 +684,29 @@ The old test at Case F (item 25) expects 36px; that assertion has been updated t
     equal exactly 52 pixels, confirming the SIZE constant propagated correctly through
     the CSS and DOM measurement pipeline.
 
+### AE — Companion hover-reveal intention pill (Task 3)
+
+The floating companion's `title` attribute held the intention sentence, but relied on the
+browser's slow/unstyled native tooltip. This adds a real, styled pill
+(`[data-companion-hover-pill="true"]`) that fades in above the dot on hover, showing the
+intention text; the native `title` stays as a supplementary fallback, not removed. The pill
+flips to render below the dot instead of clipping off-screen when the companion sits near
+the top of the viewport, and nudges horizontally when it would overflow a side edge.
+
+70. E2E test: `e2e/companion.spec.ts` "hovering the companion reveals a pill showing the
+    intention, styled and positioned above the dot". Start a session with the intention
+    "write the quarterly report", navigate to an arbitrary page, hover `.dot-wrap`.
+    **Pass:** the pill is `opacity: 0` before hover, becomes `opacity: 1` within 1s of
+    hovering and shows the exact intention text, its bottom edge sits above the dot's
+    top edge (rendered above, not overlapping), and moving the mouse away returns it to
+    `opacity: 0`.
+    Visual check (manual, temp spec deleted after): confirmed the pill is a legible dark-
+    on-light rounded card sitting directly above the dot with a visible gap on a plain
+    page, and — after positioning the companion near the very top of the viewport and
+    hovering it as a fresh gesture (mouse moved away and back, not held down mid-drag) —
+    confirmed the pill flips to render below the dot instead of clipping off the top of
+    the screen.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

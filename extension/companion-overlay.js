@@ -19,6 +19,9 @@ let shadow = null
 let dot = null
 let dragState = null
 let returnTimer = null
+let currentSession = null
+let hoverPill = null
+let hoverTimer = null
 
 function css() {
   return `
@@ -106,6 +109,29 @@ function css() {
       50% { transform: scale(1.12); opacity: 1; }
     }
 
+    [data-companion-hover-pill] {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms var(--m-ease);
+      margin: 0;
+      padding: 8px 14px;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border-radius: 999px;
+      border: 1px solid #C7C2BB;
+      background: #F3F1EE;
+      color: #14120F;
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(20, 18, 15, 0.15);
+    }
+
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; }
     }
@@ -184,7 +210,9 @@ async function ensureMounted() {
   const core = document.createElement('div')
   core.className = 'dot'
   dot.append(ring, core)
-  shadow.append(style, dot)
+  hoverPill = document.createElement('p')
+  hoverPill.dataset.companionHoverPill = 'true'
+  shadow.append(style, dot, hoverPill)
   document.documentElement.append(hostEl)
   await positionHost()
 
@@ -192,6 +220,37 @@ async function ensureMounted() {
   dot.addEventListener('pointermove', onDrag)
   dot.addEventListener('pointerup', endDrag)
   dot.addEventListener('pointercancel', endDrag)
+  dot.addEventListener('pointerenter', showHoverPill)
+  dot.addEventListener('pointerleave', hideHoverPill)
+}
+
+function showHoverPill() {
+  if (!currentSession?.intention) return
+  clearTimeout(hoverTimer)
+  hoverTimer = setTimeout(() => {
+    hoverPill.textContent = currentSession.intention
+    hoverPill.style.opacity = '1'
+    hoverPill.style.bottom = 'calc(100% + 8px)'
+    hoverPill.style.top = ''
+    hoverPill.style.left = '50%'
+    hoverPill.style.transform = 'translateX(-50%)'
+    requestAnimationFrame(() => {
+      const rect = hoverPill.getBoundingClientRect()
+      if (rect.top < 0) {
+        hoverPill.style.top = 'calc(100% + 8px)'
+        hoverPill.style.bottom = ''
+      }
+      const overflowRight = rect.right - window.innerWidth
+      const overflowLeft = -rect.left
+      if (overflowRight > 0) hoverPill.style.transform = `translateX(calc(-50% - ${overflowRight}px))`
+      else if (overflowLeft > 0) hoverPill.style.transform = `translateX(calc(-50% + ${overflowLeft}px))`
+    })
+  }, 150)
+}
+
+function hideHoverPill() {
+  clearTimeout(hoverTimer)
+  if (hoverPill) hoverPill.style.opacity = '0'
 }
 
 function unmount() {
@@ -200,7 +259,9 @@ function unmount() {
   hostEl = null
   shadow = null
   dot = null
+  hoverPill = null
   clearTimeout(returnTimer)
+  clearTimeout(hoverTimer)
 }
 
 // Real data today only has two values: 'settled' | 'drifting' — "Resting" (no ring at
@@ -224,8 +285,10 @@ function applyVisualState(next) {
 async function applyState(session, companionState) {
   if (!session) {
     unmount()
+    currentSession = null
     return
   }
+  currentSession = session
   await ensureMounted()
   applyVisualState(companionState === 'drifting' ? 'drift' : 'focus')
   dot.title = session.intention || ''
