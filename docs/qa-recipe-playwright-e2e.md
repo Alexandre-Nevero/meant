@@ -796,6 +796,35 @@ text. No new class: `data-popup-header` is an attribute, and `.m-mark`/`.m-btn`/
     `page.locator('.m-mark')` (previously unique) is scoped to `[data-state="idle"]` now
     that the reused History icon is a second `.m-mark` on the same page.
 
+### AH — Cycle-preset row visual grouping without breaking exclusive selection (Task 6)
+
+The cycle-preset row (25/5 · 50/10 · custom · no cycles) renders as four sibling buttons
+in a single `.m-chip-row` with exclusive single-select behavior spanning all 4 options via
+one `chipGroup()` call. To visually separate the two numeric presets (work/break minutes)
+from the custom/no-cycles options without splitting into two separate chipGroups (which
+would break exclusive selection across the gap), this adds a CSS-only visual gap before
+the 3rd chip. The row can't use the existing `data-chip-layout="cluster"` pattern (which
+wraps two separate label+chipGroup pairs in `whereGroup`/`blockGroup` elsewhere) — that
+pattern explicitly requires two independent groups. Instead, `cycle.row.dataset.chipLayout
+= 'paired'` tags the single row with a new attribute value, and `[data-surface="popup"]
+[data-chip-layout="paired"] > .m-chip:nth-child(3) { margin-left: 12px; }` adds a larger
+gap before the 3rd chip only.
+
+74. E2E test: `e2e/popup.spec.ts` "the cycle-preset row visually separates the two
+    duration presets from custom/no cycles". Pair the popup (idle view). **Pass:**
+    `[data-chip-layout="paired"]` is visible and contains exactly 4 `.m-chip` elements.
+    Measure the gaps: the gap between the 1st and 2nd chip (within the first group) is
+    smaller than the gap between the 2nd and 3rd chip (the visual separator). **Pass:**
+    exclusive single-select still spans all 4 buttons, including across the new visual
+    gap — clicking the 1st chip (25/5) to press it, then clicking the 3rd chip (custom)
+    un-presses the 1st, proving this is still ONE chipGroup, not two.
+    Visual check (temp spec + screenshot, deleted after): rendered the idle popup at
+    360px width and screenshotted the cycle-preset row. Confirmed by eye: the two numeric
+    presets ("25/5", "50/10") read as one visual pair on the left; a clearly larger gap
+    sits before "custom"; "custom" and "no cycles" read together as a second pair on the
+    right; the row overall reads as two related visual groups, not one undifferentiated
+    strip of four identical chips.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

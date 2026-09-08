@@ -133,6 +133,35 @@ test.describe('popup, idle state', () => {
     await expect(page.locator('#root > .m-chip-row').last()).not.toBeVisible({ timeout: 500 }).catch(() => {})
   })
 
+  // Case AH (Task 6): Cycle-preset row visually separates the two duration presets from
+  // custom/no cycles without splitting the chipGroup, preserving exclusive single-select
+  // across all 4 options.
+  test('the cycle-preset row visually separates the two duration presets from custom/no cycles', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const cycleRow = page.locator('[data-chip-layout="paired"]')
+    await expect(cycleRow).toBeVisible()
+    const chips = cycleRow.locator('.m-chip')
+    await expect(chips).toHaveCount(4)
+
+    const secondBox = (await chips.nth(1).boundingBox())! // "50/10"
+    const thirdBox = (await chips.nth(2).boundingBox())! // "custom"
+    const firstGap = (await chips.nth(1).boundingBox())!.x - ((await chips.nth(0).boundingBox())!.x + (await chips.nth(0).boundingBox())!.width)
+    const groupGap = thirdBox.x - (secondBox.x + secondBox.width)
+    expect(groupGap).toBeGreaterThan(firstGap) // the gap between groups is wider than the gap within a group
+
+    // Exclusive selection still works correctly across the whole row, including across
+    // the new visual gap — clicking "custom" (in the second visual group) must un-press
+    // "25/5" (in the first visual group), proving this is still ONE chipGroup, not two.
+    await chips.first().click() // 25/5
+    await expect(chips.first()).toHaveAttribute('aria-pressed', 'true')
+    await chips.nth(2).click() // custom
+    await expect(chips.nth(2)).toHaveAttribute('aria-pressed', 'true')
+    await expect(chips.first()).toHaveAttribute('aria-pressed', 'false')
+  })
+
   // The duration picker is chipGroup's single-select path (no multi/removable) — one of
   // the two chip groups in this popup still genuinely toggle rather than add/remove
   // (the other is the cycle picker). Site chips became removable in an earlier task, so

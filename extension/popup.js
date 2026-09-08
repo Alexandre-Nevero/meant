@@ -371,6 +371,7 @@ async function idle() {
 
   // First ever session: cycle defaults to 50/10 (Step 3). A returning session recalls last time's pick.
   const cycle = cyclePicker(lastChoice ? lastChoice.cycle : { work: 50, break: 10 })
+  cycle.row.dataset.chipLayout = 'paired'
 
   // First ever session: workSites from the API, none pre-selected.
   const workSiteValues = lastChoice ? lastChoice.workSites : []
