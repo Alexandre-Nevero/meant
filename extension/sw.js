@@ -53,7 +53,7 @@ async function sweepOpenTabs(domains) {
 // the moment a domain becomes blocked. This is the inverse, run when a session ends: a
 // tab sitting on blocked.html for a domain THIS session blocked has nothing that
 // navigates it back on its own — declarativeNetRequest only intercepts NEW navigation
-// attempts, so removing the rule (removeAllRules, called right after this) never
+// attempts, so removing the rule (removeAllRules, called right before this) never
 // un-redirects a tab that's already redirected. Scoped to this session's own
 // blockedDomains only — a stale blocked.html tab left over from an earlier,
 // already-ended session must not get swept by a DIFFERENT session's own end.
