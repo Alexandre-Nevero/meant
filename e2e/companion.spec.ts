@@ -263,8 +263,23 @@ test.describe('floating companion', () => {
     await page.waitForTimeout(400)
     const box = (await host.boundingBox())!
     expect(box.width).toBeGreaterThan(28)
-    expect(box.width).toBe(36)
-    expect(box.height).toBe(36)
+    expect(box.width).toBe(52)
+    expect(box.height).toBe(52)
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the companion is 52px, not the old 36px', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId)
+
+    const page = await context.newPage()
+    await page.goto('https://example.com')
+    await page.waitForTimeout(400) // let the wake animation settle
+    const box = (await page.locator(HOST_SELECTOR).boundingBox())!
+    expect(box.width).toBe(52)
+    expect(box.height).toBe(52)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })

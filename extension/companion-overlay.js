@@ -12,7 +12,7 @@
 // never a component's own hex value, even when matching an external reference.
 
 const DEFAULT_POSITION = { right: 24, bottom: 24 }
-const SIZE = 36
+const SIZE = 52
 
 let hostEl = null
 let shadow = null

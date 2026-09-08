@@ -670,6 +670,20 @@ dotless domains like `localhost`.
     page (injected real data shows up), and the extension-ID string never appears anywhere
     in the DOM (`toHaveCount(0)`), confirming the server-side filter is wired and working.
 
+### AD — Companion size 52px (Task 2)
+
+The floating companion overlay on injected pages grew from 36px to 52px, a 44% increase
+in linear dimension. All position/sizing calculations in `extension/companion-overlay.js`
+already derive from the `SIZE` constant, so the change is one line: `const SIZE = 52`.
+The old test at Case F (item 25) expects 36px; that assertion has been updated to expect
+52px as well to reflect the new size.
+
+69. E2E test: `e2e/companion.spec.ts` "the companion is 52px, not the old 36px". Start a
+    session, navigate to an arbitrary page, wait for the companion's wake animation to
+    settle (400ms), measure the companion's bounding box. **Pass:** both width and height
+    equal exactly 52 pixels, confirming the SIZE constant propagated correctly through
+    the CSS and DOM measurement pipeline.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
