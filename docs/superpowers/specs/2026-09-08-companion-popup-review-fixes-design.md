@@ -79,13 +79,14 @@ code fix — or (b) the browser is running an extension build older than the fix
 **Fix (defense in depth, not a live-tracking change).** Add a real-domain-shape guard
 where review data is rendered, so historical junk rows stop *displaying* even though they
 remain in the database: `lib/band.ts`'s `toBand()` already filters `r.kind === 'attention'
-&& r.domain` before building segments — extend that filter to also require the domain
-string look like a real hostname (contains a `.`, matching the same "must have a dot" rule
-`extension/lib/normalize-domain.js` and `lib/domains.ts` already enforce elsewhere in this
-codebase — no new validation concept, reusing the existing one). A 32-character
-lowercase-`a`–`p` string (the Chrome extension ID charset) has no dot and gets excluded by
-this same rule; no special-cased pattern-matching against "looks like an extension ID"
-needed.
+&& r.domain` before building segments — extend that filter to also reject a string shaped
+exactly like a Chrome extension ID: 32 characters, entirely within `a`-`p` (the actual
+charset Chrome uses to encode an extension's ID). This must be a *targeted* shape check,
+not a generic "must contain a dot" rule — this codebase already has real, legitimate
+dotless tracked domains (`localhost`, exercised directly in
+`e2e/session-lifecycle.spec.ts`), so requiring a dot would silently regress those. The
+regex `/^[a-p]{32}$/` matches the extension-ID shape precisely without touching `localhost`
+or any other real dotless hostname a browser can legitimately visit.
 
 ## 4. Blocked sites don't revert when a session ends
 
