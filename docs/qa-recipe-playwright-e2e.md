@@ -345,19 +345,26 @@ bottom-right corner.
     recorded in the wide window — confirming the stored position holds its relative place
     instead of being reclamped against the narrower window's own smaller width.
 
-### P — Landing page CTA swap based on auth state (Task 5)
+### P — Landing page CTA swap based on auth state (Task 5, updated for the canvas landing redesign)
 
-The landing page (`/`) used to redirect a signed-in visitor to `/dashboard`. This fix shows
-the same pitch to both signed-in and signed-out visitors, but swaps only the call-to-action:
-signed-out sees the sign-in form, signed-in sees a "Go to your dashboard" link.
+The landing page (`/`) used to redirect a signed-in visitor to `/dashboard`. Task 5 fixed
+that by showing the same pitch to both signed-in and signed-out visitors while swapping the
+call-to-action. This case was later updated when the landing page's real, previously-built
+canvas redesign was ported to `main`: sign-in/sign-up moved to a dedicated `/sign-in` route
+(the landing page itself never carries an inline auth form), and the CTA now lives in two
+places — the header nav and the ledger section — both swapping between "Sign in" (→
+`/sign-in`) and "Go to your dashboard" (→ `/dashboard`) based on auth state. No forced
+redirect on `/` either way.
 
-44. Sign up and land on `/dashboard`. Navigate directly to `/`. **Pass:** the hero text
-    "Every other focus app has to ask whether you were focused." is visible, and a
-    `href="/dashboard"` link with text "Go to your dashboard" is present in the hero
-    section. No email input field is visible (verifying the auth form is not rendered).
+44. Sign up and land on `/dashboard`. Navigate directly to `/`. **Pass:** the hero text "Say
+    what you mean. It knows if you did." is visible, a `header` element contains a link
+    "Go to your dashboard", `section.m-landing-ledger` contains its own "Go to your
+    dashboard" link, and no "Sign in" link is present anywhere on the page.
 45. In a fresh browser context, navigate to `/` signed-out. **Pass:** the hero text is
-    visible, a sign-in form with an email input field (in the hero section) is present,
-    and no "Go to your dashboard" link is visible.
+    visible, the header's "Sign in" link points at `href="/sign-in"`, the ledger section
+    has its own "Sign in" link, no email input field is visible anywhere on `/` (the auth
+    form never renders inline), and no "Go to your dashboard" link is present. (See Case X
+    below for the dedicated `/sign-in` route itself.)
 
 ### Q — Dashboard ledger container width (pure CSS constraint)
 
@@ -508,6 +515,34 @@ wrapper, no second element.
     `aria-pressed` exclusively among its siblings exactly as before — these two call sites
     never pass `removable` and are unaffected by this fix.
 
+### X — Landing page canvas redesign ported from a previously-built branch
+
+The landing page's header (and every other section) never implemented the canvas's
+centered, `max-width: 1200px` container — `app/globals.css` padded the section/header
+elements directly with no width cap at all, so on a wide viewport the content stretched
+edge to edge instead of sitting in a centered column. This had been fixed once already, on
+a separate long-diverged branch/worktree (`worktree-landing-gsap-scroll`) that built out a
+fuller landing redesign — the centered container, a live-typing hero element
+(`app/intention-typer.tsx`), sign-in extracted to its own `/sign-in` route, and the four
+"beats" reworked into a connected sequence with arrows. That branch's `app/page.tsx` still
+had the old forced `if (userId) redirect('/dashboard')` (predating the fix that removed
+it), so porting it required reconciling: keep the new visual structure, drop the redirect,
+and apply the CTA-swap pattern to the new nav locations instead of the old inline form.
+
+57. Sign up, navigate to `/`. Set the viewport to 1920px wide. **Pass:** the header's
+    inner content (wordmark + nav buttons) does not stretch to the browser's edges — it
+    sits in a column comfortably inset from both sides, matching
+    `design/canvas/Landing.dc.html`'s centered structure. Same check for the hero, the
+    four-steps section, the two prose sections, and the ledger.
+58. Navigate to `/sign-in` in a signed-out context. **Pass:** the real sign-in/sign-up
+    form renders (this is the actual auth entry point now, not the landing page). Navigate
+    to `/sign-in` while signed in. **Pass:** redirected to `/dashboard` (a route-specific
+    redirect, correct and intentional here — unlike the landing page, which never
+    redirects).
+59. `e2e/fixtures.ts`'s `freshAccount()` helper, and `e2e/session-recovery.spec.ts`'s own
+    inline signup flow, both now sign up via `/sign-in`, not `/` — confirmed by the full
+    suite passing end to end, since nearly every spec depends on one of these two paths.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
@@ -529,6 +564,10 @@ fine to me" judgment calls, since severity triage belongs to whoever reads the r
   never appears.
 - `e2e/fixtures.ts` — the shared `launchPersistentContext` + extension-ID helper, a
   `freshAccount()` helper (signup with a random email, returns the page + credentials).
+  Signs up via `/sign-in`, not `/` (Case X — the landing page never carries an inline
+  auth form).
+- `app/sign-in/page.tsx`, `app/intention-typer.tsx` — added by Case X's landing redesign
+  port: the dedicated sign-in route, and the hero's live-typing decorative element.
 - `e2e/setup-lists.spec.ts` (case A), `e2e/pairing.spec.ts` (B), `e2e/popup.spec.ts` (C),
   `e2e/session-lifecycle.spec.ts` (D), `e2e/offline.spec.ts` (E), `e2e/companion.spec.ts`
   (F), `e2e/review.spec.ts` (G, R), `e2e/session-elapsed.spec.ts` (H),

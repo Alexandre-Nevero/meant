@@ -1,15 +1,44 @@
+import { Fragment } from 'react'
 import { currentUserId } from '@/lib/auth/session'
-import { AuthForm } from './auth-form'
 import { Band } from './band'
+import { IntentionTyper } from './intention-typer'
+import type { Segment } from '@/lib/band'
 
 export const dynamic = 'force-dynamic'
 
-const BEATS = [
-  { title: 'Say it.', body: 'Type what you mean to finish. Leaving it empty is allowed, and it is counted.' },
-  { title: 'Work.', body: 'Attention is recorded without you starting anything.' },
-  { title: 'Get blocked.', body: 'The sites you chose show your own sentence back to you. No bypass.' },
-  { title: 'Answer.', body: 'Did you? Yes or Not yet, weighted the same, forever.' },
-]
+// The mark evolving across the loop (canvas: Landing.dc.html §beats), not four
+// matching cards — each step's chip and band are a step further along than the last.
+const STEPS: readonly {
+  title: string
+  body: string
+  sentence: string
+  segments: readonly Segment[]
+}[] = [
+  {
+    title: 'Say it.',
+    body: 'Type what you mean to finish. Leaving it empty is allowed, and it is counted.',
+    sentence: 'finish the supplier report',
+    segments: [{ kind: 'remainder', flex: 1 }],
+  },
+  {
+    title: 'Work.',
+    body: 'Attention is recorded without you starting anything.',
+    sentence: 'finish the supplier report',
+    segments: [{ kind: 'attention-1', flex: 20 }, { kind: 'attention-2', flex: 6 }, { kind: 'attention-3', flex: 2 }],
+  },
+  {
+    title: 'Get blocked.',
+    body: 'The sites you chose show your own sentence back to you. No bypass.',
+    sentence: 'finish the supplier report',
+    segments: [{ kind: 'attention-1', flex: 30 }, { kind: 'attention-2', flex: 8 }, { kind: 'attention-3', flex: 3 }],
+  },
+  {
+    title: 'Answer.',
+    body: 'Did you? Yes or Not yet, weighted the same, forever.',
+    sentence: 'finish the supplier report',
+    segments: [{ kind: 'attention-1', flex: 41 }, { kind: 'attention-2', flex: 12 }, { kind: 'attention-3', flex: 9 }],
+  },
+] as const
 
 const LEDGER_PREVIEW = [
   { intention: 'finish the supplier report', outcome: 'Not yet', segments: [{ kind: 'attention-1', flex: 41 }, { kind: 'attention-2', flex: 12 }, { kind: 'attention-3', flex: 9 }] },
@@ -19,6 +48,10 @@ const LEDGER_PREVIEW = [
 
 export default async function Home() {
   const userId = await currentUserId()
+  // No forced redirect for a signed-in visitor (E7 — the landing page must always
+  // render): every auth-dependent CTA below swaps its own label/target instead.
+  const signedInHref = '/dashboard'
+  const signedInLabel = 'Go to your dashboard'
 
   return (
     <div data-surface="landing">
@@ -27,53 +60,54 @@ export default async function Home() {
           <p className="m-mark" data-state="ended" />
           <p className="m-landing-wordmark">MEANT</p>
         </div>
-        <a
-          className="m-meta"
-          href="https://github.com/ED3N-Ventures-Interns/meant#extension"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Add to Chrome
-        </a>
+        <div className="m-landing-nav-actions">
+          <a
+            className="m-btn m-landing-nav-secondary"
+            data-variant="quiet"
+            href="https://github.com/ED3N-Ventures-Interns/meant#extension"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Add to Chrome
+          </a>
+          <a className="m-btn" data-variant="primary" href={userId ? signedInHref : '/sign-in'}>
+            {userId ? signedInLabel : 'Sign in'}
+          </a>
+        </div>
       </header>
 
       <section className="m-landing-hero">
-        <p className="m-mark" data-state="ended" />
+        <IntentionTyper />
         <h1 className="m-rate">Eleven this month. Seven finished.</h1>
-        <p className="m-landing-lede">
-          MEANT asks what you mean to do, turns it into a short plan, blocks what you chose to
-          avoid, and sits with you while you work. Every other focus app has to ask whether you
-          were focused. This one is inside the tab, so it already knows.
-        </p>
-        <div className="m-landing-auth" id="auth">
-          {userId ? (
-            <a className="m-btn" data-variant="primary" href="/dashboard">Go to your dashboard</a>
-          ) : (
-            <>
-              <p className="m-meta">Sign in or create an account to continue.</p>
-              <AuthForm />
-            </>
-          )}
-          <p className="m-meta">Chrome and Edge. No installer, no admin rights.</p>
-        </div>
+        <p className="m-landing-lede">Say what you mean. It knows if you did.</p>
       </section>
 
       <section className="m-landing-beats">
         <h2 className="m-landing-h2">Four steps and one sentence.</h2>
         <div className="m-landing-beats-grid">
-          {BEATS.map((beat) => (
-            <div key={beat.title}>
-              <p className="m-mark" data-state="ended" />
-              <p className="m-landing-beat-title">{beat.title}</p>
-              <p className="m-meta">{beat.body}</p>
-            </div>
+          {STEPS.map((step, i) => (
+            <Fragment key={step.title}>
+              {i > 0 && (
+                <svg className="m-landing-beat-arrow" width="16" height="10" viewBox="0 0 16 10" fill="none" aria-hidden="true">
+                  <path d="M0.5 5H15M15 5L10.5 1M15 5L10.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+              <div className="m-landing-beat" data-index={i}>
+                <div className="m-landing-beat-chip">
+                  {step.sentence && <p>{step.sentence}</p>}
+                </div>
+                <Band segments={[...step.segments]} />
+                <p className="m-landing-beat-title">{step.title}</p>
+                <p className="m-meta">{step.body}</p>
+              </div>
+            </Fragment>
           ))}
         </div>
       </section>
 
       <section className="m-landing-prose">
         <h2 className="m-landing-h2">It reads the page. It stores nothing.</h2>
-        <p className="m-meta">
+        <p>
           To tell your work from your drift it has to read the tab you are on, once, and decide.
           What it keeps is the site name and one word: served, drifted, unclear. There is no
           column for the text, no line in a log, nothing queued for later. Not a promise — there
@@ -83,7 +117,7 @@ export default async function Home() {
 
       <section className="m-landing-prose">
         <h2 className="m-landing-h2">No total hours. Anywhere.</h2>
-        <p className="m-meta">
+        <p>
           Time is evidence inside one session&rsquo;s review. It is never a headline, never a
           streak, never a score. The number that accumulates is how many things you said you
           would finish, and did.
@@ -91,6 +125,9 @@ export default async function Home() {
       </section>
 
       <section className="m-landing-ledger">
+        <p className="m-meta m-landing-ledger-caption">
+          The band is the attention: a session&rsquo;s top domains, by time.
+        </p>
         {LEDGER_PREVIEW.map((row) => (
           <div className="m-row" key={row.intention}>
             <p className="m-sentence">{row.intention}</p>
@@ -99,11 +136,9 @@ export default async function Home() {
           </div>
         ))}
         <div className="m-landing-auth">
-          {userId ? (
-            <a className="m-btn" data-variant="primary" href="/dashboard">Go to your dashboard</a>
-          ) : (
-            <a className="m-btn" data-variant="primary" href="#auth">Sign in</a>
-          )}
+          <a className="m-btn" data-variant="primary" href={userId ? signedInHref : '/sign-in'}>
+            {userId ? signedInLabel : 'Sign in'}
+          </a>
           <p className="m-meta">Your sessions stay in your account. There is no team view.</p>
         </div>
       </section>

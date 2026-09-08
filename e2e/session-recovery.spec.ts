@@ -40,7 +40,8 @@ test('a session survives a browser close, and ends itself (without popping a tab
 
     const page = await context1.newPage()
     const email = `e2e-recovery-${Date.now()}@example.com`
-    await page.goto('/')
+    // Sign-in/sign-up lives at /sign-in, not the landing page itself.
+    await page.goto('/sign-in')
     const signupForm = page.locator('form', { has: page.getByRole('button', { name: 'Create an account' }) })
     await signupForm.getByPlaceholder('Name').fill('E2E Recovery')
     await signupForm.getByPlaceholder('Email').fill(email)

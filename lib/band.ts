@@ -1,4 +1,7 @@
-export type Segment = { kind: 'attention-1' | 'attention-2' | 'attention-3' | 'away'; flex: number }
+// 'remainder' is never produced by toBand() below (real attention data has no unmeasured
+// gap to reserve) — it exists for static previews (landing) that need to show "nothing
+// recorded yet" as the dashed edge .m-row-bar already renders for that kind.
+export type Segment = { kind: 'attention-1' | 'attention-2' | 'attention-3' | 'away' | 'remainder'; flex: number }
 
 /** Attention rows for one session → band segments: top 3 domains by time, then away.
  * Takes the raw shape `sql` returns (untyped rows), not a declared row type. */
