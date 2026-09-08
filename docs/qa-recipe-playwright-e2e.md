@@ -289,6 +289,14 @@ silently filters non-HTTP(S) schemes.
     must match the extension ID to be meaningful, so the test constructs it dynamically
     from `extensionId` rather than hardcoding.)
 
+    **Companion fix (defense-in-depth, Task 3):** Case 40 verifies live tracking never records
+    extension IDs. Task 3's unit-tested filter in `lib/band.ts` provides the second layer —
+    even historical data rows (from before the live-tracking fix existed, or if the live filter
+    ever failed) shaped like extension IDs (32 chars, a-p only) are silently excluded from the
+    review page's attention band. A `www.`-prefixed domain is included; a string matching the
+    exact extension ID shape is not. This guards against historical junk showing up on the
+    review surface.
+
 ### M — Already-focused tab seeding on session start (Task 2 fix)
 
 `startSession()` in `extension/sw.js` calls `transition()` to seed the session's time slice
