@@ -86,3 +86,31 @@ test('the away row explains what "away" means via a hover title, not new visible
   const awayRow = reviewPage.locator('.m-row:has([data-kind="away"])')
   await expect(awayRow).toHaveAttribute('title', /not measured/i)
 })
+
+// Case Z — review page container width matching the dashboard
+test('the review page has the same max-width container as the dashboard, not full viewport width', async ({ context, extensionId, freshAccount }) => {
+  const setupPage = await context.newPage()
+  await freshAccount(setupPage)
+  const mint = await setupPage.request.post('/api/pair')
+  const { code } = await mint.json()
+  const claim = await setupPage.request.post('/api/pair/claim', { data: { code } })
+  const { token, deviceId } = await claim.json()
+  await setupPage.goto(`chrome-extension://${extensionId}/popup.html`)
+  await setupPage.evaluate(({ token, deviceId }) => new Promise<void>((r) => chrome.storage.local.set({ token, deviceId }, () => r())), { token, deviceId })
+  await setupPage.reload()
+  await setupPage.locator('input.m-field').first().fill('review width test')
+  await setupPage.getByRole('button', { name: 'Start' }).click()
+  const sessionId: string = await setupPage.evaluate(
+    () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+  )
+  await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+  const page = await context.newPage()
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await page.goto(`/review/${sessionId}`)
+
+  const review = page.locator('[data-surface="review"]')
+  const box = await review.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.width).toBeLessThanOrEqual(1000)
+})

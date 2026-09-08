@@ -562,6 +562,19 @@ backgrounds. The companion also grows from 28px to 36px and gains a one-shot sca
     `getAnimations({ subtree: false }).length > 0`), confirming the wake animation runs
     on mount — the animation scales from 0.5 to 1 over 360ms with an easing curve.
 
+### Z — Review page container width (pure CSS constraint)
+
+The review page container had no max-width constraint and stretched to fill the full viewport,
+even at very wide breakpoints where a 1000px container is the approved design. This case
+verifies the fix wires the approved fixture value into the shipped stylesheet, matching the
+dashboard's ledger container width.
+
+62. Start a session, then navigate to its review page. Set the viewport to 1600px wide.
+    **Pass:** the `[data-surface="review"]` element's bounding box width is at most 1000px,
+    not close to the full 1600px viewport. (This is the CSS-only constraint, matching the
+    `[data-surface="ledger"]` rule's own approved values — same max-width, margin, padding,
+    flex layout, and gap for literal visual parity between the two "history" surfaces.)
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
