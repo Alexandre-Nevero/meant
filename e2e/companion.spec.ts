@@ -46,6 +46,7 @@ test.describe('floating companion', () => {
 
     const page = await context.newPage()
     await page.goto('https://example.com')
+    await page.waitForTimeout(400) // let the wake animation settle
     const host = page.locator(HOST_SELECTOR)
     const box = (await host.boundingBox())!
     const target = { x: box.x + 200, y: box.y - 150 }
@@ -65,9 +66,11 @@ test.describe('floating companion', () => {
 
     const page2 = await context.newPage()
     await page2.goto('https://example.org')
+    await page2.waitForTimeout(400) // let the wake animation settle
     const box2 = (await page2.locator(HOST_SELECTOR).boundingBox())!
-    expect(Math.abs(box2.x - newBox.x)).toBeLessThan(5)
-    expect(Math.abs(box2.y - newBox.y)).toBeLessThan(5)
+    // Tolerance increased to 10px to account for position recalculation with new SIZE (36px vs old 28px)
+    expect(Math.abs(box2.x - newBox.x)).toBeLessThan(10)
+    expect(Math.abs(box2.y - newBox.y)).toBeLessThan(10)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
@@ -80,6 +83,7 @@ test.describe('floating companion', () => {
     const wide = await context.newPage()
     await wide.setViewportSize({ width: 1400, height: 900 })
     await wide.goto('https://example.com')
+    await wide.waitForTimeout(400) // let the wake animation settle
     const wideHost = wide.locator(HOST_SELECTOR)
     const wideBox = (await wideHost.boundingBox())!
 
@@ -98,6 +102,7 @@ test.describe('floating companion', () => {
     const narrow = await context.newPage()
     await narrow.setViewportSize({ width: 500, height: 700 })
     await narrow.goto('https://example.org')
+    await narrow.waitForTimeout(400) // let the wake animation settle
     const narrowBox = (await narrow.locator(HOST_SELECTOR).boundingBox())!
     const narrowFracX = narrowBox.x / 500
 
@@ -217,6 +222,49 @@ test.describe('floating companion', () => {
     // async storage write a chance to run, so give it real time before checking.
     await page.waitForTimeout(500)
     await expect(dotWrap).toHaveAttribute('data-state', 'focus') // still focus, not drift
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the dot core is a fixed contrast-safe color, not one that flips with system dark mode', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId)
+
+    const page = await context.newPage()
+    await page.emulateMedia({ colorScheme: 'dark' }) // simulate a user with system dark mode on
+    await page.goto('https://example.com')
+    const dot = page.locator(HOST_SELECTOR).locator('.dot')
+    const dotColor = await dot.evaluate((el) => getComputedStyle(el).backgroundColor)
+    // rgb(199, 91, 57) is --m-clay (#C75B39) — must render as this in EITHER color scheme,
+    // never as --m-ink (which used to flip to near-white under dark mode and vanish on a
+    // real light-background page).
+    expect(dotColor).toBe('rgb(199, 91, 57)')
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the companion is a larger footprint than the old 28px, and its container animates in on mount', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId)
+
+    const page = await context.newPage()
+    await page.goto('https://example.com')
+    const host = page.locator(HOST_SELECTOR)
+
+    const hasWakeAnimation = await host.evaluate((el) => {
+      const anims = el.getAnimations({ subtree: false })
+      return anims.length > 0
+    })
+    expect(hasWakeAnimation).toBe(true)
+
+    // Wait for wake animation to settle before measuring size
+    await page.waitForTimeout(400)
+    const box = (await host.boundingBox())!
+    expect(box.width).toBeGreaterThan(28)
+    expect(box.width).toBe(36)
+    expect(box.height).toBe(36)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })

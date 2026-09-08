@@ -155,6 +155,30 @@ button, input, select { font: inherit; color: inherit; }
 }
 .m-field[data-pairing-code="true"]::placeholder { font-family: var(--m-figure); letter-spacing: 0.1em; font-size: 13px; }
 
+/* ---------- [data-timer-pill] — the running popup's intention box, doubling as the
+ * cycle's static progress indicator. The pill's own border carries the progress signal
+ * directly instead of a separate mark glyph elsewhere. */
+[data-timer-pill] {
+  position: relative;
+  border: var(--m-stroke) solid var(--m-ink);
+  border-radius: var(--m-r-field);
+  overflow: hidden;
+}
+[data-timer-pill] > .m-field,
+[data-timer-pill] > .m-sentence {
+  border: none;
+}
+[data-timer-pill] > .m-mark:not(:empty) {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  border: none;
+  border-radius: 0;
+}
+
 /* chip fields — duration and blocklist pickers */
 .m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; max-height: 132px; overflow-y: auto; }
 .m-chip {

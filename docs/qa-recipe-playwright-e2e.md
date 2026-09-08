@@ -289,6 +289,14 @@ silently filters non-HTTP(S) schemes.
     must match the extension ID to be meaningful, so the test constructs it dynamically
     from `extensionId` rather than hardcoding.)
 
+    **Companion fix (defense-in-depth, Task 3):** Case 40 verifies live tracking never records
+    extension IDs. Task 3's unit-tested filter in `lib/band.ts` provides the second layer —
+    even historical data rows (from before the live-tracking fix existed, or if the live filter
+    ever failed) shaped like extension IDs (32 chars, a-p only) are silently excluded from the
+    review page's attention band. A `www.`-prefixed domain is included; a string matching the
+    exact extension ID shape is not. This guards against historical junk showing up on the
+    review surface.
+
 ### M — Already-focused tab seeding on session start (Task 2 fix)
 
 `startSession()` in `extension/sw.js` calls `transition()` to seed the session's time slice
@@ -439,14 +447,15 @@ The running popup showed elapsed minutes but no sense of where you sit in a conf
 work/break cycle. The fix adds a pure `cyclePhase(session)` helper (`session.cycle` +
 `session.startedAt` in, `{phase, elapsedInPhaseMs, phaseMs, remainingMinutes}` or `null`
 out) and wires it into `running()`: a phase line (`"work — 15 min left"` /
-`"break — 3 min left"`) plus a two-segment fill in the existing `.m-mark:not(:empty)`
-band (`.m-row-bar[data-kind="attention-1"]` for elapsed-in-phase,
-`[data-kind="remainder"]` for what's left) — the same proportional-band construction
-already used elsewhere, no new class. Read-only display only: `extension/lib/
-attribution.js`'s undriven `'break'` mode stays undriven; break time keeps being
-tracked as ordinary attention/away exactly as before. No cycle configured ⇒ no phase
-line, no band. No `chrome.storage.onChanged` listener was added — the display only
-recomputes when the popup itself re-renders, never on a live per-second timer.
+`"break — 3 min left"`) plus a two-segment fill — originally in a separate top-level
+`.m-mark:not(:empty)` band, since restructured by Task 5 of the follow-up review-fixes
+plan to live inside `[data-timer-pill]` instead (see Case AB below; the top-level
+`.m-mark[data-state="running"]` is now always empty, matching idle/ended). Read-only
+display only: `extension/lib/attribution.js`'s undriven `'break'` mode stays undriven;
+break time keeps being tracked as ordinary attention/away exactly as before. No cycle
+configured ⇒ no phase line, no band. No `chrome.storage.onChanged` listener was added —
+the display only recomputes when the popup itself re-renders, never on a live
+per-second timer.
 
 50. Start a session with the picker's `25/5` preset. **Pass:** a `work — N min left` line
     is visible. Push `session.startedAt` back 26 minutes via `chrome.storage.local` (25/5
@@ -542,6 +551,101 @@ and apply the CTA-swap pattern to the new nav locations instead of the old inlin
 59. `e2e/fixtures.ts`'s `freshAccount()` helper, and `e2e/session-recovery.spec.ts`'s own
     inline signup flow, both now sign up via `/sign-in`, not `/` — confirmed by the full
     suite passing end to end, since nearly every spec depends on one of these two paths.
+
+### Y — Companion redesign: contrast-safe color, larger size, wake animation
+
+The companion overlay dot's color was bound to `prefers-color-scheme`, which reflects the
+user's OS/browser setting, not the actual page's background — so a dark-mode user navigating
+to a light-background page got an invisible near-white dot. The fix makes the dot use a
+fixed --m-clay (orange) color that has working contrast against both light and dark
+backgrounds. The companion also grows from 28px to 36px and gains a one-shot scale+fade
+"wake" animation on mount.
+
+60. Start a session, open a new tab, and emulate dark color scheme on that tab. **Pass:**
+    the companion dot's computed `backgroundColor` is `rgb(199, 91, 57)` (--m-clay,
+    `#C75B39`), not a color that flips with the color-scheme media query. This confirms
+    visibility no longer depends on guessing the page's background colors.
+61. After starting a session, open a new tab. **Pass:** the companion's bounding box width
+    and height are both 36px (not the old 28px), confirming the size increase. Also check
+    that the host element has active animations when measured (via
+    `getAnimations({ subtree: false }).length > 0`), confirming the wake animation runs
+    on mount — the animation scales from 0.5 to 1 over 360ms with an easing curve.
+
+### Z — Review page container width (pure CSS constraint)
+
+The review page container had no max-width constraint and stretched to fill the full viewport,
+even at very wide breakpoints where a 1000px container is the approved design. This case
+verifies the fix wires the approved fixture value into the shipped stylesheet, matching the
+dashboard's ledger container width.
+
+62. Start a session, then navigate to its review page. Set the viewport to 1600px wide.
+    **Pass:** the `[data-surface="review"]` element's bounding box width is at most 1000px,
+    not close to the full 1600px viewport. (This is the CSS-only constraint, matching the
+    `[data-surface="ledger"]` rule's own approved values — same max-width, margin, padding,
+    flex layout, and gap for literal visual parity between the two "history" surfaces.)
+
+### AA — A blocked tab reverts to the real site once its session ends (Task 4 fix)
+
+`endSession()` already removed all `declarativeNetRequest` block rules on Stop/elapsed/
+recovery, but a tab already sitting on `blocked.html?d=<domain>` (redirected there mid-
+session) never navigated back — `declarativeNetRequest` only intercepts *new* navigation
+attempts, so removing the rule alone never un-redirects a tab that's already redirected.
+The fix adds `sweepBlockedTabsBack(domains)` (mirroring `sweepOpenTabs`'s shape, the
+inverse direction), called from `endSession()`'s `finally` block, scoped to that session's
+own `blockedDomains` only — a stale `blocked.html` tab left over from an earlier,
+already-ended session must not get swept by a *different* session's own end. One ordering
+detail mattered in practice, found only by running the test against the brief's literal
+ordering and watching it still fail: `removeAllRules()` must run *before* the sweep, not
+after — the sweep's own `tabs.update` navigation is itself a new navigation attempt, so if
+the block rule is still installed at that instant, `declarativeNetRequest` redirects the
+sweep's own navigation right back to the exact same `blocked.html` URL, which looks
+indistinguishable from nothing happening at all.
+
+63. Start a session with a blocked domain configured, navigate a tab to that domain so it
+    lands on `blocked.html`. Click Stop. **Pass:** that tab navigates to the real
+    `https://<domain>/` within 5 seconds — no popup interaction beyond Stop, no further
+    navigation on that tab.
+64. Same setup, but immediately before Stop, clear `session.blockedDomains` to `[]` directly
+    in `chrome.storage.local` (simulating a session that no longer blocks that domain by
+    the time it ends). **Pass:** the blocked tab is left untouched — still on
+    `blocked.html?d=<domain>` half a second later — confirming the sweep checks membership
+    in the *ending* session's own current `blockedDomains`, not a blanket sweep of every
+    `blocked.html` tab regardless of which session's domains it belongs to.
+
+### AB — The intention pill's own outline carries cycle progress, not a separate mark (Task 5)
+
+Case U's phase display lived in a separate top-level `.m-mark:not(:empty)` band next to
+the intention box. Product direction: the intention's own box should double as the
+cycle's static progress indicator — its border carries elapsed/remaining directly,
+rather than a separate glyph elsewhere. `running()` now wraps `sentenceNode` (the
+editable `<input class="m-field">` inside the grace window, or the read-only
+`<p class="m-sentence">` past it) in a plain `<div data-timer-pill="true">`; when a
+cycle is configured, the SAME `.m-mark:not(:empty)` / `.m-row-bar[data-kind="attention-1"
+|"remainder"]` construction from Case U is appended inside that wrapper instead, and
+`[data-timer-pill] > .m-mark:not(:empty)` is pinned via CSS to a thin 3px strip flush
+with the wrapper's bottom inside edge (solid fill, dashed remainder), clipped by the
+wrapper's own `overflow: hidden`. The top-level `.m-mark[data-state="running"]` glyph
+still exists (matching idle/ended) but is now always empty — it no longer carries the
+fill. No new class was added; `data-timer-pill` is a plain attribute, and the fill reuses
+the pre-existing `.m-row-bar[data-kind]` rules verbatim. Static only, same as Case U —
+recomputed on the popup's own natural re-render, never a live tick, never a dial or ring.
+Visual check (not exercised by the Playwright cases below): confirmed by screenshot that
+the intention text stays legible inside the pill, the two-segment strip is visible flush
+with the pill's bottom edge, the phase line sits directly under the pill, and — checked
+specifically — clicking into the field during the grace window shows the input's
+`:focus-visible` outline drawn fully intact around the pill's rounded corners, not cut
+off by the wrapper's `overflow: hidden` (the outline sits close enough to the wrapper's
+own border that it isn't clipped in practice; no padding/scoping change was needed).
+
+65. Start a session with the `25/5` preset and a sentence typed in. **Pass:**
+    `[data-timer-pill="true"]` is visible and contains the SAME editable
+    `input.m-field` holding that sentence (not a separate element) plus a
+    `.m-mark:not(:empty)` strip with one `.m-row-bar[data-kind="attention-1"]` and one
+    `[data-kind="remainder"]` bar inside it. The separate top-level
+    `.m-mark[data-state="running"]` is still visible but has zero `.m-row-bar` children.
+    The `work — N min left` phase line still renders immediately after the pill.
+66. Start a session with `no cycles` selected. **Pass:** `[data-timer-pill="true"]` is
+    visible but contains no `.m-mark` at all, and no `... min left` text renders anywhere.
 
 ## What Sonnet writes vs. what Haiku runs
 

@@ -49,6 +49,27 @@ async function sweepOpenTabs(domains) {
   }
 }
 
+// The forward sweep (sweepOpenTabs, above) redirects an already-open tab to blocked.html
+// the moment a domain becomes blocked. This is the inverse, run when a session ends: a
+// tab sitting on blocked.html for a domain THIS session blocked has nothing that
+// navigates it back on its own — declarativeNetRequest only intercepts NEW navigation
+// attempts, so removing the rule (removeAllRules, called right before this) never
+// un-redirects a tab that's already redirected. Scoped to this session's own
+// blockedDomains only — a stale blocked.html tab left over from an earlier,
+// already-ended session must not get swept by a DIFFERENT session's own end.
+async function sweepBlockedTabsBack(domains) {
+  if (!domains || domains.length === 0) return
+  const blockedUrlPrefix = chrome.runtime.getURL('blocked.html')
+  const tabs = await chrome.tabs.query({})
+  for (const tab of tabs) {
+    if (!tab.id || !tab.url || !tab.url.startsWith(blockedUrlPrefix)) continue
+    const blockedDomain = new URL(tab.url).searchParams.get('d')
+    if (blockedDomain && domains.includes(blockedDomain)) {
+      chrome.tabs.update(tab.id, { url: `https://${blockedDomain}` }).catch(() => {})
+    }
+  }
+}
+
 export async function getSession() {
   const { session } = await chrome.storage.local.get('session')
   return session ?? null
@@ -145,7 +166,13 @@ export async function endSession(endReason) {
       endReason,
     }, { method: 'PATCH' })
   } finally {
+    // removeAllRules() must run BEFORE the sweep: declarativeNetRequest intercepts the
+    // sweep's own tabs.update navigation just like any other new navigation attempt — if
+    // the block rule is still installed at that instant, the sweep's navigation to the
+    // real site gets redirected right back to blocked.html (the exact same URL, so it
+    // looks like nothing happened). Removing the rule first closes that race.
     await removeAllRules()
+    await sweepBlockedTabsBack(session.blockedDomains)
     await chrome.alarms.clear(TICK)
     await chrome.storage.local.set({ session: null, companionState: null })
     // No session means no alarm to drain the queue later, so try once more now — this is

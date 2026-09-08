@@ -458,21 +458,6 @@ function running(session) {
   mark.dataset.state = 'running'
 
   const phase = cyclePhase(session)
-  if (phase) {
-    // Reuse the SAME .m-mark:not(:empty) proportional-band construction already used
-    // for the review page's attention band (lib/band.ts's DOM shape, ported here since
-    // this file has no bundler/TS/React) — a filled portion for elapsed-in-phase, a
-    // dashed 'remainder' portion for what's left. No new class, no animation, no
-    // ticking — this recomputes only when the popup itself re-renders (it has no
-    // chrome.storage.onChanged listener), never on a live per-second timer.
-    const filled = el('span', 'm-row-bar')
-    filled.dataset.kind = 'attention-1'
-    filled.style.flex = String(phase.elapsedInPhaseMs)
-    const remainder = el('span', 'm-row-bar')
-    remainder.dataset.kind = 'remainder'
-    remainder.style.flex = String(Math.max(phase.phaseMs - phase.elapsedInPhaseMs, 1))
-    mark.append(filled, remainder)
-  }
 
   const startedAt = new Date(session.startedAt).getTime()
   const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000)
@@ -510,7 +495,32 @@ function running(session) {
     sentenceNode = el('p', 'm-sentence', session.intention)
   }
 
-  show(mark, sentenceNode, elapsed, ...(phaseLine ? [phaseLine] : []), ...(blockedList ? [blockedList] : []), stop, navRow())
+  // The intention's own box doubles as the cycle's static progress indicator: the pill
+  // that already holds the sentence carries the progress on its own outline, instead of
+  // a separate small mark glyph elsewhere. `.m-field`/`.m-sentence` cannot show a
+  // two-tone border directly (an <input> can't hold child DOM nodes the way the
+  // existing .m-mark:not(:empty) fill technique needs, and CSS border-image doesn't
+  // combine reliably with border-radius across browsers) — instead a wrapper carries
+  // the visible border, and a thin .m-mark:not(:empty) strip (reusing the SAME
+  // .m-row-bar[data-kind] fill technique already used elsewhere in this codebase) sits
+  // flush with the wrapper's bottom inside edge. Static only — recomputed on the
+  // popup's own natural re-render, never a live tick.
+  const pillWrap = el('div')
+  pillWrap.dataset.timerPill = 'true'
+  pillWrap.append(sentenceNode)
+  if (phase) {
+    const progressMark = el('p', 'm-mark', '')
+    const filled = el('span', 'm-row-bar')
+    filled.dataset.kind = 'attention-1'
+    filled.style.flex = String(phase.elapsedInPhaseMs)
+    const remainder = el('span', 'm-row-bar')
+    remainder.dataset.kind = 'remainder'
+    remainder.style.flex = String(Math.max(phase.phaseMs - phase.elapsedInPhaseMs, 1))
+    progressMark.append(filled, remainder)
+    pillWrap.append(progressMark)
+  }
+
+  show(mark, pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop, navRow())
 }
 
 async function outcome(sessionId) {

@@ -418,4 +418,53 @@ test.describe('popup, running state', () => {
     await expect(page.getByText(/min left$/)).toHaveCount(0)
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   });
+
+  test('a running session with a cycle configured shows progress on the intention pill\'s own outline, not a separate mark', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5' }).click()
+    await page.locator('input.m-field').first().fill('pill outline test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    await expect(pillWrap).toBeVisible()
+    // The intention text is still inside the SAME pill wrapper, not a separate element.
+    // A freshly-started session is always within the sentence-edit grace window, so
+    // sentenceNode is always the editable <input> here, never the read-only <p>.
+    await expect(pillWrap.locator('input.m-field')).toHaveValue('pill outline test')
+    // The progress strip lives INSIDE the pill wrapper (not as a top-level sibling mark).
+    const progressStrip = pillWrap.locator('.m-mark:not(:empty)')
+    await expect(progressStrip).toBeVisible()
+    await expect(progressStrip.locator('.m-row-bar[data-kind="attention-1"]')).toHaveCount(1)
+    await expect(progressStrip.locator('.m-row-bar[data-kind="remainder"]')).toHaveCount(1)
+
+    // The plain running-state mark (matching idle/ended) still exists as its own
+    // top-level element, unaffected — it no longer carries the fill.
+    const topLevelMark = page.locator('.m-mark[data-state="running"]')
+    await expect(topLevelMark).toBeVisible()
+    await expect(topLevelMark.locator('.m-row-bar')).toHaveCount(0)
+
+    // The phase text sits immediately after the pill, not after a separate elapsed line.
+    const phaseLine = page.getByText(/^work — \d+ min left$/)
+    await expect(phaseLine).toBeVisible()
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the pill shows no progress strip when no cycle is configured', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: 'no cycles' }).click()
+    await page.locator('input.m-field').first().fill('no cycle pill test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    await expect(pillWrap).toBeVisible()
+    await expect(pillWrap.locator('.m-mark')).toHaveCount(0)
+    await expect(page.getByText(/min left$/)).toHaveCount(0)
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
 })
