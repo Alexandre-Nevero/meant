@@ -495,29 +495,51 @@ function running(session) {
     sentenceNode = el('p', 'm-sentence', session.intention)
   }
 
-  // The intention's own box doubles as the cycle's static progress indicator: the pill
-  // that already holds the sentence carries the progress on its own outline, instead of
-  // a separate small mark glyph elsewhere. `.m-field`/`.m-sentence` cannot show a
-  // two-tone border directly (an <input> can't hold child DOM nodes the way the
-  // existing .m-mark:not(:empty) fill technique needs, and CSS border-image doesn't
-  // combine reliably with border-radius across browsers) — instead a wrapper carries
-  // the visible border, and a thin .m-mark:not(:empty) strip (reusing the SAME
-  // .m-row-bar[data-kind] fill technique already used elsewhere in this codebase) sits
-  // flush with the wrapper's bottom inside edge. Static only — recomputed on the
-  // popup's own natural re-render, never a live tick.
+  // The intention's own box doubles as the cycle's static progress indicator: an SVG
+  // stroke traced around the pill's existing rounded-rect shape (same 26px corner radius
+  // as --m-r-field — this doesn't change the pill's shape, only how its outline is
+  // drawn), instead of a flat strip on one edge. `.m-field`/`.m-sentence` cannot show a
+  // two-tone border directly (an <input> can't hold child DOM nodes, and CSS
+  // border-image doesn't combine reliably with border-radius across browsers) — an SVG
+  // sibling avoids both problems. Static only — recomputed on the popup's own natural
+  // re-render, never a live tick; getTotalLength() gives the exact rendered perimeter for
+  // THIS pill's real, measured size (it can grow to two lines), no manual formula needed.
   const pillWrap = el('div')
   pillWrap.dataset.timerPill = 'true'
   pillWrap.append(sentenceNode)
   if (phase) {
-    const progressMark = el('p', 'm-mark', '')
-    const filled = el('span', 'm-row-bar')
-    filled.dataset.kind = 'attention-1'
-    filled.style.flex = String(phase.elapsedInPhaseMs)
-    const remainder = el('span', 'm-row-bar')
-    remainder.dataset.kind = 'remainder'
-    remainder.style.flex = String(Math.max(phase.phaseMs - phase.elapsedInPhaseMs, 1))
-    progressMark.append(filled, remainder)
-    pillWrap.append(progressMark)
+    requestAnimationFrame(() => {
+      const { width, height } = pillWrap.getBoundingClientRect()
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+      svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;'
+
+      const r = 26
+      function track(strokeColor) {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+        rect.setAttribute('x', '0.75')
+        rect.setAttribute('y', '0.75')
+        rect.setAttribute('width', String(width - 1.5))
+        rect.setAttribute('height', String(height - 1.5))
+        rect.setAttribute('rx', String(r))
+        rect.setAttribute('ry', String(r))
+        rect.setAttribute('fill', 'none')
+        rect.setAttribute('stroke', strokeColor)
+        rect.setAttribute('stroke-width', '1.5')
+        return rect
+      }
+
+      const remainderTrack = track('var(--m-edge)')
+      remainderTrack.setAttribute('stroke-dasharray', '3 3')
+      const elapsedTrack = track('var(--m-clay)')
+      svg.append(remainderTrack, elapsedTrack)
+      pillWrap.append(svg)
+      pillWrap.style.border = 'none'
+
+      const perimeter = elapsedTrack.getTotalLength()
+      const elapsedFraction = phase.elapsedInPhaseMs / phase.phaseMs
+      elapsedTrack.setAttribute('stroke-dasharray', `${perimeter * elapsedFraction} ${perimeter}`)
+    })
   }
 
   show(mark, pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop, navRow())

@@ -637,13 +637,19 @@ specifically — clicking into the field during the grace window shows the input
 off by the wrapper's `overflow: hidden` (the outline sits close enough to the wrapper's
 own border that it isn't clipped in practice; no padding/scoping change was needed).
 
+**Superseded by Case AF (Task 4, next round):** the bottom-only 3px strip described above
+was replaced by an SVG stroke traced around the pill's full rounded-rect perimeter. The
+`.m-mark:not(:empty)` / `.m-row-bar[data-kind]` construction inside `[data-timer-pill]` is
+gone; steps 65-66 below now describe the SVG-based assertions that replaced them (the test
+titles and pass criteria were updated in place, not duplicated).
+
 65. Start a session with the `25/5` preset and a sentence typed in. **Pass:**
     `[data-timer-pill="true"]` is visible and contains the SAME editable
-    `input.m-field` holding that sentence (not a separate element) plus a
-    `.m-mark:not(:empty)` strip with one `.m-row-bar[data-kind="attention-1"]` and one
-    `[data-kind="remainder"]` bar inside it. The separate top-level
-    `.m-mark[data-state="running"]` is still visible but has zero `.m-row-bar` children.
-    The `work — N min left` phase line still renders immediately after the pill.
+    `input.m-field` holding that sentence (not a separate element) plus a child `<svg>`
+    with exactly 2 `<rect>` elements (the dashed remainder track and the solid elapsed
+    track). The separate top-level `.m-mark[data-state="running"]` is still visible but
+    has zero `.m-row-bar` children. The `work — N min left` phase line still renders
+    immediately after the pill.
 66. Start a session with `no cycles` selected. **Pass:** `[data-timer-pill="true"]` is
     visible but contains no `.m-mark` at all, and no `... min left` text renders anywhere.
 
@@ -706,6 +712,45 @@ the top of the viewport, and nudges horizontally when it would overflow a side e
     hovering it as a fresh gesture (mouse moved away and back, not held down mid-drag) —
     confirmed the pill flips to render below the dot instead of clipping off the top of
     the screen.
+
+### AF — Timer pill progress as a full-perimeter SVG loop, not a bottom-only strip (Task 4)
+
+Case AB's fill lived on a thin 3px strip flush with the pill's bottom edge only. This
+replaces the *rendering technique* (not the underlying data — still `cyclePhase()`'s
+`elapsedInPhaseMs`/`phaseMs`, still fully static) with an SVG stroke traced around the
+pill's full existing rounded-rect shape (same 26px radius as `--m-r-field`, not a new
+capsule/stadium shape). `running()`'s `phase` branch now defers construction to a
+`requestAnimationFrame` callback (needs the pill's real rendered `getBoundingClientRect()`,
+since the sentence can wrap to two lines): it builds two overlaid `<rect>`s inside a child
+`<svg>` — a dashed `var(--m-edge)` remainder track and a solid `var(--m-clay)` elapsed
+track — then reads the elapsed track's own `getTotalLength()` to convert the elapsed
+fraction into an exact `stroke-dasharray` in pixels, no manual perimeter formula. The
+wrapper's plain CSS border (`border: var(--m-stroke) solid var(--m-ink)`) is suppressed
+via `pillWrap.style.border = 'none'`, set only inside the `if (phase)` branch — the
+no-cycle case never runs the `requestAnimationFrame` callback at all, so it keeps the
+plain CSS border exactly as before.
+
+71. E2E test: `e2e/popup.spec.ts` "the intention pill's progress is drawn as an SVG loop
+    around its full perimeter, not a bottom-only strip". Start a session with the `25/5`
+    preset. **Pass:** `[data-timer-pill="true"]` contains a visible `<svg>` with exactly 2
+    `<rect>` children; the second rect's `stroke-dasharray` splits into `filled total`
+    where `0 < filled < total` (a genuine elapsed fraction, not a placeholder); the
+    wrapper's own computed `border-style` is `none` (the SVG, not the CSS border, carries
+    the visible outline).
+72. E2E test: `e2e/popup.spec.ts` "the pill keeps its plain CSS border, no SVG, when no
+    cycle is configured". Start a session with `no cycles` selected. **Pass:**
+    `[data-timer-pill="true"]` contains zero `<svg>` elements and its computed
+    `border-style` is NOT `none` (the plain CSS border still renders).
+    Visual check (temp spec deleted after): with `session.startedAt` pushed back ~10
+    minutes into a 25/5 work phase, confirmed the pill's full outline shows the two-tone
+    split — solid clay tracing from the left edge across the top and cleanly around the
+    top-right corner partway down the right edge (matching the elapsed fraction), then
+    dashed for the remainder around the rest of the loop — with no visible gaps or
+    overlaps at any of the four rounded corners, the intention text still legible inside,
+    and the phase text still directly under the pill. Separately, with a freshly-started
+    session (still within the grace window, no time-shift), clicking into the intention
+    field confirmed the input's `:focus-visible` outline renders fully intact around the
+    pill's edge on all four sides, not clipped by the new SVG.
 
 ## What Sonnet writes vs. what Haiku runs
 
