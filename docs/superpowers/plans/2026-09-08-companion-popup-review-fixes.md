@@ -786,20 +786,11 @@ function running(session) {
     pillWrap.append(progressMark)
   }
 
-  const disconnect = el('button', 'm-btn', 'Disconnect')
-  disconnect.dataset.variant = 'quiet'
-  disconnect.addEventListener('click', async () => {
-    disconnect.disabled = true
-    await post('/api/device', undefined, { method: 'DELETE', queue: false })
-    await chrome.storage.local.set({ token: null, deviceId: null, session: null, pendingReview: null })
-    render()
-  })
-
   show(mark, pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop, navRow())
 }
 ```
 
-Note: this removes the now-orphaned `disconnect` button that previously lived elsewhere in this function's tail — check the current file's exact tail past this point before landing this edit (the brief above reconstructs the whole function body from what's already been read this session; if the live file has additional trailing logic not shown here, preserve it exactly, only changing the `mark`/`sentenceNode`/`phaseLine` construction and the final `show(...)` call's argument list and order).
+Note: `running()` has no `disconnect` button in its current, real form — that button belongs only to the unrelated `unpaired()` function (a different, signed-out/unpaired state), not this one. Double-check the live file's actual current `running()` body matches what's shown above (confirmed identical at plan-writing time) before landing this edit — if it has drifted since, preserve any genuinely new trailing logic, but do not add a `disconnect` button here; it does not belong in this function.
 
 In `extension/meant.css`, add near the existing `.m-field`/`.m-sentence` rules:
 
@@ -866,10 +857,12 @@ re-checking:
   `sweepBlockedTabsBack` (backward) — same domain-resolution conventions, no drift between
   the two.
 - `extension/popup.js`'s `running()` restructuring doesn't regress anything else in that
-  function (the `disconnect` button, `navRow()`, the editable-vs-read-only sentence
-  branch) — re-read the function's actual current tail before the review, since this
-  plan's Task 5 reconstructs the whole function body from what was read earlier in this
-  session and the live file may have grown additional logic since.
+  function (`navRow()`, the editable-vs-read-only sentence branch, the `stop` button) —
+  re-read the function's actual current tail before the review, since this plan's Task 5
+  reconstructs the whole function body from what was read earlier in this session and the
+  live file may have grown additional logic since. Confirm no `disconnect` button was
+  accidentally introduced — that belongs only to the unrelated `unpaired()` function, not
+  `running()`.
 - Run a production `next build` before considering the whole batch done (this plan's
   changes are extension + `lib/band.ts` + one `app/globals.css` rule — low risk to the
   build, but confirm anyway, matching this project's own established discipline).
