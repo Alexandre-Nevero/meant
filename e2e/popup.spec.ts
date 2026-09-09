@@ -631,6 +631,12 @@ test('the outcome screen shows a colored attention band between the intention an
   const { token } = await setupPage.evaluate(
     () => new Promise<{ token: string }>((r) => chrome.storage.local.get('token', (v: any) => r(v))),
   )
+
+  // Wait for the session-creation POST (fired from sw.js startSession()) to land server-side.
+  // The Start button click is fire-and-forget on the client; sessionId is available from storage
+  // immediately, but the server row may not exist yet.
+  await setupPage.waitForTimeout(500)
+
   await setupPage.request.post('/api/events', {
     headers: { authorization: `Bearer ${token}` },
     data: {
