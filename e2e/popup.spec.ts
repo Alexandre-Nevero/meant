@@ -474,34 +474,93 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   });
 
-  test('a running session with a cycle configured shows progress on the intention pill\'s own outline, not a separate mark', async ({ context, extensionId, freshAccount }) => {
+  test('the intention pill\'s loop starts at true top-center and traces clockwise', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: '25/5' }).click()
-    await page.locator('input.m-field').first().fill('pill outline test')
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('loop start test')
     await page.getByRole('button', { name: 'Start' }).click()
 
     const pillWrap = page.locator('[data-timer-pill="true"]')
     await expect(pillWrap).toBeVisible()
-    // The intention text is still inside the SAME pill wrapper, not a separate element.
-    // A freshly-started session is always within the sentence-edit grace window, so
-    // sentenceNode is always the editable <input> here, never the read-only <p>.
-    await expect(pillWrap.locator('input.m-field')).toHaveValue('pill outline test')
-    // The progress loop lives INSIDE the pill wrapper as an SVG (not a top-level sibling mark).
     const svg = pillWrap.locator('svg')
     await expect(svg).toBeVisible()
-    await expect(svg.locator('rect')).toHaveCount(2)
+    const paths = svg.locator('path')
+    await expect(paths.first()).toBeVisible()
 
-    // The plain running-state mark (matching idle/ended) still exists as its own
-    // top-level element, unaffected — it no longer carries the fill.
-    const topLevelMark = page.locator('.m-mark[data-state="running"]')
-    await expect(topLevelMark).toBeVisible()
-    await expect(topLevelMark.locator('.m-row-bar')).toHaveCount(0)
+    // Every segment shares the identical `d` (the authored top-center-start path) —
+    // confirms this is the new path-based construction, not the old two-<rect> one.
+    const dValues = await paths.evaluateAll((els) => els.map((e) => e.getAttribute('d')))
+    expect(new Set(dValues).size).toBe(1)
+    expect(dValues[0]).toMatch(/^M [\d.]+ [\d.]+ H/) // starts with a horizontal move from top-center
 
-    // The phase text sits immediately after the pill, not after a separate elapsed line.
-    const phaseLine = page.getByText(/^work — \d+ min left$/)
-    await expect(phaseLine).toBeVisible()
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the pill shows a visible arc immediately at session start, before any real attention time', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('cold start test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    const svg = pillWrap.locator('svg')
+    await expect(svg).toBeVisible()
+    const firstPath = svg.locator('path').first()
+    const dasharray = await firstPath.evaluate((e) => getComputedStyle(e).strokeDasharray)
+    const [drawn] = dasharray.split(',').map((n) => parseFloat(n))
+    expect(drawn).toBeGreaterThan(0) // a visible arc exists even with ~0 real elapsed time
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the loop is a solid line throughout, no dashed segments anywhere', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('solid line test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    const svg = pillWrap.locator('svg')
+    await expect(svg).toBeVisible()
+    const strokeWidths = await svg.locator('path').evaluateAll((els) => els.map((e) => getComputedStyle(e).strokeWidth))
+    for (const w of strokeWidths) expect(w).toBe('2px') // --m-stroke-loud, uniform across every segment
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the pill\'s border is visually suppressed without changing its measured size', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('measurement test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    await expect(pillWrap).toHaveAttribute('data-loop', 'on')
+    await expect(pillWrap).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)') // transparent, not border-style:none
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test.fixme('the loop still draws when no cycle is configured, filling from live attention data alone', async ({ context, extensionId, freshAccount }) => {
+    // un-skip once Task 4's picker lands 'custom' → 'no cycles'
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: 'custom', exact: true }).click()
+    await page.getByRole('button', { name: 'no cycles', exact: true }).click()
+    await page.locator('input.m-field').first().fill('no cycle loop test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    await expect(pillWrap.locator('svg')).toBeVisible() // the loop is NOT gated on a cycle existing
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
@@ -522,48 +581,4 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
-  test('the intention pill\'s progress is drawn as an SVG loop around its full perimeter, not a bottom-only strip', async ({ context, extensionId, freshAccount }) => {
-    const page = await context.newPage()
-    await freshAccount(page)
-    await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: '25/5' }).click()
-    await page.locator('input.m-field').first().fill('loop test')
-    await page.getByRole('button', { name: 'Start' }).click()
-
-    const pillWrap = page.locator('[data-timer-pill="true"]')
-    await expect(pillWrap).toBeVisible()
-    const svg = pillWrap.locator('svg')
-    await expect(svg).toBeVisible()
-    const rects = svg.locator('rect')
-    await expect(rects).toHaveCount(2) // one track rect, one progress rect
-
-    // The progress rect's stroke-dasharray should reflect a genuine, non-zero elapsed
-    // fraction of the perimeter, not a fixed placeholder value.
-    const dasharray = await rects.nth(1).getAttribute('stroke-dasharray')
-    expect(dasharray).toBeTruthy()
-    const [filled, total] = dasharray!.split(' ').map(Number)
-    expect(filled).toBeGreaterThan(0)
-    expect(filled).toBeLessThan(total)
-
-    // The wrapper's own CSS border is suppressed while the SVG carries the visible outline.
-    await expect(pillWrap).toHaveCSS('border-style', 'none')
-
-    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-  })
-
-  test('the pill keeps its plain CSS border, no SVG, when no cycle is configured', async ({ context, extensionId, freshAccount }) => {
-    const page = await context.newPage()
-    await freshAccount(page)
-    await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: 'no cycles' }).click()
-    await page.locator('input.m-field').first().fill('no cycle loop test')
-    await page.getByRole('button', { name: 'Start' }).click()
-
-    const pillWrap = page.locator('[data-timer-pill="true"]')
-    await expect(pillWrap).toBeVisible()
-    await expect(pillWrap.locator('svg')).toHaveCount(0)
-    await expect(pillWrap).not.toHaveCSS('border-style', 'none')
-
-    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-  })
 })

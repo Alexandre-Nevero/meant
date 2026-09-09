@@ -851,6 +851,58 @@ runs.
     seconds into `session.tally`). **Pass:** `session.tally.attention['example.com']`
     is a number greater than 0.
 
+### AJ — Timer pill loop becomes live, per-site segmented, top-center-start, solid (Task 3)
+
+Case AF's two-`<rect>` construction (dashed `var(--m-edge)` remainder track plus a solid
+`var(--m-clay)` elapsed track, gated on `if (phase)`) is replaced entirely. The loop is now
+one authored SVG `<path>` `d` (clockwise from true top-dead-centre: `M x+w/2 y H … A … V … H
+…`, no `Z`), reused verbatim for every segment — a real per-site attention loop instead of a
+generic phase-progress ring. Segments come from `withOpenSlice(session.tally, session.slice,
+Date.now())` piped through `toSegments()` (both from `./lib/tally.js`, Task 1), painted
+`--m-clay`/`--m-clay-2`/`--m-clay-3` for the top three attention domains and `--m-edge` for
+the remainder — away/break fold into the remainder unpainted, per "away is a hatch, never
+solid grey". A 5%-of-perimeter floor (item D) guarantees a visible arc even at t≈0. The loop
+now draws **unconditionally** — no `if (phase)` gate — since it visualizes live attention,
+not phase progress; a session with no cycle configured still shows it. The wrapper's own CSS
+border is hidden via `border-color: transparent` (a new `[data-timer-pill][data-loop="on"]`
+rule), not `style.border = 'none'` — the old approach changed `border-style`, which shifts
+`clientWidth`/`clientHeight` by the stroke width right before it's measured; `border-color:
+transparent` keeps the box identically sized. The now-fully-dead `[data-timer-pill] >
+.m-mark:not(:empty)` bottom-strip rule (zero producers since two rounds ago) is removed.
+
+76. E2E test: `e2e/popup.spec.ts` "the intention pill's loop starts at true top-center and
+    traces clockwise". Start a `25/5` session. **Pass:** every `<path>` inside the pill's
+    `<svg>` shares one identical `d` value, and that `d` matches `^M [\d.]+ [\d.]+ H` — a
+    horizontal move immediately after the top-center `M`, confirming the new path-based
+    construction (not the old two-`<rect>` one).
+77. E2E test: `e2e/popup.spec.ts` "the pill shows a visible arc immediately at session
+    start, before any real attention time". Start a `25/5` session. **Pass:** the first
+    path's computed `stroke-dasharray`'s drawn length is greater than 0 even with ~0 real
+    elapsed attention — the 5% floor.
+78. E2E test: `e2e/popup.spec.ts` "the loop is a solid line throughout, no dashed segments
+    anywhere". Start a `25/5` session. **Pass:** every path's computed `stroke-width` is
+    exactly `2px` (`--m-stroke-loud`), uniform across every segment — no dashed track.
+79. E2E test: `e2e/popup.spec.ts` "the pill's border is visually suppressed without
+    changing its measured size". Start a `25/5` session. **Pass:** the pill wrapper carries
+    `data-loop="on"` and its computed `border-color` is `rgba(0, 0, 0, 0)` (transparent via
+    CSS, not `border-style: none`).
+80. E2E test (`test.fixme`, not yet runnable): `e2e/popup.spec.ts` "the loop still draws
+    when no cycle is configured, filling from live attention data alone". Depends on Task
+    4's `custom` → `no cycles` picker click sequence, which hasn't landed yet — stays
+    `test.fixme` (reports as skipped, not failed) until Task 4 converts it back to a plain
+    `test`. Documents that this task's loop is unconditional: it will draw even with no
+    cycle configured.
+    Visual check (temp spec + screenshot, deleted after): started a `25/5` session,
+    navigated across two real domains (`example.com`, `www.iana.org`) so real segments
+    exist, pushed `session.startedAt` back and reloaded, then screenshotted the pill at
+    native 360px width. Confirmed by eye: a solid clay arc begins exactly at the pill's
+    true top-center and runs clockwise, no dashed segments anywhere, and the remainder
+    closes the loop as a plain, muted `--m-edge` line rather than a dashed one. With
+    real accumulated attention only a few seconds against a 1500s (25 min) denominator,
+    the drawn arc matched the 5% floor rather than the real (much smaller) proportion,
+    confirming item D's cold-start floor. The `custom` → `no cycles` case is deferred to
+    Task 4, once its picker lands.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

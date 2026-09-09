@@ -168,16 +168,11 @@ button, input, select { font: inherit; color: inherit; }
 [data-timer-pill] > .m-sentence {
   border: none;
 }
-[data-timer-pill] > .m-mark:not(:empty) {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 3px;
-  border: none;
-  border-radius: 0;
-}
+/* Fix (round 5): pillWrap.style.border = 'none' used to change clientWidth/Height right
+ * before measuring it (a 1.5px border removal jumps the box 3px wider) — a transparent
+ * border keeps the box size identical to the idle field it replaces, while still hiding
+ * the visible line so the SVG loop is the only thing drawn. */
+[data-timer-pill][data-loop="on"] { border-color: transparent; }
 
 /* chip fields — duration and blocklist pickers */
 .m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; max-height: 132px; overflow-y: auto; }

@@ -2,6 +2,7 @@ import { post, get, apiBase } from './api.js'
 import { isEditable } from './lib/sentence-lock.js'
 import { normalizeDomain } from './lib/normalize-domain.js'
 import { resolveSitePhrase } from './lib/resolve-sites.js'
+import { withOpenSlice, toSegments } from './lib/tally.js'
 
 const root = document.getElementById('root')
 
@@ -510,53 +511,127 @@ function running(session) {
     sentenceNode = el('p', 'm-sentence', session.intention)
   }
 
-  // The intention's own box doubles as the cycle's static progress indicator: an SVG
-  // stroke traced around the pill's existing rounded-rect shape (same 26px corner radius
-  // as --m-r-field — this doesn't change the pill's shape, only how its outline is
-  // drawn), instead of a flat strip on one edge. `.m-field`/`.m-sentence` cannot show a
-  // two-tone border directly (an <input> can't hold child DOM nodes, and CSS
-  // border-image doesn't combine reliably with border-radius across browsers) — an SVG
-  // sibling avoids both problems. Static only — recomputed on the popup's own natural
-  // re-render, never a live tick; getTotalLength() gives the exact rendered perimeter for
-  // THIS pill's real, measured size (it can grow to two lines), no manual formula needed.
+  // The intention's own box doubles as the session's live attention loop: an authored SVG
+  // path traced around the pill's existing rounded-rect shape (same 26px corner radius as
+  // --m-r-field — this doesn't change the pill's shape, only how its outline is drawn),
+  // segmented by which sites the time actually went to. Unconditional — this draws every
+  // time, independent of whether a cycle is configured, since it visualizes live attention
+  // data, not phase progress. Static only: one requestAnimationFrame measurement frame,
+  // gated on document.fonts.ready so a font-swap reflow can't leave the viewBox stale.
   const pillWrap = el('div')
   pillWrap.dataset.timerPill = 'true'
   pillWrap.append(sentenceNode)
-  if (phase) {
-    requestAnimationFrame(() => {
-      pillWrap.style.border = 'none'
-      const width = pillWrap.clientWidth
-      const height = pillWrap.clientHeight
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-      svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
-      svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;'
 
-      const r = 26
-      function track(strokeColor) {
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-        rect.setAttribute('x', '0.75')
-        rect.setAttribute('y', '0.75')
-        rect.setAttribute('width', String(width - 1.5))
-        rect.setAttribute('height', String(height - 1.5))
-        rect.setAttribute('rx', String(r))
-        rect.setAttribute('ry', String(r))
-        rect.setAttribute('fill', 'none')
-        rect.setAttribute('stroke', strokeColor)
-        rect.setAttribute('stroke-width', '1.5')
-        return rect
-      }
+  const merged = withOpenSlice(session.tally, session.slice, Date.now())
+  const segments = toSegments(merged)
 
-      const remainderTrack = track('var(--m-edge)')
-      remainderTrack.setAttribute('stroke-dasharray', '3 3')
-      const elapsedTrack = track('var(--m-clay)')
-      svg.append(remainderTrack, elapsedTrack)
-      pillWrap.append(svg)
+  document.fonts.ready.then(() => requestAnimationFrame(() => {
+    pillWrap.dataset.loop = 'on' // CSS makes the border transparent without changing clientWidth/Height
+    const width = pillWrap.clientWidth
+    const height = pillWrap.clientHeight
 
-      const perimeter = elapsedTrack.getTotalLength()
-      const elapsedFraction = phase.elapsedInPhaseMs / phase.phaseMs
-      elapsedTrack.setAttribute('stroke-dasharray', `${perimeter * elapsedFraction} ${perimeter}`)
-    })
-  }
+    const SVG_NS = 'http://www.w3.org/2000/svg'
+    const svg = document.createElementNS(SVG_NS, 'svg')
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+    svg.setAttribute('aria-hidden', 'true') // the figures beside it carry the same information
+    svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;'
+
+    // Clockwise from top-dead-centre. Same rounded-rect geometry as --m-r-field (26px), so
+    // the pill's shape does not change — only where the outline's zero point is and how it
+    // is painted. inset = 1 (half the 2px stroke), r = 26.
+    const inset = 1
+    const r = 26
+    function loopPath() {
+      const x = inset, y = inset
+      const w = width - inset * 2, h = height - inset * 2
+      const rr = Math.min(r, w / 2, h / 2) // matches the rx/ry clamp <rect> would apply
+      return [
+        `M ${x + w / 2} ${y}`,
+        `H ${x + w - rr}`,
+        `A ${rr} ${rr} 0 0 1 ${x + w} ${y + rr}`,
+        `V ${y + h - rr}`,
+        `A ${rr} ${rr} 0 0 1 ${x + w - rr} ${y + h}`,
+        `H ${x + rr}`,
+        `A ${rr} ${rr} 0 0 1 ${x} ${y + h - rr}`,
+        `V ${y + rr}`,
+        `A ${rr} ${rr} 0 0 1 ${x + rr} ${y}`,
+        `H ${x + w / 2}`,
+      ].join(' ')
+      // No `Z` — the path already returns to its start point, and a `Z` would add a
+      // zero-length close that some engines count in getTotalLength().
+    }
+    const d = loopPath()
+
+    // A throwaway path just to measure the real rendered perimeter — getTotalLength()
+    // gives the exact number for THIS pill's real, measured size (it can wrap to two
+    // lines), no manual perimeter formula needed.
+    const measurer = document.createElementNS(SVG_NS, 'path')
+    measurer.setAttribute('d', d)
+    svg.append(measurer)
+    const L = measurer.getTotalLength()
+    measurer.remove()
+
+    // §3.1 — the loop's full length means the session's planned duration. "until I stop"
+    // (plannedMinutes == null) has no target, so the loop just fills with real proportions
+    // (denom = measured). Math.max(..., measured) clamps a session that overruns its plan
+    // instead of letting segments run past L.
+    const measured = segments.reduce((sum, s) => sum + s.flex, 0)
+    const denom = session.plannedMinutes == null
+      ? Math.max(measured, 1)
+      : Math.max(session.plannedMinutes * 60, measured)
+
+    const PAINT = {
+      'attention-1': 'var(--m-clay)',
+      'attention-2': 'var(--m-clay-2)',
+      'attention-3': 'var(--m-clay-3)',
+      remainder: 'var(--m-edge)',
+    }
+    const GAP = 3 // px of path length — matches .m-mark:not(:empty) { gap: 3px }
+    const MIN_ARC = 0.05 * L // item D — never render nothing at t≈0
+    const MIN_DRAWN = 8 // below this a segment cannot read as a segment
+
+    function arc(kind, start, len) {
+      const p = document.createElementNS(SVG_NS, 'path')
+      p.setAttribute('d', d) // the same authored d for every segment
+      p.dataset.kind = kind // debuggable, and greppable against .m-row-bar
+      p.style.fill = 'none'
+      p.style.stroke = PAINT[kind]
+      p.style.strokeWidth = '2' // --m-stroke-loud — the smallest weight that holds --m-clay-3
+      p.style.strokeLinecap = 'butt' // round caps would eat into the 3px gaps
+      p.style.strokeDasharray = `${len} ${L - len}` // sums to exactly L: a segment crossing
+      p.style.strokeDashoffset = `${(L - start) % L}` // the seam wraps instead of clipping
+      svg.append(p)
+    }
+
+    // 1. shares, in path-length units — away/break fold into the remainder (see PAINT: no
+    //    away/break entry — a hatch can't survive a 2px stroke, and "away is a hatch, never
+    //    solid grey" rules out painting it solid; the full away/break vocabulary lives on
+    //    the outcome screen's 14px band instead, Task 6).
+    const shares = segments
+      .filter((s) => s.kind.startsWith('attention'))
+      .map((s) => ({ kind: s.kind, len: (s.flex / denom) * L }))
+      .filter((s) => s.len >= MIN_DRAWN) // a sub-8px sliver is noise; its time falls into
+                                          // the remainder, unpainted
+
+    // 2. the floor (item D) — first segment only, never a permanent offset once real
+    //    progress exceeds it.
+    if (shares.length === 0) shares.push({ kind: 'attention-1', len: MIN_ARC }) // cold start
+    else shares[0].len = Math.max(shares[0].len, MIN_ARC)
+
+    // 3. lay them out clockwise from 0 (= top-dead-centre), gaps carved out of each
+    //    segment's tail.
+    let cursor = 0
+    for (const s of shares) {
+      arc(s.kind, cursor, Math.max(s.len - GAP, 2))
+      cursor += s.len
+    }
+
+    // 4. the remainder closes the loop, leaving one final gap before wrapping to top-centre.
+    const remainder = L - cursor
+    if (remainder > GAP + MIN_DRAWN) arc('remainder', cursor, remainder - GAP)
+
+    pillWrap.append(svg)
+  }))
 
   show(header(mark), pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop)
 }
