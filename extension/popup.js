@@ -515,9 +515,16 @@ function running(session) {
 
   const startedAt = new Date(session.startedAt).getTime()
   const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000)
-  const elapsed = el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
 
-  const phaseLine = phase ? el('p', 'm-meta', `${phase.phase} — ${phase.remainingMinutes} min left`) : null
+  // A single read, not a ticking clock — toolkit §9 refuses "a countdown that ticks".
+  // With duration merged into the cycle (Task 4), "left in this cycle" and "left in this
+  // session" are the same number for every mode except "until I stop" — two lines would
+  // say one thing twice, so this collapses them into one.
+  const phaseLine = phase
+    ? el('p', 'm-meta', phase.phase === 'break'
+        ? `${elapsedMinutes} min · break, ${phase.remainingMinutes} min left`
+        : `${elapsedMinutes} min · ${phase.remainingMinutes} min left`)
+    : el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
 
   const blockedList = session.blockedDomains?.length
     ? el('p', 'm-meta', `blocking: ${session.blockedDomains.join(', ')}`)
@@ -671,7 +678,7 @@ function running(session) {
     pillWrap.append(svg)
   }))
 
-  show(header(mark), pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop)
+  show(header(mark), pillWrap, phaseLine, ...(blockedList ? [blockedList] : []), stop)
 }
 
 async function outcome(sessionId) {

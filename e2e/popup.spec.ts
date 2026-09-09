@@ -469,33 +469,32 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
-  test('a running session with a cycle configured shows which phase it is in, without a ticking countdown', async ({ context, extensionId, freshAccount }) => {
+  test('a running session with a cycle configured shows one consolidated line, not two, and never ticks', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    // 25/5 is already the picker's own preset (CYCLE_PRESETS[0]).
     await page.getByRole('button', { name: '25/5', exact: true }).click()
-    await page.locator('input.m-field').first().fill('cycle test')
-    await page.getByRole('button', { name: 'Start', exact: true }).click()
+    await page.locator('input.m-field').first().fill('consolidated copy test')
+    await page.getByRole('button', { name: 'Start' }).click()
 
-    await expect(page.getByText(/^work — \d+ min left$/)).toBeVisible()
+    await expect(page.getByText(/^\d+ min · \d+ min left$/)).toBeVisible()
+    await expect(page.getByText(/min elapsed/)).toHaveCount(0) // the old separate line is gone
 
-    // Push startedAt into the break phase without a real 25-minute wait.
+    // Push startedAt into the break phase without a real 26-minute wait.
     await page.evaluate(() => {
       return new Promise<void>((resolve) => {
         chrome.storage.local.get('session', ({ session }: any) => {
-          session.startedAt = new Date(Date.now() - 26 * 60_000).toISOString() // 1 min into break
+          session.startedAt = new Date(Date.now() - 26 * 60_000).toISOString()
           chrome.storage.local.set({ session }, () => resolve())
         })
       })
     })
     await page.reload()
-    await expect(page.getByText(/^break — \d+ min left$/)).toBeVisible()
+    await expect(page.getByText(/^\d+ min · break, \d+ min left$/)).toBeVisible()
 
-    // No cycle at all: no phase line should render.
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-  });
+  })
 
   test('a running session with no cycle configured shows no phase line', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()

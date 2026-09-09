@@ -23,9 +23,10 @@ test('starting a session offline does not hang, and syncs once back online', asy
   await page.locator('input.m-field').first().fill('offline start test')
   const startedAt = Date.now()
   await page.getByRole('button', { name: 'Start' }).click()
-  // Local-first: Start must succeed instantly, offline — the running view (elapsed
-  // minutes) should appear right away, not hang waiting on a network round-trip.
-  await expect(page.getByText(/min elapsed/)).toBeVisible({ timeout: 3_000 })
+  // Local-first: Start must succeed instantly, offline — the running view (consolidated
+  // elapsed+phase line) should appear right away, not hang waiting on a network round-trip.
+  // The default cycle (25/5) shows the consolidated format: "X min · Y min left"
+  await expect(page.getByText(/^\d+ min · \d+ min left$/)).toBeVisible({ timeout: 3_000 })
   const elapsedMs = Date.now() - startedAt
   expect(elapsedMs).toBeLessThan(3_000)
 

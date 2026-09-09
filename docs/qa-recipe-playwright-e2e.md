@@ -446,29 +446,29 @@ compact cluster without dominating the popup.
     row appears as a compact ~4-line chip grid with an internal scrollbar, not a tall
     tower of wrapping chips extending past the Start button.)
 
-### U — Cycle phase display in the running popup (Task 10)
+### U — Cycle phase display in the running popup (Task 10, consolidated in Task 5 review round)
 
-The running popup showed elapsed minutes but no sense of where you sit in a configured
-work/break cycle. The fix adds a pure `cyclePhase(session)` helper (`session.cycle` +
-`session.startedAt` in, `{phase, elapsedInPhaseMs, phaseMs, remainingMinutes}` or `null`
-out) and wires it into `running()`: a phase line (`"work — 15 min left"` /
-`"break — 3 min left"`) plus a two-segment fill — originally in a separate top-level
-`.m-mark:not(:empty)` band, since restructured by Task 5 of the follow-up review-fixes
-plan to live inside `[data-timer-pill]` instead (see Case AB below; the top-level
-`.m-mark[data-state="running"]` is now always empty, matching idle/ended). Read-only
-display only: `extension/lib/attribution.js`'s undriven `'break'` mode stays undriven;
-break time keeps being tracked as ordinary attention/away exactly as before. No cycle
-configured ⇒ no phase line, no band. No `chrome.storage.onChanged` listener was added —
-the display only recomputes when the popup itself re-renders, never on a live
-per-second timer.
+The running popup originally showed elapsed minutes but no sense of where you sit in a
+configured work/break cycle. Task 10 added a pure `cyclePhase(session)` helper and a two-line
+display: one line for elapsed time (`"X min elapsed"`) and a second for the phase
+(`"work — 15 min left"` / `"break — 3 min left"`). The follow-up review round consolidated
+these into a single line since duration is now merged into the cycle — "left in this cycle"
+and "left in this session" are the same number for every mode except "until I stop", so two
+lines would say one thing twice. The new consolidated format is `"X min · Y min left"` for
+work phases and `"X min · break, Y min left"` for break phases. Read-only display only:
+`extension/lib/attribution.js`'s undriven `'break'` mode stays undriven; break time keeps
+being tracked as ordinary attention/away exactly as before. No cycle configured ⇒ only an
+elapsed line (`"X min elapsed"`), never the empty phrase line. No `chrome.storage.onChanged`
+listener was added — the display only recomputes when the popup itself re-renders, never on
+a live per-second timer.
 
-50. Start a session with the picker's `25/5` preset. **Pass:** a `work — N min left` line
-    is visible. Push `session.startedAt` back 26 minutes via `chrome.storage.local` (25/5
-    cycle: 26 min elapsed lands 1 min into the break phase — `posInCycle` (1,560,000ms)
-    ≥ `workMs` (1,500,000ms)) and reload. **Pass:** the line now reads
-    `break — N min left`.
-51. Start a session with `no cycles` selected. **Pass:** no `... min left` text renders
-    anywhere in the popup.
+50. Start a session with the picker's `25/5` preset. **Pass:** a `25 min · N min left` line
+    is visible (consolidated elapsed and phase). Push `session.startedAt` back 26 minutes
+    via `chrome.storage.local` (25/5 cycle: 26 min elapsed lands 1 min into the break phase
+    — `posInCycle` (1,560,000ms) ≥ `workMs` (1,500,000ms)) and reload. **Pass:** the line
+    now reads `26 min · break, N min left`.
+51. Start a session with `no cycles` selected. **Pass:** a `X min elapsed` line (no phase,
+    no "min left") is visible — no consolidated format when no cycle is configured.
 
 ### V — Blocking UI: the interstitial names the domain, the popup label stops mismatching its sibling (Task 12)
 
@@ -962,6 +962,31 @@ clicking `no cycles`. Confirmed by eye: level 1 shows exactly 3 aligned chips (`
 labelled `work`/`break` inputs (a text cursor, not a pointer) plus the `until I stop`/
 `no cycles` chips beneath, all aligned, nothing overlapping; the `no cycles` state
 visibly greys the break input and relabels `work` to `minutes`.
+
+### AL — Running-screen copy consolidation: elapsed + phase into one line (Task 5 review round)
+
+With Task 4's merger of `plannedMinutes` into the cycle, the running popup's two separate
+text lines (`"X min elapsed"` and `"work — Y min left"`) became redundant — "left in this
+cycle" and "left in this session" are now always the same number (except "until I stop").
+The fix consolidates them into one line, visible only when a cycle is configured:
+`"X min · Y min left"` for work phases, `"X min · break, Y min left"` for breaks. When no
+cycle is configured, the display falls back to the plain `"X min elapsed"` line (phase is
+falsy, so no consolidation applies). Both the old and new text are read-only, non-ticking
+displays — recomputed only when the popup itself re-renders.
+
+87. E2E test: `e2e/popup.spec.ts` "a running session with a cycle configured shows one
+    consolidated line, not two, and never ticks". Start a session with the `25/5` preset
+    and a sentence. **Pass:** a line matching `/^\d+ min · \d+ min left$/` is visible and
+    a search for "min elapsed" returns zero matches — confirming the old two-line format
+    (separate elapsed line) is gone. Push `session.startedAt` back 26 minutes to land
+    in the break phase and reload. **Pass:** the line now matches `/^\d+ min · break,
+    \d+ min left$/`, confirming the break phase text swaps in with the consolidated
+    format intact.
+88. E2E test: `e2e/popup.spec.ts` "a running session with no cycle configured shows no
+    phase line" (Case U, item 51, re-affirmed). Start a session with `no cycles` selected.
+    **Pass:** a line matching `/^\d+ min elapsed$/` is visible and no "min left" text
+    appears anywhere — the fallback plain elapsed line, confirming this branch is
+    unchanged by the consolidation fix.
 
 ## What Sonnet writes vs. what Haiku runs
 
