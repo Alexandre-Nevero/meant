@@ -114,3 +114,46 @@ test('the review page has the same max-width container as the dashboard, not ful
   expect(box).not.toBeNull()
   expect(box!.width).toBeLessThanOrEqual(1000)
 })
+
+// Case AC — extension-ID-shaped domains excluded from per-domain row list
+test('the review page never shows an extension-ID-shaped domain in its per-domain row list', async ({ context, extensionId, freshAccount }) => {
+  const setupPage = await context.newPage()
+  await freshAccount(setupPage)
+  const mint = await setupPage.request.post('/api/pair')
+  const { code } = await mint.json()
+  const claim = await setupPage.request.post('/api/pair/claim', { data: { code } })
+  const { token, deviceId } = await claim.json()
+  await setupPage.goto(`chrome-extension://${extensionId}/popup.html`)
+  await setupPage.evaluate(({ token, deviceId }) => new Promise<void>((r) => chrome.storage.local.set({ token, deviceId }, () => r())), { token, deviceId })
+  await setupPage.reload()
+  await setupPage.locator('input.m-field').first().fill('tracking hygiene test')
+  await setupPage.getByRole('button', { name: 'Start' }).click()
+  const sessionId: string = await setupPage.evaluate(
+    () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+  )
+
+  await setupPage.waitForTimeout(500)
+
+  // Inject one real attention row and one extension-ID-shaped row directly via the same
+  // API sw.js's own flush() uses — deterministic, no dependency on real tab-switching
+  // timing, matching this suite's own established precedent for injecting review-data
+  // fixtures.
+  const eventRes = await context.request.post('/api/events', {
+    headers: { authorization: `Bearer ${token}` },
+    data: {
+      sessionId,
+      events: [
+        { kind: 'attention', domain: 'chatgpt.com', seconds: 90, at: new Date().toISOString() },
+        { kind: 'attention', domain: 'emnalgngpciahekjdcgpbgnhmkpjhlhi', seconds: 30, at: new Date().toISOString() },
+      ],
+    },
+  })
+  expect(eventRes.status()).toBe(200)
+
+  await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+
+  const reviewPage = await context.newPage()
+  await reviewPage.goto(`/review/${sessionId}`)
+  await expect(reviewPage.getByText('chatgpt.com')).toBeVisible()
+  await expect(reviewPage.getByText('emnalgngpciahekjdcgpbgnhmkpjhlhi')).toHaveCount(0)
+})

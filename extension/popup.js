@@ -191,18 +191,32 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
 
 function navRow() {
   const row = el('div', 'm-chip-row')
-  const history = el('button', 'm-btn', 'History')
+  const history = el('button', 'm-btn')
   history.dataset.variant = 'quiet'
+  history.setAttribute('aria-label', 'View session history')
+  history.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M7 4v3l2 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>'
   history.addEventListener('click', async () => {
     chrome.tabs.create({ url: (await apiBase()) + '/dashboard' })
   })
-  const landing = el('button', 'm-btn', 'meant.app')
+  const landing = el('button', 'm-btn')
   landing.dataset.variant = 'quiet'
+  landing.setAttribute('aria-label', 'Open meant.app')
+  landing.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M6 2H2v10h10V8M8 2h4v4M12 2 6 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>'
   landing.addEventListener('click', async () => {
     chrome.tabs.create({ url: (await apiBase()) + '/' })
   })
   row.append(history, landing)
   return row
+}
+
+// Top-right header: the popup's own mark glyph beside the (now icon-only) nav row.
+// data-popup-header, not a new class — the class contract stays frozen (13 fixed classes
+// plus .m-chip/.m-chip-row/.m-companion-*).
+function header(mark) {
+  const wrap = el('div')
+  wrap.dataset.popupHeader = 'true'
+  wrap.append(mark, navRow())
+  return wrap
 }
 
 function cyclePresetKey(cycle) {
@@ -347,6 +361,7 @@ async function idle() {
 
   // First ever session: cycle defaults to 50/10 (Step 3). A returning session recalls last time's pick.
   const cycle = cyclePicker(lastChoice ? lastChoice.cycle : { work: 50, break: 10 })
+  cycle.row.dataset.chipLayout = 'paired'
 
   // First ever session: workSites from the API, none pre-selected.
   const workSiteValues = lastChoice ? lastChoice.workSites : []
@@ -400,7 +415,7 @@ async function idle() {
     if (!res?.ok) {
       console.error('popup: start failed', res, chrome.runtime.lastError)
       start.disabled = false
-      show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start,
+      show(header(mark), label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start,
         el('p', 'm-meta', res?.offline ? 'No connection. A session needs one to start.' : 'Could not start.'))
       return
     }
@@ -433,7 +448,7 @@ async function idle() {
     render()
   })
 
-  show(mark, label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect, navRow())
+  show(header(mark), label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect)
 }
 
 // Pure computation, no chrome.* API — which phase (work/break) the elapsed time
@@ -495,32 +510,55 @@ function running(session) {
     sentenceNode = el('p', 'm-sentence', session.intention)
   }
 
-  // The intention's own box doubles as the cycle's static progress indicator: the pill
-  // that already holds the sentence carries the progress on its own outline, instead of
-  // a separate small mark glyph elsewhere. `.m-field`/`.m-sentence` cannot show a
-  // two-tone border directly (an <input> can't hold child DOM nodes the way the
-  // existing .m-mark:not(:empty) fill technique needs, and CSS border-image doesn't
-  // combine reliably with border-radius across browsers) — instead a wrapper carries
-  // the visible border, and a thin .m-mark:not(:empty) strip (reusing the SAME
-  // .m-row-bar[data-kind] fill technique already used elsewhere in this codebase) sits
-  // flush with the wrapper's bottom inside edge. Static only — recomputed on the
-  // popup's own natural re-render, never a live tick.
+  // The intention's own box doubles as the cycle's static progress indicator: an SVG
+  // stroke traced around the pill's existing rounded-rect shape (same 26px corner radius
+  // as --m-r-field — this doesn't change the pill's shape, only how its outline is
+  // drawn), instead of a flat strip on one edge. `.m-field`/`.m-sentence` cannot show a
+  // two-tone border directly (an <input> can't hold child DOM nodes, and CSS
+  // border-image doesn't combine reliably with border-radius across browsers) — an SVG
+  // sibling avoids both problems. Static only — recomputed on the popup's own natural
+  // re-render, never a live tick; getTotalLength() gives the exact rendered perimeter for
+  // THIS pill's real, measured size (it can grow to two lines), no manual formula needed.
   const pillWrap = el('div')
   pillWrap.dataset.timerPill = 'true'
   pillWrap.append(sentenceNode)
   if (phase) {
-    const progressMark = el('p', 'm-mark', '')
-    const filled = el('span', 'm-row-bar')
-    filled.dataset.kind = 'attention-1'
-    filled.style.flex = String(phase.elapsedInPhaseMs)
-    const remainder = el('span', 'm-row-bar')
-    remainder.dataset.kind = 'remainder'
-    remainder.style.flex = String(Math.max(phase.phaseMs - phase.elapsedInPhaseMs, 1))
-    progressMark.append(filled, remainder)
-    pillWrap.append(progressMark)
+    requestAnimationFrame(() => {
+      pillWrap.style.border = 'none'
+      const width = pillWrap.clientWidth
+      const height = pillWrap.clientHeight
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+      svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;'
+
+      const r = 26
+      function track(strokeColor) {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+        rect.setAttribute('x', '0.75')
+        rect.setAttribute('y', '0.75')
+        rect.setAttribute('width', String(width - 1.5))
+        rect.setAttribute('height', String(height - 1.5))
+        rect.setAttribute('rx', String(r))
+        rect.setAttribute('ry', String(r))
+        rect.setAttribute('fill', 'none')
+        rect.setAttribute('stroke', strokeColor)
+        rect.setAttribute('stroke-width', '1.5')
+        return rect
+      }
+
+      const remainderTrack = track('var(--m-edge)')
+      remainderTrack.setAttribute('stroke-dasharray', '3 3')
+      const elapsedTrack = track('var(--m-clay)')
+      svg.append(remainderTrack, elapsedTrack)
+      pillWrap.append(svg)
+
+      const perimeter = elapsedTrack.getTotalLength()
+      const elapsedFraction = phase.elapsedInPhaseMs / phase.phaseMs
+      elapsedTrack.setAttribute('stroke-dasharray', `${perimeter * elapsedFraction} ${perimeter}`)
+    })
   }
 
-  show(mark, pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop, navRow())
+  show(header(mark), pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop)
 }
 
 async function outcome(sessionId) {
@@ -546,7 +584,7 @@ async function outcome(sessionId) {
   }
   const data = res.data
 
-  const nodes = [mark]
+  const nodes = [header(mark)]
   if (data.intention) {
     nodes.push(el('p', 'm-meta', 'You meant to'), el('p', 'm-sentence', data.intention))
   } else {
@@ -576,7 +614,7 @@ async function outcome(sessionId) {
     }
     yes.addEventListener('click', () => answer('yes'))
     notYet.addEventListener('click', () => answer('no'))
-    nodes.push(yes, notYet, navRow())
+    nodes.push(yes, notYet)
   } else {
     nodes.push(el('p', 'm-meta', data.outcome === 'yes'
       ? `Good. That's ${data.finished} of ${data.answered}.`
@@ -587,7 +625,7 @@ async function outcome(sessionId) {
       await chrome.storage.local.remove('pendingReview')
       render()
     })
-    nodes.push(done, navRow())
+    nodes.push(done)
   }
 
   show(...nodes)

@@ -258,16 +258,21 @@ state, is untouched — it stays blank on purpose). Same commit adds a `navRow()
 to both `idle()` and `running()`, and a read-only `blocking: <domains>` line
 (`.m-meta`) to `running()`, sourced from `session.blockedDomains`.
 
+**Superseded by Task 5 (Case AG below):** `navRow()`'s buttons moved from full-width text
+buttons at the bottom into a top-right icon-only header row next to the mark. Items 37/38
+below are updated in place (not duplicated) to match; the original bottom-row placement no
+longer exists.
+
 36. Open the popup with no session running (idle view). **Pass:** `.m-mark`'s `::after`
     has a real `background-image` (the three-tint clay gradient), not `none` — check via
     `getComputedStyle(el, '::after').backgroundImage`. Visually: the same glyph as the
     running/ended mark, not a blank outline.
-37. Still in the idle view. **Pass:** a `History` and a `meant.app` button are both visible
-    (`.m-btn[data-variant="quiet"]`, in a `.m-chip-row` after `Disconnect this device`).
+37. Still in the idle view. **Pass:** a `View session history` button and an `Open
+    meant.app` button (by `aria-label`, icon-only — see Case AG) are both visible, inside
+    `[data-popup-header="true"]`.
 38. Configure at least one blocked domain and Start a session. **Pass:** the running view
     shows a `blocking: <domain list>` line (`.m-meta`, right after the elapsed-time line)
-    matching the configured domains, plus the same `History`/`meant.app` buttons after
-    `Stop`.
+    matching the configured domains, plus the same header icon buttons.
 39. **Visual, human/screenshot check:** at the popup's real 360px width, confirm nothing
     animates — no `transition`/`transform` introduced anywhere in this task's CSS or JS
     (PRODUCT.md: the popup animates nothing) — and the two nav buttons render at a
@@ -561,13 +566,17 @@ fixed --m-clay (orange) color that has working contrast against both light and d
 backgrounds. The companion also grows from 28px to 36px and gains a one-shot scale+fade
 "wake" animation on mount.
 
+**Superseded by Case AD (Task 2, next round):** the size described below grew again,
+36px → 52px. Step 61's pass criteria have been updated in place to match; the 28px → 36px
+framing above is left as historical context for why the size-increase test exists at all.
+
 60. Start a session, open a new tab, and emulate dark color scheme on that tab. **Pass:**
     the companion dot's computed `backgroundColor` is `rgb(199, 91, 57)` (--m-clay,
     `#C75B39`), not a color that flips with the color-scheme media query. This confirms
     visibility no longer depends on guessing the page's background colors.
 61. After starting a session, open a new tab. **Pass:** the companion's bounding box width
-    and height are both 36px (not the old 28px), confirming the size increase. Also check
-    that the host element has active animations when measured (via
+    and height are both 52px (not the old 28px/36px), confirming the size increase. Also
+    check that the host element has active animations when measured (via
     `getAnimations({ subtree: false }).length > 0`), confirming the wake animation runs
     on mount — the animation scales from 0.5 to 1 over 360ms with an easing curve.
 
@@ -637,15 +646,188 @@ specifically — clicking into the field during the grace window shows the input
 off by the wrapper's `overflow: hidden` (the outline sits close enough to the wrapper's
 own border that it isn't clipped in practice; no padding/scoping change was needed).
 
+**Superseded by Case AF (Task 4, next round):** the bottom-only 3px strip described above
+was replaced by an SVG stroke traced around the pill's full rounded-rect perimeter. The
+`.m-mark:not(:empty)` / `.m-row-bar[data-kind]` construction inside `[data-timer-pill]` is
+gone; steps 65-66 below now describe the SVG-based assertions that replaced them (the test
+titles and pass criteria were updated in place, not duplicated).
+
 65. Start a session with the `25/5` preset and a sentence typed in. **Pass:**
     `[data-timer-pill="true"]` is visible and contains the SAME editable
-    `input.m-field` holding that sentence (not a separate element) plus a
-    `.m-mark:not(:empty)` strip with one `.m-row-bar[data-kind="attention-1"]` and one
-    `[data-kind="remainder"]` bar inside it. The separate top-level
-    `.m-mark[data-state="running"]` is still visible but has zero `.m-row-bar` children.
-    The `work — N min left` phase line still renders immediately after the pill.
+    `input.m-field` holding that sentence (not a separate element) plus a child `<svg>`
+    with exactly 2 `<rect>` elements (the dashed remainder track and the solid elapsed
+    track). The separate top-level `.m-mark[data-state="running"]` is still visible but
+    has zero `.m-row-bar` children. The `work — N min left` phase line still renders
+    immediately after the pill.
 66. Start a session with `no cycles` selected. **Pass:** `[data-timer-pill="true"]` is
     visible but contains no `.m-mark` at all, and no `... min left` text renders anywhere.
+
+### AC — Extension-ID-shaped domains excluded from review page (Task 1 fix)
+
+Case L (step 40) verified that the live-tracking filter in `extension/sw.js` prevents
+chrome-extension:// URLs from being tracked as domains. This case verifies the server-side
+defence-in-depth filter in `lib/review-data.ts`'s `getReviewData()` — even if historical
+data or a filter bypass accidentally recorded an extension ID as a domain, it never appears
+on the review page's per-domain row list. The shape filter (EXTENSION_ID_SHAPE: exactly 32
+chars, a-p only, no dots) is tested both in isolation (unit test) and end-to-end (E2E test
+injecting real data), proving it excludes junk extension IDs while still including legitimate
+dotless domains like `localhost`.
+
+67. Unit test: `test/review-data.test.js` verifies the exact filter condition that
+    `getReviewData()` uses in its `topAttention` computation. **Pass:** a test row array
+    containing one real domain (`chatgpt.com`) and one extension-ID-shaped junk entry
+    (`emnalgngpciahekjdcgpbgnhmkpjhlhi`, 32 a-p chars) filters to just the real domain when
+    the shape guard `/^[a-p]{32}$/` is applied. A separate assertion confirms `localhost`
+    (another dotless domain, real and legitimate) still passes the same filter.
+68. E2E test: `e2e/review.spec.ts` Case AC. Start a session, inject two attention events
+    directly via `POST /api/events` (one real domain, one extension-ID-shaped string),
+    stop the session, navigate to the review page. **Pass:** `chatgpt.com` is visible on the
+    page (injected real data shows up), and the extension-ID string never appears anywhere
+    in the DOM (`toHaveCount(0)`), confirming the server-side filter is wired and working.
+
+### AD — Companion size 52px (Task 2)
+
+The floating companion overlay on injected pages grew from 36px to 52px, a 44% increase
+in linear dimension. All position/sizing calculations in `extension/companion-overlay.js`
+already derive from the `SIZE` constant, so the change is one line: `const SIZE = 52`.
+The old test at Case F (item 25) expects 36px; that assertion has been updated to expect
+52px as well to reflect the new size.
+
+69. E2E test: `e2e/companion.spec.ts` "the companion is 52px, not the old 36px". Start a
+    session, navigate to an arbitrary page, wait for the companion's wake animation to
+    settle (400ms), measure the companion's bounding box. **Pass:** both width and height
+    equal exactly 52 pixels, confirming the SIZE constant propagated correctly through
+    the CSS and DOM measurement pipeline.
+
+### AE — Companion hover-reveal intention pill (Task 3)
+
+The floating companion's `title` attribute held the intention sentence, but relied on the
+browser's slow/unstyled native tooltip. This adds a real, styled pill
+(`[data-companion-hover-pill="true"]`) that fades in above the dot on hover, showing the
+intention text; the native `title` stays as a supplementary fallback, not removed. The pill
+flips to render below the dot instead of clipping off-screen when the companion sits near
+the top of the viewport, and nudges horizontally when it would overflow a side edge.
+
+70. E2E test: `e2e/companion.spec.ts` "hovering the companion reveals a pill showing the
+    intention, styled and positioned above the dot". Start a session with the intention
+    "write the quarterly report", navigate to an arbitrary page, hover `.dot-wrap`.
+    **Pass:** the pill is `opacity: 0` before hover, becomes `opacity: 1` within 1s of
+    hovering and shows the exact intention text, its bottom edge sits above the dot's
+    top edge (rendered above, not overlapping), and moving the mouse away returns it to
+    `opacity: 0`.
+    Visual check (manual, temp spec deleted after): confirmed the pill is a legible dark-
+    on-light rounded card sitting directly above the dot with a visible gap on a plain
+    page, and — after positioning the companion near the very top of the viewport and
+    hovering it as a fresh gesture (mouse moved away and back, not held down mid-drag) —
+    confirmed the pill flips to render below the dot instead of clipping off the top of
+    the screen.
+
+### AF — Timer pill progress as a full-perimeter SVG loop, not a bottom-only strip (Task 4)
+
+Case AB's fill lived on a thin 3px strip flush with the pill's bottom edge only. This
+replaces the *rendering technique* (not the underlying data — still `cyclePhase()`'s
+`elapsedInPhaseMs`/`phaseMs`, still fully static) with an SVG stroke traced around the
+pill's full existing rounded-rect shape (same 26px radius as `--m-r-field`, not a new
+capsule/stadium shape). `running()`'s `phase` branch now defers construction to a
+`requestAnimationFrame` callback (needs the pill's real rendered `getBoundingClientRect()`,
+since the sentence can wrap to two lines): it builds two overlaid `<rect>`s inside a child
+`<svg>` — a dashed `var(--m-edge)` remainder track and a solid `var(--m-clay)` elapsed
+track — then reads the elapsed track's own `getTotalLength()` to convert the elapsed
+fraction into an exact `stroke-dasharray` in pixels, no manual perimeter formula. The
+wrapper's plain CSS border (`border: var(--m-stroke) solid var(--m-ink)`) is suppressed
+via `pillWrap.style.border = 'none'`, set only inside the `if (phase)` branch — the
+no-cycle case never runs the `requestAnimationFrame` callback at all, so it keeps the
+plain CSS border exactly as before.
+
+71. E2E test: `e2e/popup.spec.ts` "the intention pill's progress is drawn as an SVG loop
+    around its full perimeter, not a bottom-only strip". Start a session with the `25/5`
+    preset. **Pass:** `[data-timer-pill="true"]` contains a visible `<svg>` with exactly 2
+    `<rect>` children; the second rect's `stroke-dasharray` splits into `filled total`
+    where `0 < filled < total` (a genuine elapsed fraction, not a placeholder); the
+    wrapper's own computed `border-style` is `none` (the SVG, not the CSS border, carries
+    the visible outline).
+72. E2E test: `e2e/popup.spec.ts` "the pill keeps its plain CSS border, no SVG, when no
+    cycle is configured". Start a session with `no cycles` selected. **Pass:**
+    `[data-timer-pill="true"]` contains zero `<svg>` elements and its computed
+    `border-style` is NOT `none` (the plain CSS border still renders).
+    Visual check (temp spec deleted after): with `session.startedAt` pushed back ~10
+    minutes into a 25/5 work phase, confirmed the pill's full outline shows the two-tone
+    split — solid clay tracing from the left edge across the top and cleanly around the
+    top-right corner partway down the right edge (matching the elapsed fraction), then
+    dashed for the remainder around the rest of the loop — with no visible gaps or
+    overlaps at any of the four rounded corners, the intention text still legible inside,
+    and the phase text still directly under the pill. Separately, with a freshly-started
+    session (still within the grace window, no time-shift), clicking into the intention
+    field confirmed the input's `:focus-visible` outline renders fully intact around the
+    pill's edge on all four sides, not clipped by the new SVG.
+
+### AG — History/meant.app moved into a top-right icon header row (Task 5)
+
+Case K's `navRow()` used to render `History`/`meant.app` as two full-width text buttons at
+the very bottom of the popup, after `Disconnect this device`/`Stop`. This moves them into
+a new `[data-popup-header="true"]` row sitting beside the existing `.m-mark` glyph, top of
+the popup: `header(mark)` wraps `mark` and `navRow()` together and replaces `mark` as the
+first argument to both `idle()`'s and `running()`'s final `show(...)` call (the trailing
+`navRow()` argument is dropped from each, since `navRow()` now runs inside `header()`
+instead). `navRow()`'s own buttons are now icon-only: "History" reuses the existing
+`.m-mark[data-state="ended"]` glyph (`markGlyph()` — no new icon system, per this
+product's own rule that the mark is the only icon this product has) and "meant.app" gets
+one small hand-drawn SVG matching this codebase's one existing precedent for a custom
+glyph (`app/page.tsx`'s beat-arrow: `stroke="currentColor" stroke-width="1.5"
+stroke-linecap="round" stroke-linejoin="round" fill="none"`). Both buttons carry a real
+`aria-label` (`View session history` / `Open meant.app`) since they now carry no visible
+text. No new class: `data-popup-header` is an attribute, and `.m-mark`/`.m-btn`/
+`.m-chip-row` are reused, not extended.
+
+73. E2E test: `e2e/popup.spec.ts` "History and meant.app render as icon buttons in a header
+    row, top-right, not full-width text buttons at the bottom". Pair the popup (idle
+    view). **Pass:** `[data-popup-header="true"]` is visible and contains both a `View
+    session history` button and an `Open meant.app` button; the `View session history`
+    button has no visible text (`toHaveText('')`) and the `Open meant.app` button contains
+    exactly one `<svg>`; within the header, the `.m-chip-row`'s bounding box sits to the
+    right of the `.m-mark`'s (mark left, icons right).
+    Visual check (temp spec deleted after): screenshotted both the idle and the running
+    popup at 360px width. Confirmed on both: the mark glyph and the two icon buttons sit on
+    one row at the top, mark left, icons right, nothing overlapping or misaligned; each
+    icon button renders inside its own `.m-btn[data-variant="quiet"]` pill border, reading
+    as clearly clickable even with no visible text; the old full-width `History`/
+    `meant.app` text buttons are gone from the bottom of both views (idle now ends with
+    `Start`/`Disconnect this device`, running now ends with `Stop`, no nav row after
+    either).
+    Existing tests updated to match (not left broken): `e2e/popup.spec.ts`'s two prior
+    call sites that asserted on the buttons' old visible text names (`History`/
+    `meant.app`) now target the `aria-label`s instead, and one prior test's
+    `page.locator('.m-mark')` (previously unique) is scoped to `[data-state="idle"]` now
+    that the reused History icon is a second `.m-mark` on the same page.
+
+### AH — Cycle-preset row visual grouping without breaking exclusive selection (Task 6)
+
+The cycle-preset row (25/5 · 50/10 · custom · no cycles) renders as four sibling buttons
+in a single `.m-chip-row` with exclusive single-select behavior spanning all 4 options via
+one `chipGroup()` call. To visually separate the two numeric presets (work/break minutes)
+from the custom/no-cycles options without splitting into two separate chipGroups (which
+would break exclusive selection across the gap), this adds a CSS-only visual gap before
+the 3rd chip. The row can't use the existing `data-chip-layout="cluster"` pattern (which
+wraps two separate label+chipGroup pairs in `whereGroup`/`blockGroup` elsewhere) — that
+pattern explicitly requires two independent groups. Instead, `cycle.row.dataset.chipLayout
+= 'paired'` tags the single row with a new attribute value, and `[data-surface="popup"]
+[data-chip-layout="paired"] > .m-chip:nth-child(3) { margin-left: 12px; }` adds a larger
+gap before the 3rd chip only.
+
+74. E2E test: `e2e/popup.spec.ts` "the cycle-preset row visually separates the two
+    duration presets from custom/no cycles". Pair the popup (idle view). **Pass:**
+    `[data-chip-layout="paired"]` is visible and contains exactly 4 `.m-chip` elements.
+    Measure the gaps: the gap between the 1st and 2nd chip (within the first group) is
+    smaller than the gap between the 2nd and 3rd chip (the visual separator). **Pass:**
+    exclusive single-select still spans all 4 buttons, including across the new visual
+    gap — clicking the 1st chip (25/5) to press it, then clicking the 3rd chip (custom)
+    un-presses the 1st, proving this is still ONE chipGroup, not two.
+    Visual check (temp spec + screenshot, deleted after): rendered the idle popup at
+    360px width and screenshotted the cycle-preset row. Confirmed by eye: the two numeric
+    presets ("25/5", "50/10") read as one visual pair on the left; a clearly larger gap
+    sits before "custom"; "custom" and "no cycles" read together as a second pair on the
+    right; the row overall reads as two related visual groups, not one undifferentiated
+    strip of four identical chips.
 
 ## What Sonnet writes vs. what Haiku runs
 

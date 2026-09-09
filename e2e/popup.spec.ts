@@ -84,20 +84,75 @@ test.describe('popup, idle state', () => {
     // Task 6: the idle mark must render the same decorative gradient glyph as
     // running/ended, not a blank outline (the CSS bug — data-state="idle" was
     // missing from the ::after selector).
-    const markBackground = await page.locator('.m-mark').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
+    const markBackground = await page.locator('.m-mark[data-state="idle"]').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
     expect(markBackground).not.toBe('none')
 
     // Task 6: nav row present in the idle view too, and both buttons actually open a
     // real tab at the right URL (chrome.tabs.create), not just render.
-    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'meant.app', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'View session history', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Open meant.app', exact: true })).toBeVisible()
 
-    const historyPage = await clickAndExpectNewTab(page, context, 'History', 'http://localhost:3000/dashboard')
+    const historyPage = await clickAndExpectNewTab(page, context, 'View session history', 'http://localhost:3000/dashboard')
     expect(historyPage.url()).toContain('/dashboard')
     await historyPage.close()
 
-    const landingPage = await clickAndExpectNewTab(page, context, 'meant.app', 'http://localhost:3000/')
+    const landingPage = await clickAndExpectNewTab(page, context, 'Open meant.app', 'http://localhost:3000/')
     await landingPage.close()
+  })
+
+  // Case AG (Task 5): History/meant.app move into a top-right icon header row instead of
+  // full-width text buttons at the bottom.
+  test('History and meant.app render as icon buttons in a header row, top-right, not full-width text buttons at the bottom', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const header = page.locator('[data-popup-header="true"]')
+    await expect(header).toBeVisible()
+    const historyButton = header.getByRole('button', { name: 'View session history' })
+    const meantButton = header.getByRole('button', { name: 'Open meant.app' })
+    await expect(historyButton).toBeVisible()
+    await expect(meantButton).toBeVisible()
+
+    // Icon-only: no visible text content, an SVG (the History icon is its own small
+    // clock glyph, distinct from the header's real .m-mark state indicator) inside.
+    await expect(historyButton).toHaveText('')
+    await expect(historyButton.locator('svg')).toHaveCount(1)
+    await expect(meantButton.locator('svg')).toHaveCount(1)
+
+    // The header's mark and nav row sit side by side, mark on the left.
+    const markBox = (await header.locator('.m-mark').boundingBox())!
+    const navBox = (await header.locator('.m-chip-row').boundingBox())!
+    expect(navBox.x).toBeGreaterThan(markBox.x)
+  })
+
+  // Case AH (Task 6): Cycle-preset row visually separates the two duration presets from
+  // custom/no cycles without splitting the chipGroup, preserving exclusive single-select
+  // across all 4 options.
+  test('the cycle-preset row visually separates the two duration presets from custom/no cycles', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const cycleRow = page.locator('[data-chip-layout="paired"]')
+    await expect(cycleRow).toBeVisible()
+    const chips = cycleRow.locator('.m-chip')
+    await expect(chips).toHaveCount(4)
+
+    const secondBox = (await chips.nth(1).boundingBox())! // "50/10"
+    const thirdBox = (await chips.nth(2).boundingBox())! // "custom"
+    const firstGap = (await chips.nth(1).boundingBox())!.x - ((await chips.nth(0).boundingBox())!.x + (await chips.nth(0).boundingBox())!.width)
+    const groupGap = thirdBox.x - (secondBox.x + secondBox.width)
+    expect(groupGap).toBeGreaterThan(firstGap) // the gap between groups is wider than the gap within a group
+
+    // Exclusive selection still works correctly across the whole row, including across
+    // the new visual gap — clicking "custom" (in the second visual group) must un-press
+    // "25/5" (in the first visual group), proving this is still ONE chipGroup, not two.
+    await chips.first().click() // 25/5
+    await expect(chips.first()).toHaveAttribute('aria-pressed', 'true')
+    await chips.nth(2).click() // custom
+    await expect(chips.nth(2)).toHaveAttribute('aria-pressed', 'true')
+    await expect(chips.first()).toHaveAttribute('aria-pressed', 'false')
   })
 
   // The duration picker is chipGroup's single-select path (no multi/removable) — one of
@@ -366,14 +421,14 @@ test.describe('popup, running state', () => {
     await page.getByRole('button', { name: 'Start', exact: true }).click()
 
     await expect(page.getByText(/^blocking: .*example\.org/)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'History', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'meant.app', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'View session history', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Open meant.app', exact: true })).toBeVisible()
 
-    const historyPage = await clickAndExpectNewTab(page, context, 'History', 'http://localhost:3000/dashboard')
+    const historyPage = await clickAndExpectNewTab(page, context, 'View session history', 'http://localhost:3000/dashboard')
     expect(historyPage.url()).toContain('/dashboard')
     await historyPage.close()
 
-    const landingPage = await clickAndExpectNewTab(page, context, 'meant.app', 'http://localhost:3000/')
+    const landingPage = await clickAndExpectNewTab(page, context, 'Open meant.app', 'http://localhost:3000/')
     await landingPage.close()
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
@@ -433,11 +488,10 @@ test.describe('popup, running state', () => {
     // A freshly-started session is always within the sentence-edit grace window, so
     // sentenceNode is always the editable <input> here, never the read-only <p>.
     await expect(pillWrap.locator('input.m-field')).toHaveValue('pill outline test')
-    // The progress strip lives INSIDE the pill wrapper (not as a top-level sibling mark).
-    const progressStrip = pillWrap.locator('.m-mark:not(:empty)')
-    await expect(progressStrip).toBeVisible()
-    await expect(progressStrip.locator('.m-row-bar[data-kind="attention-1"]')).toHaveCount(1)
-    await expect(progressStrip.locator('.m-row-bar[data-kind="remainder"]')).toHaveCount(1)
+    // The progress loop lives INSIDE the pill wrapper as an SVG (not a top-level sibling mark).
+    const svg = pillWrap.locator('svg')
+    await expect(svg).toBeVisible()
+    await expect(svg.locator('rect')).toHaveCount(2)
 
     // The plain running-state mark (matching idle/ended) still exists as its own
     // top-level element, unaffected — it no longer carries the fill.
@@ -464,6 +518,51 @@ test.describe('popup, running state', () => {
     await expect(pillWrap).toBeVisible()
     await expect(pillWrap.locator('.m-mark')).toHaveCount(0)
     await expect(page.getByText(/min left$/)).toHaveCount(0)
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the intention pill\'s progress is drawn as an SVG loop around its full perimeter, not a bottom-only strip', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5' }).click()
+    await page.locator('input.m-field').first().fill('loop test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    await expect(pillWrap).toBeVisible()
+    const svg = pillWrap.locator('svg')
+    await expect(svg).toBeVisible()
+    const rects = svg.locator('rect')
+    await expect(rects).toHaveCount(2) // one track rect, one progress rect
+
+    // The progress rect's stroke-dasharray should reflect a genuine, non-zero elapsed
+    // fraction of the perimeter, not a fixed placeholder value.
+    const dasharray = await rects.nth(1).getAttribute('stroke-dasharray')
+    expect(dasharray).toBeTruthy()
+    const [filled, total] = dasharray!.split(' ').map(Number)
+    expect(filled).toBeGreaterThan(0)
+    expect(filled).toBeLessThan(total)
+
+    // The wrapper's own CSS border is suppressed while the SVG carries the visible outline.
+    await expect(pillWrap).toHaveCSS('border-style', 'none')
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the pill keeps its plain CSS border, no SVG, when no cycle is configured', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: 'no cycles' }).click()
+    await page.locator('input.m-field').first().fill('no cycle loop test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    await expect(pillWrap).toBeVisible()
+    await expect(pillWrap.locator('svg')).toHaveCount(0)
+    await expect(pillWrap).not.toHaveCSS('border-style', 'none')
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
