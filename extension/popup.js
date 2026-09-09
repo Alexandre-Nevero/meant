@@ -710,6 +710,25 @@ async function outcome(sessionId) {
   } else {
     nodes.push(el('p', 'm-meta', "You didn't say what you meant to do."))
   }
+
+  const TINTS = ['attention-1', 'attention-2', 'attention-3']
+  const bandSegments = [
+    ...data.topAttention.map((r, i) => ({ kind: TINTS[i], flex: r.seconds })),
+    ...(data.awaySeconds > 0 ? [{ kind: 'away', flex: data.awaySeconds }] : []),
+  ].filter((s) => s.flex > 0)
+  if (bandSegments.length > 0) {
+    const band = el('p', 'm-mark')
+    band.dataset.state = 'ended'
+    band.dataset.band = 'session'
+    for (const s of bandSegments) {
+      const bar = el('span', 'm-row-bar')
+      bar.dataset.kind = s.kind
+      bar.style.flex = String(s.flex) // the one legitimate inline style: it IS the data
+      band.append(bar)
+    }
+    nodes.push(band)
+  }
+
   for (const row of data.topAttention) {
     nodes.push(el('p', 'm-meta', `${row.domain} — ${Math.round(row.seconds / 60)} min`))
   }

@@ -617,3 +617,52 @@ test.describe('popup, running state', () => {
   })
 
 })
+
+test('the outcome screen shows a colored attention band between the intention and the per-domain rows', async ({ context, extensionId, freshAccount }) => {
+  const setupPage = await context.newPage()
+  await freshAccount(setupPage)
+  await pairPopup(setupPage, extensionId)
+  await setupPage.locator('input.m-field').first().fill('outcome band test')
+  await setupPage.getByRole('button', { name: 'Start' }).click()
+
+  const sessionId: string = await setupPage.evaluate(
+    () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+  )
+  const { token } = await setupPage.evaluate(
+    () => new Promise<{ token: string }>((r) => chrome.storage.local.get('token', (v: any) => r(v))),
+  )
+  await setupPage.request.post('/api/events', {
+    headers: { authorization: `Bearer ${token}` },
+    data: {
+      sessionId,
+      events: [
+        { kind: 'attention', domain: 'chatgpt.com', seconds: 300, at: new Date().toISOString() },
+        { kind: 'away', domain: null, seconds: 60, at: new Date().toISOString() },
+      ],
+    },
+  })
+  await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  await setupPage.reload()
+
+  const band = setupPage.locator('.m-mark[data-band="session"]')
+  await expect(band).toBeVisible()
+  const bars = band.locator('.m-row-bar')
+  await expect(bars).toHaveCount(2) // one attention-1, one away
+  await expect(bars.nth(0)).toHaveAttribute('data-kind', 'attention-1')
+  await expect(bars.nth(1)).toHaveAttribute('data-kind', 'away')
+
+  // Additive — the existing text rows are still there too.
+  await expect(setupPage.getByText(/chatgpt\.com — \d+ min/)).toBeVisible()
+})
+
+test('the outcome screen shows no band when there is no attention data at all', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+  await page.locator('input.m-field').first().fill('empty outcome test')
+  await page.getByRole('button', { name: 'Start' }).click()
+  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  await page.reload()
+
+  await expect(page.locator('.m-mark[data-band="session"]')).toHaveCount(0)
+})

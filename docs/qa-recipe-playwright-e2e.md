@@ -988,6 +988,34 @@ displays — recomputed only when the popup itself re-renders.
     appears anywhere — the fallback plain elapsed line, confirming this branch is
     unchanged by the consolidation fix.
 
+### AM — Outcome-screen attention band, giving `.m-row-bar` its first producer (Task 6)
+
+A prior round shipped the paint rules for `.m-row-bar[data-kind="..."]` (attention-1/2/3,
+away, remainder) and the `.m-mark:not(:empty)` flex layout, but nothing ever rendered them
+outside the running popup's timer loop — the post-session outcome screen still listed
+attention only as plain text rows. `outcome()` now also builds a `.m-mark[data-band="session"]`
+between the intention sentence and the per-domain text rows: one `.m-row-bar[data-kind=...]`
+per non-zero segment (`attention-1/2/3` for `data.topAttention` in order, `away` last when
+`data.awaySeconds > 0`), each with `style.flex` set to its raw seconds — the one legitimate
+inline style, since it IS the data. No band renders at all when every segment would be zero.
+
+89. E2E test: `e2e/popup.spec.ts` "the outcome screen shows a colored attention band between
+    the intention and the per-domain rows". Start a session, post one `attention` event
+    (300s, chatgpt.com) and one `away` event (60s) via `/api/events`, stop, reload onto the
+    outcome screen. **Pass:** `.m-mark[data-band="session"]` is visible, contains exactly 2
+    `.m-row-bar` children, the first has `data-kind="attention-1"` and the second
+    `data-kind="away"` — and the existing `chatgpt.com — N min` text row is still present
+    (additive, not a replacement).
+90. E2E test: `e2e/popup.spec.ts` "the outcome screen shows no band when there is no
+    attention data at all". Start and immediately stop a session with no events posted.
+    **Pass:** `.m-mark[data-band="session"]` has zero matches — an empty session renders no
+    band rather than an empty or zero-width one.
+
+Manual/visual: with 3 attention domains (600s/300s/150s) plus 120s away posted before stop,
+the band renders as one full-width bar with four swatches in decreasing width, left to right:
+solid dark clay, solid mid clay, solid light clay, then the diagonal-hatch away pattern —
+same left-to-right order as the text rows underneath.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

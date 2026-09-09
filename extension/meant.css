@@ -100,6 +100,11 @@ button, input, select { font: inherit; color: inherit; }
 .m-mark[data-state="ended"]:not(:empty) { border: none; }
 .m-mark:not(:empty) > .m-row-bar { width: auto; height: 100%; border-radius: var(--m-r-chip); }
 
+/* The session's attention as one full-width band, above the rows that label its swatches
+ * (docs/design-toolkit.md §2, "outline, then the plan, then the finished band, then the
+ * rows"). data-band, not a 14th class. */
+[data-surface="popup"] .m-mark[data-band="session"] { width: 100%; height: 14px; }
+
 /* ---------- .m-sentence — the outline that holds it ---------- */
 
 .m-sentence {
