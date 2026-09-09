@@ -86,6 +86,12 @@ test.describe('popup, idle state', () => {
     const markBox = (await header.locator('.m-mark').boundingBox())!
     const navBox = (await header.locator('.m-chip-row').boundingBox())!
     expect(navBox.x).toBeGreaterThan(markBox.x)
+
+    // Task 6: the idle mark must render the same decorative gradient glyph as
+    // running/ended, not a blank outline (the CSS bug — data-state="idle" was
+    // missing from the ::after selector).
+    const markBackground = await page.locator('.m-mark[data-state="idle"]').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
+    expect(markBackground).not.toBe('none')
   })
 
   // Case AH (Task 6, updated Task 4): Cycle-preset row visually separates the two
