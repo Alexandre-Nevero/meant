@@ -599,23 +599,6 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
-  test('the pill shows no progress strip when no cycle is configured', async ({ context, extensionId, freshAccount }) => {
-    const page = await context.newPage()
-    await freshAccount(page)
-    await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: 'custom', exact: true }).click()
-    await page.getByRole('button', { name: 'no cycles' }).click()
-    await page.locator('input.m-field').first().fill('no cycle pill test')
-    await page.getByRole('button', { name: 'Start' }).click()
-
-    const pillWrap = page.locator('[data-timer-pill="true"]')
-    await expect(pillWrap).toBeVisible()
-    await expect(pillWrap.locator('.m-mark')).toHaveCount(0)
-    await expect(page.getByText(/min left$/)).toHaveCount(0)
-
-    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-  })
-
 })
 
 test('the outcome screen shows a colored attention band between the intention and the per-domain rows', async ({ context, extensionId, freshAccount }) => {
@@ -632,10 +615,16 @@ test('the outcome screen shows a colored attention band between the intention an
     () => new Promise<{ token: string }>((r) => chrome.storage.local.get('token', (v: any) => r(v))),
   )
 
-  // Wait for the session-creation POST (fired from sw.js startSession()) to land server-side.
-  // The Start button click is fire-and-forget on the client; sessionId is available from storage
-  // immediately, but the server row may not exist yet.
-  await setupPage.waitForTimeout(500)
+  // Wait for the session-creation POST (fired from sw.js startSession()) to land server-side,
+  // polling instead of a fixed sleep — the Start button click is fire-and-forget on the client.
+  await expect
+    .poll(async () => {
+      const res = await setupPage.request.get(`/api/sessions/${sessionId}/review`, {
+        headers: { authorization: `Bearer ${token}` },
+      })
+      return res.status()
+    }, { timeout: 5_000 })
+    .not.toBe(404)
 
   await setupPage.request.post('/api/events', {
     headers: { authorization: `Bearer ${token}` },

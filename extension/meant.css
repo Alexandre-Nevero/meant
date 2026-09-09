@@ -103,7 +103,7 @@ button, input, select { font: inherit; color: inherit; }
 /* The session's attention as one full-width band, above the rows that label its swatches
  * (docs/design-toolkit.md §2, "outline, then the plan, then the finished band, then the
  * rows"). data-band, not a 14th class. */
-[data-surface="popup"] .m-mark[data-band="session"] { width: 100%; height: 14px; }
+[data-surface="popup"] .m-mark[data-band="session"] { width: 100%; height: 14px; margin: 0; }
 
 /* ---------- .m-sentence — the outline that holds it ---------- */
 

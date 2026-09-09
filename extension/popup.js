@@ -711,11 +711,11 @@ async function outcome(sessionId) {
     nodes.push(el('p', 'm-meta', "You didn't say what you meant to do."))
   }
 
-  const TINTS = ['attention-1', 'attention-2', 'attention-3']
-  const bandSegments = [
-    ...data.topAttention.map((r, i) => ({ kind: TINTS[i], flex: r.seconds })),
-    ...(data.awaySeconds > 0 ? [{ kind: 'away', flex: data.awaySeconds }] : []),
-  ].filter((s) => s.flex > 0)
+  const bandSegments = toSegments({
+    attention: Object.fromEntries(data.topAttention.map((r) => [r.domain, r.seconds])),
+    away: data.awaySeconds,
+    break: 0,
+  })
   if (bandSegments.length > 0) {
     const band = el('p', 'm-mark')
     band.dataset.state = 'ended'

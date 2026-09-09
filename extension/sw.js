@@ -250,6 +250,11 @@ async function transition({ mode, domain, at = Date.now() }) {
   if (!session) return
   const prior = session.slice ?? emptySlice(new Date(session.startedAt).getTime())
   const { events, state } = advance(prior, { at, mode, domain })
+  // Known limitation: this read-modify-write is a lost-update race if two transition() calls
+  // overlap (e.g. a tab switch racing the 30s tick alarm) — the later write can silently drop
+  // an earlier call's tally increment. Harmless for slice/dwellSince (last-write-wins state)
+  // but tally is an accumulator, so a lost update means permanently undercounted seconds.
+  // Not fixed here — recorded so it isn't rediscovered from scratch.
   const tally = session.tally?.attention ? session.tally : { attention: {}, away: 0, break: 0 }
   for (const event of events) {
     await enqueue(session, event)
