@@ -346,4 +346,33 @@ test.describe('session lifecycle', () => {
     await page.waitForTimeout(500)
     await expect(blockedPage).toHaveURL(/blocked\.html\?d=example\.net/)
   })
+
+  test('session.tally accumulates real attention seconds as tabs are switched', async ({ context, extensionId, freshAccount }) => {
+    const firstTab = await context.newPage()
+    await firstTab.goto('https://example.com')
+    await firstTab.bringToFront()
+
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairAndOpenPopup(page, extensionId)
+    await firstTab.bringToFront()
+    await page.locator('input.m-field').first().fill('tally test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    // Stay on example.com long enough to cross attribution.js's 1-second emission floor.
+    await firstTab.waitForTimeout(2_000)
+
+    // Switch to a second real domain — this closes the example.com slice, which is what
+    // actually writes its seconds into session.tally (tally only grows on slice close).
+    const secondTab = await context.newPage()
+    await secondTab.goto('https://example.org')
+    await secondTab.bringToFront()
+    await secondTab.waitForTimeout(500)
+
+    await expect
+      .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session?.tally?.attention?.['example.com'])))))
+      .toBeGreaterThan(0)
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
 })

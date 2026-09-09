@@ -829,6 +829,28 @@ gap before the 3rd chip only.
     right; the row overall reads as two related visual groups, not one undifferentiated
     strip of four identical chips.
 
+### AI — `session.tally` accumulates real attention seconds (Task 2)
+
+`extension/sw.js`'s `session.tally` shape (`{ attention: {[domain]: seconds}, away: number,
+break: number }`) was reserved by an earlier round but never actually written to —
+`transition()` closed slices and enqueued events but never touched `tally`. This also
+surfaced a real bug: `startSession()` seeded `tally: {}` (a bare empty object), and
+`transition()`'s intended fallback `session.tally ?? { attention: {}, away: 0, break: 0 }`
+never fires for `{}` (only `null`/`undefined` trigger `??`), so the very first attention
+event to close would have thrown `Cannot set properties of undefined` against
+`tally.attention[domain]`. Fixed by seeding the correct shape at session start and by
+having `transition()` itself defensively normalize any pre-existing bare-`{}` session data
+(`session.tally?.attention ? session.tally : { attention: {}, away: 0, break: 0 }`), then
+accumulating each closed event's seconds into the matching bucket every time `transition()`
+runs.
+
+75. E2E test: `e2e/session-lifecycle.spec.ts` "session.tally accumulates real attention
+    seconds as tabs are switched". Start a session while already on `example.com`, stay
+    long enough to cross `attribution.js`'s 1-second emission floor, then switch to
+    `example.org` (closing the `example.com` slice, which is what actually writes its
+    seconds into `session.tally`). **Pass:** `session.tally.attention['example.com']`
+    is a number greater than 0.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
