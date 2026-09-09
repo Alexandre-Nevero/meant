@@ -26,7 +26,9 @@ test('a timed session ends itself once its planned duration elapses', async ({ c
   await pairAndOpenPopup(page, extensionId)
 
   await page.locator('input.m-field').first().fill('elapsed test')
-  await page.getByRole('button', { name: '25 min' }).click()
+  // 25 planned minutes via the merged picker: custom's work input defaults to 25.
+  await page.getByRole('button', { name: 'custom', exact: true }).click()
+  await page.getByRole('button', { name: 'no cycles', exact: true }).click()
   await page.getByRole('button', { name: 'Start' }).click()
 
   const sessionId: string = await page.evaluate(

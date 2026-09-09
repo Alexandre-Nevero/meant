@@ -220,57 +220,102 @@ function header(mark) {
   return wrap
 }
 
-function cyclePresetKey(cycle) {
-  if (!cycle) return 'none'
-  const preset = CYCLE_PRESETS.find((p) => p.work === cycle.work && p.break === cycle.break)
-  return preset ? `${preset.work}/${preset.break}` : 'custom'
-}
+/** 25/5 · 50/10 · custom — one single-select, always visible. Custom reveals labelled
+ *  work/break inputs plus two more chips (until I stop / no cycles), at-most-one-of-two.
+ *  `.value` is `{ plannedMinutes, cycle }` directly — the exact shape the Start handler
+ *  already sends to sw.js, so nothing downstream of this picker needs to change. */
+function cycleDurationPicker(lastChoice) {
+  const restored = restore(lastChoice)
+  let mode = restored.mode
+  let customMode = restored.customMode
 
-/** 25/5 · 50/10 · custom · no cycles. `custom` reveals two number inputs (`customRow`,
- *  rendered separately so the caller controls where it sits). `.value` is `{work,break}` or
- *  `null` — `null` (picking "no cycles") is today's one-continuous-block behaviour. */
-function cyclePicker(initialCycle) {
-  const key = cyclePresetKey(initialCycle)
-  const options = [
-    ...CYCLE_PRESETS.map((p) => ({ label: `${p.work}/${p.break}`, value: `${p.work}/${p.break}` })),
-    { label: 'custom', value: 'custom' },
-    { label: 'no cycles', value: 'none' },
-  ]
+  const workLabelText = el('span', null, customMode === 'none' ? 'minutes' : 'work')
+  const workLabel = el('label', 'm-meta')
+  const workInput = el('input', 'm-chip')
+  workInput.type = 'number'
+  workInput.min = '1'
+  workInput.dataset.chipRole = 'number'
+  workInput.value = String(restored.work)
+  workLabel.append(workLabelText, workInput)
 
-  const customWork = el('input', 'm-chip')
-  customWork.type = 'number'
-  customWork.min = '1'
-  customWork.style.width = '64px'
-  const customBreak = el('input', 'm-chip')
-  customBreak.type = 'number'
-  customBreak.min = '1'
-  customBreak.style.width = '64px'
-  customWork.value = String(key === 'custom' ? initialCycle.work : 25)
-  customBreak.value = String(key === 'custom' ? initialCycle.break : 5)
+  const breakLabelText = el('span', null, 'break')
+  const breakLabel = el('label', 'm-meta')
+  const brkInput = el('input', 'm-chip')
+  brkInput.type = 'number'
+  brkInput.min = '1'
+  brkInput.dataset.chipRole = 'number'
+  brkInput.value = String(restored.brk)
+  brkInput.disabled = customMode === 'none'
+  breakLabel.append(breakLabelText, brkInput)
 
-  const customRow = el('div', 'm-chip-row')
-  customRow.append(customWork, el('span', null, '/'), customBreak)
-  customRow.hidden = key !== 'custom'
+  const inputsRow = el('div')
+  inputsRow.dataset.chipLayout = 'custom'
+  inputsRow.append(workLabel, el('span', null, '/'), breakLabel)
 
-  const group = chipGroup(options, {
-    mono: true,
-    value: key,
-    onChange: (v) => { customRow.hidden = v !== 'custom' },
-  })
+  const openChip = el('button', 'm-chip', 'until I stop')
+  openChip.type = 'button'
+  openChip.setAttribute('aria-pressed', String(customMode === 'open'))
+  const noneChip = el('button', 'm-chip', 'no cycles')
+  noneChip.type = 'button'
+  noneChip.setAttribute('aria-pressed', String(customMode === 'none'))
+  const customChipsRow = el('div', 'm-chip-row')
+  customChipsRow.append(openChip, noneChip)
+
+  const customRow = el('div')
+  customRow.append(inputsRow, customChipsRow)
+  customRow.hidden = mode !== 'custom'
+
+  function setCustomMode(next) {
+    customMode = next
+    openChip.setAttribute('aria-pressed', String(next === 'open'))
+    noneChip.setAttribute('aria-pressed', String(next === 'none'))
+    brkInput.disabled = next === 'none'
+    workLabelText.textContent = next === 'none' ? 'minutes' : 'work'
+  }
+  openChip.addEventListener('click', () => setCustomMode(customMode === 'open' ? 'timed' : 'open'))
+  noneChip.addEventListener('click', () => setCustomMode(customMode === 'none' ? 'timed' : 'none'))
+  // Typing in either field is itself a choice of "timed" — editing numbers a pressed
+  // chip is ignoring would be a trap. workInput's guard is asymmetric on purpose: under
+  // "no cycles" the work field IS the session length, so editing it must not leave "none".
+  workInput.addEventListener('input', () => { if (customMode === 'open') setCustomMode('timed') })
+  brkInput.addEventListener('input', () => { if (customMode !== 'timed') setCustomMode('timed') })
+
+  const level1 = chipGroup(
+    [{ label: '25/5', value: '25/5' }, { label: '50/10', value: '50/10' }, { label: 'custom', value: 'custom' }],
+    { mono: true, value: mode, onChange: (v) => { mode = v; customRow.hidden = v !== 'custom' } },
+  )
+  level1.row.dataset.chipLayout = 'paired'
 
   return {
-    row: group.row,
+    row: level1.row,
     customRow,
     get value() {
-      const v = group.value
-      if (v === 'none') return null
-      if (v === 'custom') {
-        return { work: Number(customWork.value) || 25, break: Number(customBreak.value) || 5 }
+      const w = Number(workInput.value) || 25
+      const b = Number(brkInput.value) || 5
+      if (level1.value !== 'custom') {
+        const [pw, pb] = level1.value.split('/').map(Number)
+        return { plannedMinutes: pw + pb, cycle: { work: pw, break: pb } }
       }
-      const [work, brk] = v.split('/').map(Number)
-      return { work, break: brk }
+      if (customMode === 'none') return { plannedMinutes: w, cycle: null }
+      if (customMode === 'open') return { plannedMinutes: null, cycle: { work: w, break: b } }
+      return { plannedMinutes: w + b, cycle: { work: w, break: b } }
     },
   }
+}
+
+/** Reconstructs the picker's {mode, customMode, work, brk} starting state from a saved
+ *  { plannedMinutes, cycle } choice — or the default when there is none yet. */
+function restore(lastChoice) {
+  if (!lastChoice) return { mode: '25/5', customMode: 'timed', work: 25, brk: 5 }
+  const { plannedMinutes: pm, cycle: c } = lastChoice
+  if (!c) return { mode: 'custom', customMode: 'none', work: pm ?? 25, brk: 5 }
+  const preset = CYCLE_PRESETS.find((p) => p.work === c.work && p.break === c.break)
+  if (preset && pm === preset.work + preset.break) {
+    return { mode: `${preset.work}/${preset.break}`, customMode: 'timed', work: c.work, brk: c.break }
+  }
+  // A preset pair with a mismatched duration is an old-model session (e.g. 50 min through
+  // two 25/5 cycles) — lands in custom, exactly where the new model puts that shape.
+  return { mode: 'custom', customMode: pm == null ? 'open' : 'timed', work: c.work, brk: c.break }
 }
 
 async function fetchLists() {
@@ -355,14 +400,8 @@ async function idle() {
   const knownWorkSites = lists.workSites ?? []
   const distractSites = lists.distractSites ?? []
 
-  const duration = chipGroup(
-    [{ label: '25 min', value: '25' }, { label: '50 min', value: '50' }, { label: 'until I stop', value: '' }],
-    { mono: true, value: lastChoice ? (lastChoice.plannedMinutes == null ? '' : String(lastChoice.plannedMinutes)) : '25' },
-  )
-
-  // First ever session: cycle defaults to 50/10 (Step 3). A returning session recalls last time's pick.
-  const cycle = cyclePicker(lastChoice ? lastChoice.cycle : { work: 50, break: 10 })
-  cycle.row.dataset.chipLayout = 'paired'
+  // First ever session: 25/5 (30 min). A returning session recalls last time's pick.
+  const picker = cycleDurationPicker(lastChoice)
 
   // First ever session: workSites from the API, none pre-selected.
   const workSiteValues = lastChoice ? lastChoice.workSites : []
@@ -400,8 +439,7 @@ async function idle() {
   start.dataset.variant = 'primary'
   start.addEventListener('click', async () => {
     start.disabled = true
-    const plannedMinutes = duration.value ? Number(duration.value) : null
-    const cycleValue = cycle.value
+    const { plannedMinutes, cycle: cycleValue } = picker.value
     const workSitesValue = workSites.value
     const blockedDomainsValue = blocked.value
     const res = await chrome.runtime.sendMessage({
@@ -416,7 +454,7 @@ async function idle() {
     if (!res?.ok) {
       console.error('popup: start failed', res, chrome.runtime.lastError)
       start.disabled = false
-      show(header(mark), label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start,
+      show(header(mark), label, field, picker.row, picker.customRow, siteCluster, start,
         el('p', 'm-meta', res?.offline ? 'No connection. A session needs one to start.' : 'Could not start.'))
       return
     }
@@ -449,7 +487,7 @@ async function idle() {
     render()
   })
 
-  show(header(mark), label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect)
+  show(header(mark), label, field, picker.row, picker.customRow, siteCluster, start, disconnect)
 }
 
 // Pure computation, no chrome.* API — which phase (work/break) the elapsed time

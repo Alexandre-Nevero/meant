@@ -197,6 +197,19 @@ button, input, select { font: inherit; color: inherit; }
 .m-chip[data-chip-role="delete"] { padding: 8px 10px; color: var(--m-ink-3); }
 .m-chip[data-chip-role="delete"]:hover { color: var(--m-ink); border-color: var(--m-ink); }
 
+/* Number inputs inside the cycle reveal: chip-shaped, but a text field, not a button. */
+.m-chip[data-chip-role="number"] {
+  width: 56px;
+  cursor: text;
+  font-family: var(--m-figure);
+  font-size: 12px;
+  text-align: center;
+  color: var(--m-ink);
+}
+.m-chip[data-chip-role="number"]:disabled { color: var(--m-ink-3); border-color: var(--m-edge); cursor: default; }
+[data-surface="popup"] [data-chip-layout="custom"] { display: flex; align-items: center; gap: 8px; }
+[data-surface="popup"] [data-chip-layout="custom"] label { display: inline-flex; align-items: center; gap: 6px; }
+
 /* Task 6: "where it happens" and "blocking N" read as one related cluster (the site chips)
  * rather than two unrelated rows that happen to be adjacent — a tighter internal gap than the
  * rest of #root's row-groups, per design/canvas/PopupIdle.dc.html. Popup-only: no other
@@ -205,12 +218,10 @@ button, input, select { font: inherit; color: inherit; }
 [data-surface="popup"] [data-chip-layout="cluster"] { display: flex; flex-direction: column; gap: 12px; }
 [data-surface="popup"] [data-chip-layout="group"] { display: flex; flex-direction: column; gap: 7px; }
 
-/* The cycle-preset row is ONE chipGroup (exclusive single-select must span all 4
+/* The cycle-preset row is ONE chipGroup (exclusive single-select must span all 3
  * options), so it can't be split into two separate groups the way "cluster" wraps two
  * independent label+chipGroup pairs elsewhere in this file — this adds a visual gap
- * before the 3rd chip only, keeping all 4 buttons siblings in the same group. */
-/* Assumes exactly 2 entries in CYCLE_PRESETS (popup.js) before custom/no-cycles — the
- * gap lands after the 2nd chip on purpose; adding a 3rd preset needs this updated too. */
+ * before the 3rd chip ("custom"), separating the two numeric presets from it. */
 [data-surface="popup"] [data-chip-layout="paired"] > .m-chip:nth-child(3) {
   margin-left: 12px;
 }

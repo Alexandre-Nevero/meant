@@ -800,34 +800,35 @@ text. No new class: `data-popup-header` is an attribute, and `.m-mark`/`.m-btn`/
     `page.locator('.m-mark')` (previously unique) is scoped to `[data-state="idle"]` now
     that the reused History icon is a second `.m-mark` on the same page.
 
-### AH — Cycle-preset row visual grouping without breaking exclusive selection (Task 6)
+### AH — Cycle-preset row visual grouping without breaking exclusive selection (Task 6,
+updated Task 4 for the merged progressive-disclosure picker)
 
-The cycle-preset row (25/5 · 50/10 · custom · no cycles) renders as four sibling buttons
-in a single `.m-chip-row` with exclusive single-select behavior spanning all 4 options via
-one `chipGroup()` call. To visually separate the two numeric presets (work/break minutes)
-from the custom/no-cycles options without splitting into two separate chipGroups (which
-would break exclusive selection across the gap), this adds a CSS-only visual gap before
-the 3rd chip. The row can't use the existing `data-chip-layout="cluster"` pattern (which
-wraps two separate label+chipGroup pairs in `whereGroup`/`blockGroup` elsewhere) — that
-pattern explicitly requires two independent groups. Instead, `cycle.row.dataset.chipLayout
-= 'paired'` tags the single row with a new attribute value, and `[data-surface="popup"]
+The cycle-preset row (25/5 · 50/10 · custom) renders as three sibling buttons in a single
+`.m-chip-row` with exclusive single-select behavior spanning all 3 options via one
+`chipGroup()` call. `no cycles` no longer lives at this level — Task 4 moved it under
+`custom`'s reveal (see Case AK). To visually separate the two numeric presets (work/break
+minutes) from `custom` without splitting into two separate chipGroups (which would break
+exclusive selection across the gap), this adds a CSS-only visual gap before the 3rd chip.
+The row can't use the existing `data-chip-layout="cluster"` pattern (which wraps two
+separate label+chipGroup pairs in `whereGroup`/`blockGroup` elsewhere) — that pattern
+explicitly requires two independent groups. Instead, `picker.row.dataset.chipLayout =
+'paired'` tags the single row with a new attribute value, and `[data-surface="popup"]
 [data-chip-layout="paired"] > .m-chip:nth-child(3) { margin-left: 12px; }` adds a larger
 gap before the 3rd chip only.
 
 74. E2E test: `e2e/popup.spec.ts` "the cycle-preset row visually separates the two
-    duration presets from custom/no cycles". Pair the popup (idle view). **Pass:**
-    `[data-chip-layout="paired"]` is visible and contains exactly 4 `.m-chip` elements.
-    Measure the gaps: the gap between the 1st and 2nd chip (within the first group) is
-    smaller than the gap between the 2nd and 3rd chip (the visual separator). **Pass:**
-    exclusive single-select still spans all 4 buttons, including across the new visual
-    gap — clicking the 1st chip (25/5) to press it, then clicking the 3rd chip (custom)
-    un-presses the 1st, proving this is still ONE chipGroup, not two.
+    presets from custom". Pair the popup (idle view). **Pass:**
+    `[data-chip-layout="paired"]` is visible and contains exactly 3 `.m-chip` elements.
+    Measure the gaps: the gap between the 1st and 2nd chip (within the group) is smaller
+    than the gap between the 2nd and 3rd chip (the visual separator before "custom").
+    **Pass:** exclusive single-select still spans all 3 buttons, including across the new
+    visual gap — clicking the 1st chip (25/5) to press it, then clicking the 3rd chip
+    (custom) un-presses the 1st, proving this is still ONE chipGroup, not two.
     Visual check (temp spec + screenshot, deleted after): rendered the idle popup at
     360px width and screenshotted the cycle-preset row. Confirmed by eye: the two numeric
     presets ("25/5", "50/10") read as one visual pair on the left; a clearly larger gap
-    sits before "custom"; "custom" and "no cycles" read together as a second pair on the
-    right; the row overall reads as two related visual groups, not one undifferentiated
-    strip of four identical chips.
+    sits before "custom" on the right; the row overall reads as two related visual
+    groups, not one undifferentiated strip of three identical chips.
 
 ### AI — `session.tally` accumulates real attention seconds (Task 2)
 
@@ -886,12 +887,11 @@ transparent` keeps the box identically sized. The now-fully-dead `[data-timer-pi
     changing its measured size". Start a `25/5` session. **Pass:** the pill wrapper carries
     `data-loop="on"` and its computed `border-color` is `rgba(0, 0, 0, 0)` (transparent via
     CSS, not `border-style: none`).
-80. E2E test (`test.fixme`, not yet runnable): `e2e/popup.spec.ts` "the loop still draws
-    when no cycle is configured, filling from live attention data alone". Depends on Task
-    4's `custom` → `no cycles` picker click sequence, which hasn't landed yet — stays
-    `test.fixme` (reports as skipped, not failed) until Task 4 converts it back to a plain
-    `test`. Documents that this task's loop is unconditional: it will draw even with no
-    cycle configured.
+80. E2E test: `e2e/popup.spec.ts` "the loop still draws when no cycle is configured,
+    filling from live attention data alone". Un-skipped by Task 4 (was `test.fixme`,
+    pending that task's `custom` → `no cycles` picker click sequence; now a plain `test`
+    and passing). Documents that this task's loop is unconditional: it will draw even with
+    no cycle configured.
     Visual check (temp spec + screenshot, deleted after): started a `25/5` session,
     navigated across two real domains (`example.com`, `www.iana.org`) so real segments
     exist, pushed `session.startedAt` back and reloaded, then screenshotted the pill at
@@ -902,6 +902,66 @@ transparent` keeps the box identically sized. The now-fully-dead `[data-timer-pi
     the drawn arc matched the 5% floor rather than the real (much smaller) proportion,
     confirming item D's cold-start floor. The `custom` → `no cycles` case is deferred to
     Task 4, once its picker lands.
+
+### AK — Progressive-disclosure duration + cycle picker replaces the two old separate rows
+(Task 4)
+
+The idle popup's two separate always-visible pickers — a "session length" row (25 min /
+50 min / until I stop) and a "cycle" row (25/5 / 50/10 / custom / no cycles, Case AH) —
+are merged into ONE picker: `{25/5, 50/10, custom}` always visible; clicking `custom`
+reveals labelled `work`/`break` number inputs plus two more chips (`until I stop` /
+`no cycles`), at most one of which can be pressed at a time. `extension/popup.js`'s
+`cyclePicker()`/`cyclePresetKey()` are deleted and replaced by `cycleDurationPicker()` /
+`restore()`; its `.value` getter returns `{ plannedMinutes, cycle }` directly — the exact
+shape `chrome.runtime.sendMessage({ type: 'start', ... })` already expected from two
+separate `duration.value`/`cycle.value` reads, so `sw.js`/`startSession()` needed no
+change. A same-round CSS fix: the custom work/break `<input>`s are chip-shaped
+(`.m-chip`) but are real text fields, not buttons — `data-chip-role="number"` gives them
+`cursor: text` (previously inherited the chip's `cursor: pointer`, a real defect) and a
+distinct disabled style for the break input under "no cycles".
+
+81. E2E test: `e2e/popup.spec.ts` "the idle popup shows only 25/5, 50/10, and custom at
+    first — no duration row, no until-I-stop, no no-cycles". Pair the popup (idle view).
+    **Pass:** `25/5`, `50/10`, `custom` are visible; `25 min`, `50 min`, `until I stop`,
+    `no cycles` all have zero count (not present until `custom` is clicked); `25/5` is
+    pressed by default (the confirmed first-ever-session default, 30 planned minutes).
+82. E2E test: `e2e/popup.spec.ts` "clicking custom reveals labelled work/break inputs
+    plus until-I-stop and no-cycles". Click `custom`. **Pass:** a `work` label is
+    visible; both `input[data-chip-role="number"]` fields (work, break) are visible; the
+    work input's computed `cursor` is `text`, not `pointer`; `until I stop` and
+    `no cycles` chips are both visible.
+83. E2E test: `e2e/popup.spec.ts` "no cycles disables the break input and relabels work
+    to minutes, and stays reachable as a plain fixed-length session". Click `custom`,
+    then `no cycles`. **Pass:** the `work` label text becomes `minutes`; the break input
+    is disabled. Fill the (now "minutes") input with `45`, type a sentence, click
+    `Start`. **Pass:** `session.plannedMinutes` is `45` and `session.cycle` is `null` —
+    "no cycles" still produces a plain fixed-length session, just reached through the
+    new reveal instead of a top-level chip.
+84. E2E test: `e2e/popup.spec.ts` "until I stop keeps the typed cycle but removes the
+    planned-duration cap". Click `custom`, then `until I stop` (inputs left at their
+    defaults), type a sentence, click `Start`. **Pass:** `session.plannedMinutes` is
+    `null`; `session.cycle` is `{ work: 25, break: 5 }` — the default custom pair, since
+    neither input was edited.
+85. E2E test: `e2e/popup.spec.ts` "picking 25/5 caps the session at exactly 30 planned
+    minutes". Click `25/5`, type a sentence, click `Start`. **Pass:**
+    `session.plannedMinutes` is exactly `30` (25 + 5).
+86. E2E test: `e2e/popup.spec.ts` "the loop still draws when no cycle is configured,
+    filling from live attention data alone" (Case AJ, item 80) — un-skipped this task;
+    now a plain `test`, passing with the two-click `custom` → `no cycles` sequence its
+    body already used.
+
+Superseded and deleted this task (the old always-visible 5-chip layout they exercised no
+longer exists): `e2e/popup.spec.ts`'s "renders the approved layout: sentence, duration,
+cycle, site rows, Start" and "single-select chips toggle exclusively: picking one flips
+the previous one off".
+
+Visual check (temp spec + screenshot, deleted after): rendered the idle popup at 360px
+width and screenshotted three states — default, after clicking `custom`, after also
+clicking `no cycles`. Confirmed by eye: level 1 shows exactly 3 aligned chips (`25/5`,
+`50/10`, `custom`) with the Case AH gap before `custom`; the custom reveal shows clearly
+labelled `work`/`break` inputs (a text cursor, not a pointer) plus the `until I stop`/
+`no cycles` chips beneath, all aligned, nothing overlapping; the `no cycles` state
+visibly greys the break input and relabels `work` to `minutes`.
 
 ## What Sonnet writes vs. what Haiku runs
 
