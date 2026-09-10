@@ -313,4 +313,52 @@ test.describe('floating companion', () => {
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
+
+  test('a second injection of companion-overlay.js into a tab that already has it mounted does not create a duplicate host', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId)
+
+    const page = await context.newPage()
+    await page.goto('https://example.com')
+    await expect(page.locator(HOST_SELECTOR)).toHaveCount(1)
+
+    // Simulate reinjectCompanion() running against a tab that's already mounted —
+    // executeScript gives the script a fresh module scope, so only a DOM-level guard
+    // (checked at the top of companion-overlay.js, before any module state) can prevent
+    // a second host element from appearing. Resolve the real tab id via the service
+    // worker's own chrome.tabs.query — a content script can't read its own tabId directly.
+    const [sw] = context.serviceWorkers()
+    await sw.evaluate(async (urlPattern) => {
+      const [tab] = await chrome.tabs.query({ url: urlPattern })
+      await chrome.scripting.executeScript({ target: { tabId: tab.id! }, files: ['companion-overlay.js'] })
+    }, 'https://example.com/*')
+
+    await expect(page.locator(HOST_SELECTOR)).toHaveCount(1) // still exactly one, not two
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('reinjectCompanion mounts the companion into an already-open tab that never had it, simulating post-reload recovery', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId)
+
+    const page = await context.newPage()
+    await page.goto('https://example.org')
+    await expect(page.locator(HOST_SELECTOR)).toHaveCount(1) // mounted normally via content_scripts
+
+    // Directly clear the host to simulate the "orphaned after extension reload" state —
+    // the real regression this task fixes — then call the service worker's own
+    // reinjectCompanion() the same way onInstalled/onStartup would, and confirm it
+    // recovers the tab without the user refreshing anything.
+    await page.evaluate(() => document.querySelector('[data-meant-companion]')?.remove())
+    await expect(page.locator(HOST_SELECTOR)).toHaveCount(0)
+
+    const [sw] = context.serviceWorkers()
+    await sw.evaluate(() => (self as any).reinjectCompanion?.())
+    await expect(page.locator(HOST_SELECTOR)).toHaveCount(1)
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
 })

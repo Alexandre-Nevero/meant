@@ -1117,6 +1117,49 @@ line and the Stop button.
     column, or right-aligning the figure) even though it was out of this task's scope (no
     new class names, no CSS edits specified in the brief).
 
+### AR — Companion re-injects into already-open tabs on install/update/restart (Task 6, current round)
+
+`content_scripts` only runs declaratively on a tab's own (re)load — reloading/updating the
+extension, or a browser restart, never re-fires it for a tab that was already open, leaving
+that tab's companion orphaned until the user manually refreshes it. Fixed with the
+`scripting` permission and a new `reinjectCompanion()` in `extension/sw.js`, registered on
+both `chrome.runtime.onInstalled` and `chrome.runtime.onStartup` alongside the existing
+`recoverStaleSession`/`flush` listeners: it walks every open http(s) tab and re-runs
+`chrome.scripting.executeScript({ files: ['companion-overlay.js'] })` against each one,
+skipping (try/catch) any tab that rejects injection. A real double-mount risk this
+surfaces: `executeScript` re-injecting the same file into a tab that already has it
+mounted must not create a second host element — but a module-scope guard can't catch this,
+because a fresh `executeScript()` call does NOT reliably get a fresh module scope (Chrome
+reuses the tab's existing isolated world when the frame never navigated), so the file's own
+top-level `const`/`let` redeclare and throw a parse-time `SyntaxError` for the WHOLE file
+before any guard logic runs, silently — confirmed empirically while building this task,
+not assumed. Two changes in `extension/companion-overlay.js` together close this: a
+DOM-level guard (`if (document.documentElement.querySelector('[data-meant-companion]'))
+throw ...`) as the literal first lines of the file, before any declaration; and the rest of
+the file's existing body wrapped in an IIFE so its top-level bindings become
+function-scoped, safe to re-declare on a second injection into the same still-alive
+isolated world (a pure scoping change, no logic touched).
+
+96. E2E test: `e2e/companion.spec.ts` "a second injection of companion-overlay.js into a
+    tab that already has it mounted does not create a duplicate host". Start a session,
+    confirm exactly one host on a page, then resolve that tab's real id via the service
+    worker's own `chrome.tabs.query` and call `chrome.scripting.executeScript` against it
+    directly (simulating what `reinjectCompanion()` would do). **Pass:** still exactly one
+    `[data-meant-companion="true"]` host, not two.
+97. E2E test: `e2e/companion.spec.ts` "reinjectCompanion mounts the companion into an
+    already-open tab that never had it, simulating post-reload recovery". Start a session,
+    confirm the host mounted normally via `content_scripts`, then remove it directly from
+    the DOM (simulating the orphaned-after-reload state) and call the service worker's own
+    `self.reinjectCompanion()` — exposed on `self` for exactly this test, since a
+    module-type service worker's top-level `function` declaration isn't otherwise reachable
+    from `sw.evaluate()`. **Pass:** the host reappears with no page refresh.
+
+Manual real-Chrome check: not performed this task — the brief marks it optional and notes
+this task's behavior (a background re-injection mechanism) isn't meaningfully
+screenshotted; a human should still confirm once in a real loaded-unpacked instance that
+reloading the extension in `chrome://extensions` brings the companion back on an
+already-open tab with no page refresh.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

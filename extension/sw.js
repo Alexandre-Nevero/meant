@@ -386,3 +386,29 @@ chrome.runtime.onStartup.addListener(recoverStaleSession)
 // (e.g. the browser closed offline) would otherwise wait for the next session to sync.
 chrome.runtime.onStartup.addListener(flush)
 chrome.runtime.onInstalled.addListener(flush)
+
+// content_scripts only runs declaratively on a tab's own (re)load — it never re-fires for
+// a tab that was already open when the extension was reloaded/updated, or across a browser
+// restart, leaving that tab's companion orphaned until the user manually refreshes it. This
+// walks every open http(s) tab and re-injects the same content script chrome would have run
+// declaratively, recovering it without the user doing anything.
+async function reinjectCompanion() {
+  const tabs = await chrome.tabs.query({})
+  for (const tab of tabs) {
+    if (!tab.id || !tab.url) continue
+    // Only http(s) — chrome://, the Chrome Web Store, and other extensions' pages
+    // reject scripting injection outright; skip them rather than let each one throw.
+    if (!/^https?:\/\//.test(tab.url)) continue
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['companion-overlay.js'] })
+    } catch {
+      // A tab can still reject injection for reasons outside our control (it navigated
+      // away between the query and the injection attempt, or already has this exact
+      // script mounted and threw the DOM-guard error above) — skip it, don't let one
+      // tab's failure stop the rest.
+    }
+  }
+}
+self.reinjectCompanion = reinjectCompanion
+chrome.runtime.onInstalled.addListener(reinjectCompanion)
+chrome.runtime.onStartup.addListener(reinjectCompanion)

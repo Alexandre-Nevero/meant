@@ -1,3 +1,13 @@
+// A second injection of this same script (from reinjectCompanion() in sw.js, e.g. after
+// a browser restart re-runs onStartup on a tab this exact version already mounted into
+// normally) must not create a second host element. This check has to live in the DOM,
+// not in this module's own scope — a fresh chrome.scripting.executeScript() call gets a
+// fresh module scope every time, so a module-level guard would never see the first
+// injection's state.
+if (document.documentElement.querySelector('[data-meant-companion]')) {
+  throw new Error('meant-companion-already-mounted')
+}
+
 // The companion, floating on the page instead of docked in a side panel — present
 // only while a session is running, draggable, and gone the instant the session ends.
 // Visual language: the "Orbit" reference (a minimal orbital dot, states told by ring
@@ -11,6 +21,15 @@
 // --m-ink/--m-clay/--m-ground — this codebase's rule is tokens-first, one palette,
 // never a component's own hex value, even when matching an external reference.
 
+// Wrapped in an IIFE so every top-level `const`/`let` below is function-scoped, not a
+// global lexical binding: chrome.scripting.executeScript() re-injecting this exact file
+// into a tab that already ran it (the reinjectCompanion() recovery path, when the tab's
+// isolated world outlives an extension reload and never navigated away) would otherwise
+// hit "Identifier has already been declared" — a parse-time SyntaxError for the WHOLE
+// file, which fails silently (no rejected promise) and means even the DOM guard above
+// never runs on that second injection. Confirmed empirically. The guard above still
+// stays a plain top-level statement (no binding to collide) so it always runs first.
+;(function () {
 const DEFAULT_POSITION = { right: 24, bottom: 24 }
 const SIZE = 52
 
@@ -326,3 +345,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
 })
 
 render()
+})()
