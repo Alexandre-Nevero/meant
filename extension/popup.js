@@ -632,7 +632,7 @@ function running(session) {
       remainder: 'var(--m-edge)',
     }
     const GAP = 3 // px of path length — matches .m-mark:not(:empty) { gap: 3px }
-    const MIN_ARC = 0.05 * L // item D — never render nothing at t≈0
+    const MIN_ARC = 0.02 * L // item D — never render nothing at t≈0
     const MIN_DRAWN = 8 // below this a segment cannot read as a segment
 
     function arc(kind, start, len) {

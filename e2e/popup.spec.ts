@@ -552,6 +552,30 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
+  test('the cold-start floor is 2%, not 5%', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('floor test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    const svg = pillWrap.locator('svg')
+    await expect(svg).toBeVisible()
+    const firstPath = svg.locator('path').first()
+    const dasharray = await firstPath.evaluate((e) => getComputedStyle(e).strokeDasharray)
+    const [drawn, total] = dasharray.split(',').map((n) => parseFloat(n))
+    const fraction = drawn / (drawn + total)
+    // 2% of the loop, with a wide tolerance for the GAP subtraction and MIN_DRAWN rounding
+    // already baked into the segment-layout algorithm — this asserts "closer to 2% than
+    // 5%", not an exact figure.
+    expect(fraction).toBeLessThan(0.035)
+    expect(fraction).toBeGreaterThan(0.005)
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
   test('the loop is a solid line throughout, no dashed segments anywhere', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)

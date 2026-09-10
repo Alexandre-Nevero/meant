@@ -800,6 +800,21 @@ text. No new class: `data-popup-header` is an attribute, and `.m-mark`/`.m-btn`/
     `page.locator('.m-mark')` (previously unique) is scoped to `[data-state="idle"]` now
     that the reused History icon is a second `.m-mark` on the same page.
 
+### AN — Timer loop cold-start floor lowered from 5% to 2% (Task 1, current round)
+
+The timer loop's minimum visible arc at session start — the "cold-start floor" that
+ensures the loop never looks completely empty at t≈0 — was reduced from 5% of the
+loop's perimeter to 2%, making the initial marker more minimal while staying visible.
+This is a single-constant change in `extension/popup.js` (line 635: `MIN_ARC = 0.02 * L`
+instead of `0.05 * L`). The tolerance in the test allows for the GAP subtraction and
+MIN_DRAWN rounding already baked into the segment-layout algorithm, asserting "closer
+to 2% than 5%", not an exact figure.
+
+91. E2E test: `e2e/popup.spec.ts` "the cold-start floor is 2%, not 5%". Start a `25/5`
+    session. **Pass:** the first path's `stroke-dasharray` drawn length divided by its total
+    (drawn + remaining) yields a fraction between 0.005 and 0.035, confirming it sits
+    closer to 2% than the old 5%.
+
 ### AH — Cycle-preset row visual grouping without breaking exclusive selection (Task 6,
 updated Task 4 for the merged progressive-disclosure picker)
 
