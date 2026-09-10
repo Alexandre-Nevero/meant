@@ -156,6 +156,27 @@ test.describe('popup, idle state', () => {
     await expect(page.getByRole('button', { name: 'no cycles', exact: true })).toBeVisible()
   })
 
+  test('the custom-reveal chips share one consistent height, not a mismatched row', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: 'custom', exact: true }).click()
+
+    const workInput = page.locator('input[data-chip-role="number"]').first()
+    const untilChip = page.getByRole('button', { name: 'until I stop', exact: true })
+    const workBox = (await workInput.boundingBox())!
+    const untilBox = (await untilChip.boundingBox())!
+    // Same explicit height across a number-input chip and a button chip — within 1px
+    // rounding, not a multi-pixel visual mismatch.
+    expect(Math.abs(workBox.height - untilBox.height)).toBeLessThanOrEqual(1)
+
+    // The digit is vertically centered inside its chip, not sitting high — check the
+    // input's own line-height renders as a real value, not the UA default (which would
+    // leave the text baseline noticeably above center at this padding).
+    const lineHeight = await workInput.evaluate((e) => getComputedStyle(e).lineHeight)
+    expect(lineHeight).not.toBe('normal')
+  })
+
   test('no cycles disables the break input and relabels work to minutes, and stays reachable as a plain fixed-length session', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
@@ -444,7 +465,7 @@ test.describe('popup, idle state', () => {
 
 // Case K — the running popup's own nav row and blocked-sites visibility (Task 6 brief).
 test.describe('popup, running state', () => {
-  test('shows a blocking line for the configured domains, plus History/meant.app', async ({ context, extensionId, freshAccount }) => {
+  test('shows a blocking row for the configured domains, plus History/meant.app', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
@@ -455,7 +476,8 @@ test.describe('popup, running state', () => {
     await page.locator('input.m-field').first().fill('running state test')
     await page.getByRole('button', { name: 'Start', exact: true }).click()
 
-    await expect(page.getByText(/^blocking: .*example\.org/)).toBeVisible()
+    await expect(page.getByText('blocking', { exact: true })).toBeVisible()
+    await expect(page.locator('.m-row', { hasText: 'example.org' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'View session history', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Open meant.app', exact: true })).toBeVisible()
 
@@ -552,6 +574,30 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
+  test('the cold-start floor is 2%, not 5%', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('floor test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    const svg = pillWrap.locator('svg')
+    await expect(svg).toBeVisible()
+    const firstPath = svg.locator('path').first()
+    const dasharray = await firstPath.evaluate((e) => getComputedStyle(e).strokeDasharray)
+    const [drawn, total] = dasharray.split(',').map((n) => parseFloat(n))
+    const fraction = drawn / (drawn + total)
+    // 2% of the loop, with a wide tolerance for the GAP subtraction and MIN_DRAWN rounding
+    // already baked into the segment-layout algorithm — this asserts "closer to 2% than
+    // 5%", not an exact figure.
+    expect(fraction).toBeLessThan(0.035)
+    expect(fraction).toBeGreaterThan(0.005)
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
   test('the loop is a solid line throughout, no dashed segments anywhere', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
@@ -595,6 +641,98 @@ test.describe('popup, running state', () => {
 
     const pillWrap = page.locator('[data-timer-pill="true"]')
     await expect(pillWrap.locator('svg')).toBeVisible() // the loop is NOT gated on a cycle existing
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the running popup shows a live per-domain row list, matching the outcome screen\'s row vocabulary', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairPopup(setupPage, extensionId)
+    await setupPage.locator('input.m-field').first().fill('live rows test')
+    await setupPage.getByRole('button', { name: 'Start' }).click()
+
+    const sessionId: string = await setupPage.evaluate(
+      () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+    )
+    const { token } = await setupPage.evaluate(
+      () => new Promise<{ token: string }>((r) => chrome.storage.local.get('token', (v: any) => r(v))),
+    )
+    await expect
+      .poll(async () => {
+        const res = await setupPage.request.get(`/api/sessions/${sessionId}/review`, {
+          headers: { authorization: `Bearer ${token}` },
+        })
+        return res.status()
+      }, { timeout: 5_000 })
+      .not.toBe(404)
+    await setupPage.request.post('/api/events', {
+      headers: { authorization: `Bearer ${token}` },
+      data: {
+        sessionId,
+        events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 300, at: new Date().toISOString() }],
+      },
+    })
+    await setupPage.evaluate(({ sessionId, at }: any) => {
+      return new Promise<void>((resolve) => {
+        chrome.storage.local.get('session', ({ session }: any) => {
+          session.tally = { attention: { 'chatgpt.com': 300 }, away: 0, break: 0 }
+          chrome.storage.local.set({ session }, () => resolve())
+        })
+      })
+    }, { sessionId, at: new Date().toISOString() })
+    await setupPage.reload()
+
+    const row = setupPage.locator('.m-row', { hasText: 'chatgpt.com' })
+    await expect(row).toBeVisible()
+    await expect(row.locator('.m-row-bar')).toHaveAttribute('data-kind', 'attention-1')
+    await expect(row.locator('.m-row-figure')).toHaveText(/\d+ min/)
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the blocking list renders as rows, one per blocked domain, not a single sentence', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '+', exact: true }).nth(1).click() // blocking row's own +
+    await page.keyboard.type('youtube.com, facebook.com')
+    await page.keyboard.press('Enter')
+    await page.locator('input.m-field').first().fill('blocking rows test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    await expect(page.getByText(/^blocking: /)).toHaveCount(0) // the old single-sentence line is gone
+    await expect(page.getByText('blocking', { exact: true })).toBeVisible() // a plain label instead
+    const youtubeRow = page.locator('.m-row', { hasText: 'youtube.com' })
+    const facebookRow = page.locator('.m-row', { hasText: 'facebook.com' })
+    await expect(youtubeRow).toBeVisible()
+    await expect(facebookRow).toBeVisible()
+    await expect(youtubeRow.locator('.m-row-bar')).toHaveAttribute('data-kind', 'step-open')
+    await expect(youtubeRow.locator('.m-row-figure')).toHaveCount(0) // no time figure for a blocked-list row
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('many blocked domains scroll inside a capped container instead of pushing Stop off-screen', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
+    for (let i = 0; i < 10; i++) {
+      await plusButtons.nth(1).click() // the blocking row's own +
+      await page.keyboard.type(`blocked${i}.example.com`)
+      await page.keyboard.press('Enter')
+    }
+    await page.locator('input.m-field').first().fill('capped blocked list test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const container = page.locator('[data-scroll-list]')
+    await expect(container).toBeVisible()
+    const box = (await container.boundingBox())!
+    expect(box.height).toBeLessThanOrEqual(132)
+
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeInViewport()
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
@@ -660,4 +798,18 @@ test('the outcome screen shows no band when there is no attention data at all', 
   await page.reload()
 
   await expect(page.locator('.m-mark[data-band="session"]')).toHaveCount(0)
+})
+
+test('the intention field has native spellcheck disabled, in both idle and running states', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  await expect(page.locator('input.m-field').first()).toHaveAttribute('spellcheck', 'false')
+
+  await page.locator('input.m-field').first().fill('spellcheck test')
+  await page.getByRole('button', { name: 'Start' }).click()
+  await expect(page.locator('[data-timer-pill="true"] input.m-field')).toHaveAttribute('spellcheck', 'false')
+
+  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
 })

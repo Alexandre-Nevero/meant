@@ -386,3 +386,44 @@ chrome.runtime.onStartup.addListener(recoverStaleSession)
 // (e.g. the browser closed offline) would otherwise wait for the next session to sync.
 chrome.runtime.onStartup.addListener(flush)
 chrome.runtime.onInstalled.addListener(flush)
+
+// content_scripts only runs declaratively on a tab's own (re)load — it never re-fires for
+// a tab that was already open when the extension was reloaded/updated, or across a browser
+// restart, leaving that tab's companion orphaned until the user manually refreshes it. This
+// walks every open http(s) tab and re-injects the same content script chrome would have run
+// declaratively, recovering it without the user doing anything.
+async function reinjectCompanion() {
+  const tabs = await chrome.tabs.query({})
+  for (const tab of tabs) {
+    if (!tab.id || !tab.url) continue
+    // Only http(s) — chrome://, the Chrome Web Store, and other extensions' pages
+    // reject scripting injection outright; skip them rather than let each one throw.
+    if (!/^https?:\/\//.test(tab.url)) continue
+    try {
+      // This function only ever runs from onInstalled/onStartup — i.e. only at the
+      // moment a brand-new extension instance is starting. Any [data-meant-companion]
+      // host already in a tab's DOM at that exact moment can only be a leftover from a
+      // PREVIOUS, now-dead instance: an extension reload kills the old instance's
+      // chrome.* access but does not touch the DOM it already built, so a zombie host
+      // can sit there, inert, forever. Clear it first so the real injection below isn't
+      // blocked by companion-overlay.js's own already-mounted guard — that guard exists
+      // to protect a different race (this same reinject landing around the same moment
+      // as a declarative content_scripts injection), not to protect a stale element
+      // from a prior instance. Worst case if both races overlap: whichever injection
+      // runs second sees the other's freshly-mounted host and bails via that guard —
+      // one harmless remount flicker, never two permanent hosts.
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => document.querySelector('[data-meant-companion]')?.remove(),
+      })
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['companion-overlay.js'] })
+    } catch {
+      // A tab can still reject injection for reasons outside our control — it navigated
+      // away between the query and the injection attempt, or another genuine
+      // executeScript rejection — skip it, don't let one tab's failure stop the rest.
+    }
+  }
+}
+self.reinjectCompanion = reinjectCompanion
+chrome.runtime.onInstalled.addListener(reinjectCompanion)
+chrome.runtime.onStartup.addListener(reinjectCompanion)

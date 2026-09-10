@@ -271,8 +271,9 @@ longer exists.
     meant.app` button (by `aria-label`, icon-only — see Case AG) are both visible, inside
     `[data-popup-header="true"]`.
 38. Configure at least one blocked domain and Start a session. **Pass:** the running view
-    shows a `blocking: <domain list>` line (`.m-meta`, right after the elapsed-time line)
-    matching the configured domains, plus the same header icon buttons.
+    shows a `blocking` label (`.m-meta`) followed by one `.m-row` per configured domain
+    (superseded by Task 5 of this round — Case AQ below — which replaced the single
+    `blocking: <domains>` sentence with this row list), plus the same header icon buttons.
 39. **Visual, human/screenshot check:** at the popup's real 360px width, confirm nothing
     animates — no `transition`/`transform` introduced anywhere in this task's CSS or JS
     (PRODUCT.md: the popup animates nothing) — and the two nav buttons render at a
@@ -699,7 +700,7 @@ The old test at Case F (item 25) expects 36px; that assertion has been updated t
     equal exactly 52 pixels, confirming the SIZE constant propagated correctly through
     the CSS and DOM measurement pipeline.
 
-### AE — Companion hover-reveal intention pill (Task 3)
+### AE — Companion hover-reveal intention pill (Task 3, restyled Task 4 this round)
 
 The floating companion's `title` attribute held the intention sentence, but relied on the
 browser's slow/unstyled native tooltip. This adds a real, styled pill
@@ -708,19 +709,29 @@ intention text; the native `title` stays as a supplementary fallback, not remove
 flips to render below the dot instead of clipping off-screen when the companion sits near
 the top of the viewport, and nudges horizontally when it would overflow a side edge.
 
+For more visual presence, the pill is a flex row: a small solid `::before` dot (8px,
+`#C75B39` — `--m-clay`'s own value, fixed for the same contrast-over-arbitrary-page-
+background reason as the pill's other fixed colors) sits to the left of the intention text,
+which now lives in a child `<span>` (for its own `text-overflow: ellipsis`/`white-space:
+nowrap`) rather than as the pill's direct text node. Padding grew to `10px 16px 10px 14px`
+and font-size to 14px.
+
 70. E2E test: `e2e/companion.spec.ts` "hovering the companion reveals a pill showing the
     intention, styled and positioned above the dot". Start a session with the intention
     "write the quarterly report", navigate to an arbitrary page, hover `.dot-wrap`.
     **Pass:** the pill is `opacity: 0` before hover, becomes `opacity: 1` within 1s of
-    hovering and shows the exact intention text, its bottom edge sits above the dot's
-    top edge (rendered above, not overlapping), and moving the mouse away returns it to
-    `opacity: 0`.
-    Visual check (manual, temp spec deleted after): confirmed the pill is a legible dark-
-    on-light rounded card sitting directly above the dot with a visible gap on a plain
-    page, and — after positioning the companion near the very top of the viewport and
-    hovering it as a fresh gesture (mouse moved away and back, not held down mid-drag) —
-    confirmed the pill flips to render below the dot instead of clipping off the top of
-    the screen.
+    hovering, its child `<span>` shows the exact intention text, its `::before` computed
+    `background-color` is non-empty (the dot indicator renders), its bottom edge sits
+    above the dot's top edge (rendered above, not overlapping), and moving the mouse away
+    returns it to `opacity: 0`.
+    Visual check (manual, temp spec deleted after): confirmed a small solid clay dot sits
+    to the left of the intention text, the pill reads with more weight (larger padding/
+    font) than the earlier plain-text version, and it still looks like it belongs to this
+    product — same serif font, same fixed cream/near-black/border colors — sitting
+    directly above the dot with a visible gap on a plain page. Also reconfirmed (unchanged
+    by this round): after positioning the companion near the very top of the viewport and
+    hovering it as a fresh gesture (mouse moved away and back, not held down mid-drag),
+    the pill flips to render below the dot instead of clipping off the top of the screen.
 
 ### AF — Timer pill progress as a full-perimeter SVG loop, not a bottom-only strip (Task 4)
 
@@ -1015,6 +1026,212 @@ Manual/visual: with 3 attention domains (600s/300s/150s) plus 120s away posted b
 the band renders as one full-width bar with four swatches in decreasing width, left to right:
 solid dark clay, solid mid clay, solid light clay, then the diagonal-hatch away pattern —
 same left-to-right order as the text rows underneath.
+
+### AN — Timer loop cold-start floor lowered from 5% to 2% (Task 1, current round)
+
+The timer loop's minimum visible arc at session start — the "cold-start floor" that
+ensures the loop never looks completely empty at t≈0 — was reduced from 5% of the
+loop's perimeter to 2%, making the initial marker more minimal while staying visible.
+This is a single-constant change in `extension/popup.js` (line 635: `MIN_ARC = 0.02 * L`
+instead of `0.05 * L`). The tolerance in the test allows for the GAP subtraction and
+MIN_DRAWN rounding already baked into the segment-layout algorithm, asserting "closer
+to 2% than 5%", not an exact figure.
+
+91. E2E test: `e2e/popup.spec.ts` "the cold-start floor is 2%, not 5%". Start a `25/5`
+    session. **Pass:** the first path's `stroke-dasharray` drawn length divided by its total
+    (drawn + remaining) yields a fraction between 0.005 and 0.035, confirming it sits
+    closer to 2% than the old 5%.
+
+### AO — Intention field spellcheck suppressed (Task 2, current round)
+
+The browser's native spellcheck feature (red squiggly underline) is distracting on the
+intention field where free-form, non-dictionary phrases are the norm — a user might type
+"context-switching" or a personal goal that reads as gibberish to a dictionary. This case
+verifies that the spellcheck attribute is explicitly disabled on both instances where
+`el('input', 'm-field')` is constructed: the idle popup's "What do you mean to do?"
+field, and the running popup's editable intention (only during the grace window when
+`isEditable()` is true). Two construction sites; two separate assertions in the test.
+
+92. E2E test: `e2e/popup.spec.ts` "the intention field has native spellcheck disabled,
+    in both idle and running states". Open the idle popup. **Pass:**
+    `input.m-field` has `spellcheck="false"` (toHaveAttribute check). Fill the field with
+    a sentence, click Start. **Pass:** during the running state, the same input inside
+    `[data-timer-pill="true"]` also has `spellcheck="false"` (confirming the running
+    branch's `sentenceNode` construction gets the attribute as well).
+
+### AP — Custom-reveal chip row alignment and centering (Task 3, current round)
+
+The custom-cycle reveal row (work/break duration inputs plus "until I stop"/"no cycles"
+buttons) combines two chip types: text inputs with `data-chip-role="number"` and regular
+button chips. Without an explicit height on `.m-chip`, the two types render with different
+line-boxes, causing visual misalignment and off-center digit text. The fix sets `height: 34px`
+on the base `.m-chip` rule (covering all chip variants since `box-sizing: border-box` is
+already global) and `line-height: 1` on `.m-chip[data-chip-role="number"]` to ensure the
+digit text sits vertically centered, not floating high on the browser's default line-height.
+
+93. E2E test: `e2e/popup.spec.ts` "the custom-reveal chips share one consistent height,
+    not a mismatched row". Open the idle popup. Click "custom". **Pass:** measure the
+    bounding box of the work input chip (`input[data-chip-role="number"]`) and the
+    "until I stop" button chip. Their heights differ by at most 1px (within browser rounding
+    tolerance, not a visible 2+ px stagger). **Pass:** the work input's computed
+    `lineHeight` is not `'normal'` (confirming the explicit `line-height: 1` rule applies,
+    so the text baseline is controlled and not using the UA default that would leave digits
+    sitting high).
+
+### AQ — Live per-domain attention rows and blocked-domain rows in the running popup (Task 5, current round)
+
+`running()` computed `segments` (via `toSegments(withOpenSlice(...))`) every render already,
+for the intention pill's clockwise loop — but never rendered the per-domain breakdown as
+rows, and `session.blockedDomains` rendered as one plain sentence
+(`` `blocking: ${session.blockedDomains.join(', ')}` ``, a single `.m-meta` line). Both are
+replaced with the same `.m-row`/`.m-row-bar`/`.m-row-domain`/`.m-row-figure` vocabulary the
+outcome screen's attention band already defined in CSS but had no JS producer for yet:
+`attentionRows` (one `.m-row` per `attention*`-kind segment, its `.m-row-bar`'s `data-kind`
+matching the segment's own kind so the swatch color lines up with the intention pill's loop,
+a `.m-row-figure` showing rounded minutes) and `blockedRows` (one `.m-row` per blocked
+domain, `data-kind="step-open"` — a neutral outline swatch, no time figure, since a blocked
+domain is configuration, not measured attention), with a plain `blocking` label
+(`.m-meta`) standing in for the old sentence. Both new row lists render between the phase
+line and the Stop button.
+
+94. E2E test: `e2e/popup.spec.ts` "the running popup shows a live per-domain row list,
+    matching the outcome screen's row vocabulary". Start a session, post a real
+    `chatgpt.com` attention event and mirror it into `session.tally`, reload the popup.
+    **Pass:** a `.m-row` containing `chatgpt.com` is visible, its `.m-row-bar` has
+    `data-kind="attention-1"`, and its `.m-row-figure` reads `N min`.
+95. E2E test: `e2e/popup.spec.ts` "the blocking list renders as rows, one per blocked
+    domain, not a single sentence". Configure `youtube.com, facebook.com` as blocked, Start.
+    **Pass:** no text node matches `/^blocking: /` anywhere (the old sentence is gone); a
+    plain `blocking` label is visible; one `.m-row` per domain is visible, each `.m-row-bar`
+    carries `data-kind="step-open"`, and neither row has a `.m-row-figure` (blocked rows
+    carry no time).
+95a. Visual, human/screenshot check performed for this task: at the popup's real 360px
+    width, with three attention rows and two blocked rows both present, the CSS at
+    `extension/meant.css`'s `.m-row` rule (`grid-template-columns: 11px minmax(0, 1fr)`,
+    two tracks) only fits the bar + domain in one row — the third child, `.m-row-figure`,
+    auto-places onto its own implicit grid row below the domain rather than sitting beside
+    it. Observed result: every attention row renders as two visual lines (domain, then the
+    figure on its own line underneath) instead of one, making the row list taller than the
+    outcome screen's own equivalent band and giving the running view a visibly busier,
+    two-line-per-row feel at the popup's fixed width — worth a follow-up CSS pass (a third
+    column, or right-aligning the figure) even though it was out of this task's scope (no
+    new class names, no CSS edits specified in the brief).
+
+### AR — Companion re-injects into already-open tabs on install/update/restart (Task 6, current round)
+
+`content_scripts` only runs declaratively on a tab's own (re)load — reloading/updating the
+extension, or a browser restart, never re-fires it for a tab that was already open, leaving
+that tab's companion orphaned until the user manually refreshes it. Fixed with the
+`scripting` permission and a new `reinjectCompanion()` in `extension/sw.js`, registered on
+both `chrome.runtime.onInstalled` and `chrome.runtime.onStartup` alongside the existing
+`recoverStaleSession`/`flush` listeners: for every open http(s) tab, it runs a two-phase
+injection — first a small inline `func` that removes any existing `[data-meant-companion]`
+host, then `files: ['companion-overlay.js']` to mount a fresh one — skipping (try/catch)
+any tab that rejects injection outright.
+
+Two real correctness risks surfaced and were fixed here, both confirmed empirically rather
+than assumed:
+
+- **Double-mount**: `executeScript` re-injecting the same file into a tab that already has
+  it mounted must not create a second host element — but a module-scope guard can't catch
+  this, because a fresh `executeScript()` call does NOT reliably get a fresh module scope
+  (Chrome reuses the tab's existing isolated world when the frame never navigated), so the
+  file's own top-level `const`/`let` would redeclare and throw a parse-time `SyntaxError`
+  for the WHOLE file before any guard logic runs. Fixed with a DOM-level guard (`if
+  (document.documentElement.querySelector('[data-meant-companion]')) throw ...`) as the
+  literal first lines of `extension/companion-overlay.js`, before any declaration, plus the
+  rest of the file's existing body wrapped in an IIFE so its top-level bindings become
+  function-scoped and safe to re-declare (a pure scoping change, no logic touched).
+- **The DOM guard alone blocks the exact recovery this task exists to provide**: an
+  extension reload kills the OLD instance's `chrome.*` access but does not touch the DOM
+  element it already built, so a dead "zombie" host can sit there, inert, forever. Without
+  clearing it first, `reinjectCompanion()`'s injection would hit that leftover host, throw
+  via the guard, and mount nothing new — the companion stays dead. Fixed by having
+  `reinjectCompanion()` clear any existing host itself before the real injection (see the
+  two-phase description above) — since this function only ever runs from
+  `onInstalled`/`onStartup` (a brand-new extension instance just starting), any host
+  already present at that exact moment can only be a leftover from a previous, dead
+  instance, so clearing it unconditionally is safe. Worst case if this races a declarative
+  `content_scripts` injection landing at the same moment: whichever runs second sees the
+  other's freshly-mounted host and bails via the guard — one harmless remount flicker,
+  never two permanent hosts.
+
+96. E2E test: `e2e/companion.spec.ts` "a second injection of companion-overlay.js into a
+    tab that already has it mounted does not create a duplicate host". Start a session,
+    confirm exactly one host on a page, then resolve that tab's real id via the service
+    worker's own `chrome.tabs.query` and call a raw `chrome.scripting.executeScript`
+    (files only, no clear step) against it directly. **Pass:** still exactly one
+    `[data-meant-companion="true"]` host, not two.
+97. E2E test: `e2e/companion.spec.ts` "reinjectCompanion mounts the companion into an
+    already-open tab that never had it, simulating post-reload recovery". Start a session,
+    confirm the host mounted normally via `content_scripts`, then remove it directly from
+    the DOM and call the service worker's own `self.reinjectCompanion()` — exposed on
+    `self` for exactly this test, since a module-type service worker's top-level `function`
+    declaration isn't otherwise reachable from `sw.evaluate()`. **Pass:** the host
+    reappears with no page refresh.
+98. E2E test: `e2e/companion.spec.ts` "reinjectCompanion replaces an already-mounted host
+    with a genuinely fresh one, the realistic post-reload scenario". Start a session,
+    confirm the host mounted normally, let its wake-in animation fully finish — then,
+    unlike case 97, do NOT remove the host first (the realistic post-reload state: the
+    DOM element from the dead prior instance is still there) and call
+    `self.reinjectCompanion()`. **Pass:** exactly one host afterward, and it is
+    demonstrably a brand-new element (its own wake-in animation is actively running,
+    which the original, long-settled host's would not be) — proving the stale leftover
+    was actually replaced, not left in place. This test was verified to fail against the
+    pre-fix single-phase injection (no clear step) before the fix landed.
+
+Manual real-Chrome check: not performed this task — the brief marks it optional and notes
+this task's behavior (a background re-injection mechanism) isn't meaningfully
+screenshotted; a human should still confirm once in a real loaded-unpacked instance that
+reloading the extension in `chrome://extensions` brings the companion back on an
+already-open tab with no page refresh.
+
+### AS — Final-review fixes: block-page alignment, unbounded blocked-list height, chip
+### text overflow, 0-min display (final review pass)
+
+Four findings from a whole-branch final review, all regressions introduced by earlier
+tasks this same round:
+
+- `extension/meant.css`'s bare `.m-row-figure` rule had gained `text-align: right` for the
+  running popup's new row lists, but `extension/blocked.js` also renders a standalone
+  `.m-row-figure` `<p>` that is NOT inside a `.m-row` grid — as a flex child of `#root`
+  (`align-items: stretch`) it went full-width and right-aligned, pushing the block page's
+  "domain — N minutes left" line away from the sentence above it. Fixed by scoping the
+  rule to `.m-row > .m-row-figure` and adding an explicit `text-align: left` to the
+  existing `[data-surface="block"] .m-row-figure` rule instead of relying on inheritance.
+- The running popup's blocked-domain row list had no height cap, so enough configured
+  domains could push the Stop button below the popup's visible area (confirmed: 3
+  attention rows + 10 blocked rows reaches ~892px against Chrome's ~600px ceiling). Fixed
+  in `extension/popup.js`'s `running()` by wrapping `blockedRows` in a single container
+  carrying `data-scroll-list="true"`, matched by a new
+  `[data-surface="popup"] [data-scroll-list] { max-height: 132px; overflow-y: auto; }`
+  rule in `extension/meant.css` — the same cap `.m-chip-row` already uses for site chips.
+- `.m-chip`'s base rule had gained a fixed `height: 34px` in an earlier task; a chip label
+  long enough to wrap now spilled its text above/below the chip's outline. Fixed by adding
+  `white-space: nowrap; overflow: hidden; text-overflow: ellipsis` to the same rule.
+- The live per-domain row list computed `Math.round(s.flex / 60)`, showing "0 min" for any
+  domain under 30 real seconds of attention — most visible in a session's first 30
+  seconds, exactly when a user is likely to check the popup. Fixed with
+  `s.flex > 0 ? Math.max(1, Math.round(s.flex / 60)) : 0`, so any domain with real
+  attention shows at least "1 min".
+
+99. E2E test: `e2e/session-lifecycle.spec.ts` "the block page names the blocked domain in
+    its time-left line". Extended with a regression assertion: `.m-row-figure`'s computed
+    `text-align` is `left` on the block page. **Pass:** the computed style is `left`, not
+    `right` — this test was verified to fail against the pre-fix bare `.m-row-figure { text
+    -align: right }` rule before the scoping fix landed.
+100. E2E test: `e2e/popup.spec.ts` "many blocked domains scroll inside a capped container
+    instead of pushing Stop off-screen". Configure 10 blocked domains, Start. **Pass:** the
+    `[data-scroll-list]` container's bounding-box height is `<= 132px`, and the Stop button
+    remains in the viewport (`toBeInViewport()`) with no whole-popup scroll needed.
+
+Visual, human/screenshot check performed for this task (temp spec, screenshot, Read,
+delete): (a) the block page with one blocked domain — the "example.net — 30 minutes left"
+line now sits left-aligned directly under "That's still true.", not floating right; (b)
+the running popup with 10 blocked domains configured — the blocked-rows list scrolls
+inside its own capped container and the Stop button stays visible without scrolling the
+whole popup; (c) the idle popup's work-sites row with one long typed domain — the chip
+truncates with an ellipsis on one line instead of wrapping or overflowing its fixed height.
 
 ## What Sonnet writes vs. what Haiku runs
 

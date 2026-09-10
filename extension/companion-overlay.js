@@ -1,3 +1,16 @@
+// A second injection of this same script (from reinjectCompanion() in sw.js, e.g. after
+// a browser restart re-runs onStartup on a tab this exact version already mounted into
+// normally) must not create a second host element. This check has to live in the DOM,
+// not in this module's own scope — verified empirically: chrome.scripting.executeScript()
+// does NOT get a fresh module scope when the tab's frame never navigated. Chrome reuses
+// that frame's existing isolated world across repeated injections, so a module-level
+// guard (a variable) would never even get declared a second time — its file fails to
+// parse at all (see the IIFE wrapper below, added for exactly this reason). A guard
+// living in the DOM is the only thing both injections can actually observe.
+if (document.documentElement.querySelector('[data-meant-companion]')) {
+  throw new Error('meant-companion-already-mounted')
+}
+
 // The companion, floating on the page instead of docked in a side panel — present
 // only while a session is running, draggable, and gone the instant the session ends.
 // Visual language: the "Orbit" reference (a minimal orbital dot, states told by ring
@@ -11,6 +24,15 @@
 // --m-ink/--m-clay/--m-ground — this codebase's rule is tokens-first, one palette,
 // never a component's own hex value, even when matching an external reference.
 
+// Wrapped in an IIFE so every top-level `const`/`let` below is function-scoped, not a
+// global lexical binding: chrome.scripting.executeScript() re-injecting this exact file
+// into a tab that already ran it (the reinjectCompanion() recovery path, when the tab's
+// isolated world outlives an extension reload and never navigated away) would otherwise
+// hit "Identifier has already been declared" — a parse-time SyntaxError for the WHOLE
+// file, which fails silently (no rejected promise) and means even the DOM guard above
+// never runs on that second injection. Confirmed empirically. The guard above still
+// stays a plain top-level statement (no binding to collide) so it always runs first.
+;(function () {
 const DEFAULT_POSITION = { right: 24, bottom: 24 }
 const SIZE = 52
 
@@ -121,18 +143,32 @@ function css() {
       pointer-events: none;
       transition: opacity 150ms var(--m-ease);
       margin: 0;
-      padding: 8px 14px;
+      padding: 10px 16px 10px 14px;
       max-width: 240px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
       border-radius: 999px;
       border: 1px solid #C7C2BB;
       background: #F3F1EE;
       color: #14120F;
       font-family: 'Fraunces', Georgia, serif;
-      font-size: 13px;
+      font-size: 14px;
       box-shadow: 0 2px 8px rgba(20, 18, 15, 0.15);
+    }
+    [data-companion-hover-pill]::before {
+      content: '';
+      flex: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #C75B39; /* --m-clay, fixed for the same reason as the pill's other colors */
+    }
+    [data-companion-hover-pill] span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -231,7 +267,8 @@ function showHoverPill() {
   if (!currentSession?.intention) return
   clearTimeout(hoverTimer)
   hoverTimer = setTimeout(() => {
-    hoverPill.textContent = currentSession.intention
+    hoverPill.replaceChildren(document.createElement('span'))
+    hoverPill.firstChild.textContent = currentSession.intention
     hoverPill.style.opacity = '1'
     hoverPill.style.bottom = 'calc(100% + 8px)'
     hoverPill.style.top = ''
@@ -311,3 +348,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
 })
 
 render()
+})()

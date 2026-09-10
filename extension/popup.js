@@ -392,6 +392,7 @@ async function idle() {
 
   const field = el('input', 'm-field')
   field.placeholder = ''
+  field.spellcheck = false
 
   const [{ lastChoice }, lists] = await Promise.all([
     chrome.storage.local.get('lastChoice'),
@@ -526,10 +527,6 @@ function running(session) {
         : `${elapsedMinutes} min · ${phase.remainingMinutes} min left`)
     : el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
 
-  const blockedList = session.blockedDomains?.length
-    ? el('p', 'm-meta', `blocking: ${session.blockedDomains.join(', ')}`)
-    : null
-
   const stop = el('button', 'm-btn', 'Stop')
   stop.dataset.variant = 'quiet'
   stop.addEventListener('click', async () => {
@@ -542,6 +539,7 @@ function running(session) {
   if (isEditable(Date.now(), startedAt, GRACE_MS)) {
     sentenceNode = el('input', 'm-field')
     sentenceNode.value = session.intention
+    sentenceNode.spellcheck = false
 
     const commit = async () => {
       const value = sentenceNode.value.trim()
@@ -569,6 +567,34 @@ function running(session) {
 
   const merged = withOpenSlice(session.tally, session.slice, Date.now())
   const segments = toSegments(merged)
+
+  const attentionRows = segments
+    .filter((s) => s.kind.startsWith('attention'))
+    .map((s) => {
+      const row = el('div', 'm-row')
+      const bar = el('span', 'm-row-bar')
+      bar.dataset.kind = s.kind
+      const domain = el('p', 'm-row-domain', s.domain)
+      const minutes = s.flex > 0 ? Math.max(1, Math.round(s.flex / 60)) : 0
+      const figure = el('p', 'm-row-figure', `${minutes} min`)
+      row.append(bar, domain, figure)
+      return row
+    })
+
+  const blockingLabel = session.blockedDomains?.length ? el('p', 'm-meta', 'blocking') : null
+  const blockedRows = (session.blockedDomains ?? []).map((domain) => {
+    const row = el('div', 'm-row')
+    const bar = el('span', 'm-row-bar')
+    bar.dataset.kind = 'step-open' // neutral outline swatch — blocked domains are config, not measured attention
+    const label = el('p', 'm-row-domain', domain)
+    row.append(bar, label)
+    return row
+  })
+  const blockedRowsContainer = blockedRows.length > 0 ? el('div') : null
+  if (blockedRowsContainer) {
+    blockedRowsContainer.dataset.scrollList = 'true'
+    blockedRowsContainer.append(...blockedRows)
+  }
 
   document.fonts.ready.then(() => requestAnimationFrame(() => {
     pillWrap.dataset.loop = 'on' // CSS makes the border transparent without changing clientWidth/Height
@@ -632,7 +658,7 @@ function running(session) {
       remainder: 'var(--m-edge)',
     }
     const GAP = 3 // px of path length — matches .m-mark:not(:empty) { gap: 3px }
-    const MIN_ARC = 0.05 * L // item D — never render nothing at t≈0
+    const MIN_ARC = 0.02 * L // item D — never render nothing at t≈0
     const MIN_DRAWN = 8 // below this a segment cannot read as a segment
 
     function arc(kind, start, len) {
@@ -678,7 +704,15 @@ function running(session) {
     pillWrap.append(svg)
   }))
 
-  show(header(mark), pillWrap, phaseLine, ...(blockedList ? [blockedList] : []), stop)
+  show(
+    header(mark),
+    pillWrap,
+    phaseLine,
+    ...attentionRows,
+    ...(blockingLabel ? [blockingLabel] : []),
+    ...(blockedRowsContainer ? [blockedRowsContainer] : []),
+    stop,
+  )
 }
 
 async function outcome(sessionId) {
