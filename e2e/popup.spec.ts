@@ -685,3 +685,17 @@ test('the outcome screen shows no band when there is no attention data at all', 
 
   await expect(page.locator('.m-mark[data-band="session"]')).toHaveCount(0)
 })
+
+test('the intention field has native spellcheck disabled, in both idle and running states', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  await expect(page.locator('input.m-field').first()).toHaveAttribute('spellcheck', 'false')
+
+  await page.locator('input.m-field').first().fill('spellcheck test')
+  await page.getByRole('button', { name: 'Start' }).click()
+  await expect(page.locator('[data-timer-pill="true"] input.m-field')).toHaveAttribute('spellcheck', 'false')
+
+  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+})

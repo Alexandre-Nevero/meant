@@ -392,6 +392,7 @@ async function idle() {
 
   const field = el('input', 'm-field')
   field.placeholder = ''
+  field.spellcheck = false
 
   const [{ lastChoice }, lists] = await Promise.all([
     chrome.storage.local.get('lastChoice'),
@@ -542,6 +543,7 @@ function running(session) {
   if (isEditable(Date.now(), startedAt, GRACE_MS)) {
     sentenceNode = el('input', 'm-field')
     sentenceNode.value = session.intention
+    sentenceNode.spellcheck = false
 
     const commit = async () => {
       const value = sentenceNode.value.trim()

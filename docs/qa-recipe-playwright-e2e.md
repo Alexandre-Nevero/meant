@@ -1031,6 +1031,23 @@ to 2% than 5%", not an exact figure.
     (drawn + remaining) yields a fraction between 0.005 and 0.035, confirming it sits
     closer to 2% than the old 5%.
 
+### AO — Intention field spellcheck suppressed (Task 2, current round)
+
+The browser's native spellcheck feature (red squiggly underline) is distracting on the
+intention field where free-form, non-dictionary phrases are the norm — a user might type
+"context-switching" or a personal goal that reads as gibberish to a dictionary. This case
+verifies that the spellcheck attribute is explicitly disabled on both instances where
+`el('input', 'm-field')` is constructed: the idle popup's "What do you mean to do?"
+field, and the running popup's editable intention (only during the grace window when
+`isEditable()` is true). Two construction sites; two separate assertions in the test.
+
+92. E2E test: `e2e/popup.spec.ts` "the intention field has native spellcheck disabled,
+    in both idle and running states". Open the idle popup. **Pass:**
+    `input.m-field` has `spellcheck="false"` (toHaveAttribute check). Fill the field with
+    a sentence, click Start. **Pass:** during the running state, the same input inside
+    `[data-timer-pill="true"]` also has `spellcheck="false"` (confirming the running
+    branch's `sentenceNode` construction gets the attribute as well).
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —
