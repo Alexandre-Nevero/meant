@@ -1,9 +1,12 @@
 // A second injection of this same script (from reinjectCompanion() in sw.js, e.g. after
 // a browser restart re-runs onStartup on a tab this exact version already mounted into
 // normally) must not create a second host element. This check has to live in the DOM,
-// not in this module's own scope — a fresh chrome.scripting.executeScript() call gets a
-// fresh module scope every time, so a module-level guard would never see the first
-// injection's state.
+// not in this module's own scope — verified empirically: chrome.scripting.executeScript()
+// does NOT get a fresh module scope when the tab's frame never navigated. Chrome reuses
+// that frame's existing isolated world across repeated injections, so a module-level
+// guard (a variable) would never even get declared a second time — its file fails to
+// parse at all (see the IIFE wrapper below, added for exactly this reason). A guard
+// living in the DOM is the only thing both injections can actually observe.
 if (document.documentElement.querySelector('[data-meant-companion]')) {
   throw new Error('meant-companion-already-mounted')
 }
