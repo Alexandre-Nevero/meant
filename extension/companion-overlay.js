@@ -121,18 +121,32 @@ function css() {
       pointer-events: none;
       transition: opacity 150ms var(--m-ease);
       margin: 0;
-      padding: 8px 14px;
+      padding: 10px 16px 10px 14px;
       max-width: 240px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
       border-radius: 999px;
       border: 1px solid #C7C2BB;
       background: #F3F1EE;
       color: #14120F;
       font-family: 'Fraunces', Georgia, serif;
-      font-size: 13px;
+      font-size: 14px;
       box-shadow: 0 2px 8px rgba(20, 18, 15, 0.15);
+    }
+    [data-companion-hover-pill]::before {
+      content: '';
+      flex: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #C75B39; /* --m-clay, fixed for the same reason as the pill's other colors */
+    }
+    [data-companion-hover-pill] span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -231,7 +245,8 @@ function showHoverPill() {
   if (!currentSession?.intention) return
   clearTimeout(hoverTimer)
   hoverTimer = setTimeout(() => {
-    hoverPill.textContent = currentSession.intention
+    hoverPill.replaceChildren(document.createElement('span'))
+    hoverPill.firstChild.textContent = currentSession.intention
     hoverPill.style.opacity = '1'
     hoverPill.style.bottom = 'calc(100% + 8px)'
     hoverPill.style.top = ''

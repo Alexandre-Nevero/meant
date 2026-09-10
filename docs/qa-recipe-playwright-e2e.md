@@ -699,7 +699,7 @@ The old test at Case F (item 25) expects 36px; that assertion has been updated t
     equal exactly 52 pixels, confirming the SIZE constant propagated correctly through
     the CSS and DOM measurement pipeline.
 
-### AE — Companion hover-reveal intention pill (Task 3)
+### AE — Companion hover-reveal intention pill (Task 3, restyled Task 4 this round)
 
 The floating companion's `title` attribute held the intention sentence, but relied on the
 browser's slow/unstyled native tooltip. This adds a real, styled pill
@@ -708,19 +708,29 @@ intention text; the native `title` stays as a supplementary fallback, not remove
 flips to render below the dot instead of clipping off-screen when the companion sits near
 the top of the viewport, and nudges horizontally when it would overflow a side edge.
 
+For more visual presence, the pill is a flex row: a small solid `::before` dot (8px,
+`#C75B39` — `--m-clay`'s own value, fixed for the same contrast-over-arbitrary-page-
+background reason as the pill's other fixed colors) sits to the left of the intention text,
+which now lives in a child `<span>` (for its own `text-overflow: ellipsis`/`white-space:
+nowrap`) rather than as the pill's direct text node. Padding grew to `10px 16px 10px 14px`
+and font-size to 14px.
+
 70. E2E test: `e2e/companion.spec.ts` "hovering the companion reveals a pill showing the
     intention, styled and positioned above the dot". Start a session with the intention
     "write the quarterly report", navigate to an arbitrary page, hover `.dot-wrap`.
     **Pass:** the pill is `opacity: 0` before hover, becomes `opacity: 1` within 1s of
-    hovering and shows the exact intention text, its bottom edge sits above the dot's
-    top edge (rendered above, not overlapping), and moving the mouse away returns it to
-    `opacity: 0`.
-    Visual check (manual, temp spec deleted after): confirmed the pill is a legible dark-
-    on-light rounded card sitting directly above the dot with a visible gap on a plain
-    page, and — after positioning the companion near the very top of the viewport and
-    hovering it as a fresh gesture (mouse moved away and back, not held down mid-drag) —
-    confirmed the pill flips to render below the dot instead of clipping off the top of
-    the screen.
+    hovering, its child `<span>` shows the exact intention text, its `::before` computed
+    `background-color` is non-empty (the dot indicator renders), its bottom edge sits
+    above the dot's top edge (rendered above, not overlapping), and moving the mouse away
+    returns it to `opacity: 0`.
+    Visual check (manual, temp spec deleted after): confirmed a small solid clay dot sits
+    to the left of the intention text, the pill reads with more weight (larger padding/
+    font) than the earlier plain-text version, and it still looks like it belongs to this
+    product — same serif font, same fixed cream/near-black/border colors — sitting
+    directly above the dot with a visible gap on a plain page. Also reconfirmed (unchanged
+    by this round): after positioning the companion near the very top of the viewport and
+    hovering it as a fresh gesture (mouse moved away and back, not held down mid-drag),
+    the pill flips to render below the dot instead of clipping off the top of the screen.
 
 ### AF — Timer pill progress as a full-perimeter SVG loop, not a bottom-only strip (Task 4)
 

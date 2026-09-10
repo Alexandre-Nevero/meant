@@ -299,7 +299,10 @@ test.describe('floating companion', () => {
     const dotWrap = host.locator('.dot-wrap')
     await dotWrap.hover()
     await expect(pill).toHaveCSS('opacity', '1', { timeout: 1_000 })
-    await expect(pill).toHaveText('write the quarterly report')
+    await expect(pill.locator('span')).toHaveText('write the quarterly report')
+    const dotStyle = await pill.evaluate((e) => getComputedStyle(e, '::before').backgroundColor)
+    expect(dotStyle).not.toBe('none')
+    expect(dotStyle).not.toBe('')
 
     const dotBox = (await host.boundingBox())!
     const pillBox = (await pill.boundingBox())!
