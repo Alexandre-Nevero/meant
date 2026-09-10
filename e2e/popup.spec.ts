@@ -62,44 +62,6 @@ async function clickAndExpectNewTab(
 
 // Case C — the idle popup's rendering and interactions, against the real extension.
 test.describe('popup, idle state', () => {
-  test('renders the approved layout: sentence, duration, cycle, site rows, Start', async ({ context, extensionId, freshAccount }) => {
-    const page = await context.newPage()
-    await freshAccount(page)
-    await pairPopup(page, extensionId)
-
-    await expect(page.getByPlaceholder('')).toBeVisible() // the sentence field
-    await expect(page.getByRole('button', { name: '25 min', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: '50 min', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'until I stop', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: '25/5', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'no cycles', exact: true })).toBeVisible()
-    await expect(page.getByText('where it happens')).toBeVisible()
-    await expect(page.getByText('what to block')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
-
-    // 50/10 is the documented first-ever-session default (Task 6 brief, Step 3) — not
-    // "no cycles"; a wrong assumption on my own first pass through this suite.
-    await expect(page.getByRole('button', { name: '50/10', exact: true })).toHaveAttribute('aria-pressed', 'true')
-
-    // Task 6: the idle mark must render the same decorative gradient glyph as
-    // running/ended, not a blank outline (the CSS bug — data-state="idle" was
-    // missing from the ::after selector).
-    const markBackground = await page.locator('.m-mark[data-state="idle"]').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
-    expect(markBackground).not.toBe('none')
-
-    // Task 6: nav row present in the idle view too, and both buttons actually open a
-    // real tab at the right URL (chrome.tabs.create), not just render.
-    await expect(page.getByRole('button', { name: 'View session history', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Open meant.app', exact: true })).toBeVisible()
-
-    const historyPage = await clickAndExpectNewTab(page, context, 'View session history', 'http://localhost:3000/dashboard')
-    expect(historyPage.url()).toContain('/dashboard')
-    await historyPage.close()
-
-    const landingPage = await clickAndExpectNewTab(page, context, 'Open meant.app', 'http://localhost:3000/')
-    await landingPage.close()
-  })
-
   // Case AG (Task 5): History/meant.app move into a top-right icon header row instead of
   // full-width text buttons at the bottom.
   test('History and meant.app render as icon buttons in a header row, top-right, not full-width text buttons at the bottom', async ({ context, extensionId, freshAccount }) => {
@@ -124,12 +86,19 @@ test.describe('popup, idle state', () => {
     const markBox = (await header.locator('.m-mark').boundingBox())!
     const navBox = (await header.locator('.m-chip-row').boundingBox())!
     expect(navBox.x).toBeGreaterThan(markBox.x)
+
+    // Task 6: the idle mark must render the same decorative gradient glyph as
+    // running/ended, not a blank outline (the CSS bug — data-state="idle" was
+    // missing from the ::after selector).
+    const markBackground = await page.locator('.m-mark[data-state="idle"]').evaluate((e) => getComputedStyle(e, '::after').backgroundImage)
+    expect(markBackground).not.toBe('none')
   })
 
-  // Case AH (Task 6): Cycle-preset row visually separates the two duration presets from
-  // custom/no cycles without splitting the chipGroup, preserving exclusive single-select
-  // across all 4 options.
-  test('the cycle-preset row visually separates the two duration presets from custom/no cycles', async ({ context, extensionId, freshAccount }) => {
+  // Case AH (Task 6, updated Task 4): Cycle-preset row visually separates the two
+  // duration presets from custom without splitting the chipGroup, preserving exclusive
+  // single-select across all 3 options (25/5, 50/10, custom — "no cycles" no longer
+  // lives at this level; it's revealed under "custom").
+  test('the cycle-preset row visually separates the two presets from custom', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
@@ -137,17 +106,16 @@ test.describe('popup, idle state', () => {
     const cycleRow = page.locator('[data-chip-layout="paired"]')
     await expect(cycleRow).toBeVisible()
     const chips = cycleRow.locator('.m-chip')
-    await expect(chips).toHaveCount(4)
+    await expect(chips).toHaveCount(3)
 
-    const secondBox = (await chips.nth(1).boundingBox())! // "50/10"
-    const thirdBox = (await chips.nth(2).boundingBox())! // "custom"
-    const firstGap = (await chips.nth(1).boundingBox())!.x - ((await chips.nth(0).boundingBox())!.x + (await chips.nth(0).boundingBox())!.width)
-    const groupGap = thirdBox.x - (secondBox.x + secondBox.width)
-    expect(groupGap).toBeGreaterThan(firstGap) // the gap between groups is wider than the gap within a group
+    const firstBox = (await chips.nth(0).boundingBox())!
+    const secondBox = (await chips.nth(1).boundingBox())!
+    const thirdBox = (await chips.nth(2).boundingBox())!
+    const withinGroupGap = secondBox.x - (firstBox.x + firstBox.width)
+    const beforeCustomGap = thirdBox.x - (secondBox.x + secondBox.width)
+    expect(beforeCustomGap).toBeGreaterThan(withinGroupGap)
 
-    // Exclusive selection still works correctly across the whole row, including across
-    // the new visual gap — clicking "custom" (in the second visual group) must un-press
-    // "25/5" (in the first visual group), proving this is still ONE chipGroup, not two.
+    // Exclusive selection spans all 3, including across the visual gap.
     await chips.first().click() // 25/5
     await expect(chips.first()).toHaveAttribute('aria-pressed', 'true')
     await chips.nth(2).click() // custom
@@ -155,31 +123,98 @@ test.describe('popup, idle state', () => {
     await expect(chips.first()).toHaveAttribute('aria-pressed', 'false')
   })
 
-  // The duration picker is chipGroup's single-select path (no multi/removable) — one of
-  // the two chip groups in this popup still genuinely toggle rather than add/remove
-  // (the other is the cycle picker). Site chips became removable in an earlier task, so
-  // clicking one now deletes it instead of toggling it — this test used to click site
-  // chips and no longer exercised toggle behaviour at all.
-  test('single-select chips toggle exclusively: picking one flips the previous one off', async ({ context, extensionId, freshAccount }) => {
+  test('the idle popup shows only 25/5, 50/10, and custom at first — no duration row, no until-I-stop, no no-cycles', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    const fiftyChip = page.getByRole('button', { name: '50 min', exact: true })
-    const twentyFiveChip = page.getByRole('button', { name: '25 min', exact: true })
+    await expect(page.getByRole('button', { name: '25/5', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '50/10', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'custom', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '25 min', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '50 min', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'until I stop', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'no cycles', exact: true })).toHaveCount(0)
 
-    // 50/10 is the documented first-ever-session cycle default, but the duration default
-    // is '25 min' (see idle()'s chipGroup call) — confirm the starting state first.
-    await expect(twentyFiveChip).toHaveAttribute('aria-pressed', 'true')
-    await expect(fiftyChip).toHaveAttribute('aria-pressed', 'false')
+    // 25/5 is the confirmed first-ever-session default.
+    await expect(page.getByRole('button', { name: '25/5', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  })
 
-    await fiftyChip.click()
-    await expect(fiftyChip).toHaveAttribute('aria-pressed', 'true')
-    await expect(twentyFiveChip).toHaveAttribute('aria-pressed', 'false') // the previous pick must flip off
+  test('clicking custom reveals labelled work/break inputs plus until-I-stop and no-cycles', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
 
-    await twentyFiveChip.click()
-    await expect(twentyFiveChip).toHaveAttribute('aria-pressed', 'true')
-    await expect(fiftyChip).toHaveAttribute('aria-pressed', 'false')
+    await page.getByRole('button', { name: 'custom', exact: true }).click()
+    await expect(page.getByText('work', { exact: true })).toBeVisible()
+    const workInput = page.locator('input[data-chip-role="number"]').first()
+    const breakInput = page.locator('input[data-chip-role="number"]').nth(1)
+    await expect(workInput).toBeVisible()
+    await expect(breakInput).toBeVisible()
+    await expect(workInput).toHaveCSS('cursor', 'text') // not "pointer" — a real defect fixed by this task
+    await expect(page.getByRole('button', { name: 'until I stop', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'no cycles', exact: true })).toBeVisible()
+  })
+
+  test('no cycles disables the break input and relabels work to minutes, and stays reachable as a plain fixed-length session', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    await page.getByRole('button', { name: 'custom', exact: true }).click()
+    await page.getByRole('button', { name: 'no cycles', exact: true }).click()
+    await expect(page.getByText('minutes', { exact: true })).toBeVisible()
+    const breakInput = page.locator('input[data-chip-role="number"]').nth(1)
+    await expect(breakInput).toBeDisabled()
+
+    await page.locator('input[data-chip-role="number"]').first().fill('45')
+    await page.locator('input.m-field').first().fill('no cycles test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    await expect
+      .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session?.plannedMinutes)))))
+      .toBe(45)
+    await expect
+      .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session?.cycle)))))
+      .toBe(null)
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('until I stop keeps the typed cycle but removes the planned-duration cap', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    await page.getByRole('button', { name: 'custom', exact: true }).click()
+    await page.getByRole('button', { name: 'until I stop', exact: true }).click()
+    await page.locator('input.m-field').first().fill('until I stop test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    await expect
+      .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session?.plannedMinutes)))))
+      .toBe(null)
+    await expect
+      .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session?.cycle)))))
+      .toEqual({ work: 25, break: 5 }) // the default custom pair, since neither input was edited
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('picking 25/5 caps the session at exactly 30 planned minutes', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('preset cap test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    await expect
+      .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session?.plannedMinutes)))))
+      .toBe(30)
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
   test('typed domains are normalized on Enter and on blur, not dropped', async ({ context, extensionId, freshAccount }) => {
@@ -434,38 +469,38 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
-  test('a running session with a cycle configured shows which phase it is in, without a ticking countdown', async ({ context, extensionId, freshAccount }) => {
+  test('a running session with a cycle configured shows one consolidated line, not two, and never ticks', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
 
-    // 25/5 is already the picker's own preset (CYCLE_PRESETS[0]).
     await page.getByRole('button', { name: '25/5', exact: true }).click()
-    await page.locator('input.m-field').first().fill('cycle test')
-    await page.getByRole('button', { name: 'Start', exact: true }).click()
+    await page.locator('input.m-field').first().fill('consolidated copy test')
+    await page.getByRole('button', { name: 'Start' }).click()
 
-    await expect(page.getByText(/^work — \d+ min left$/)).toBeVisible()
+    await expect(page.getByText(/^\d+ min · \d+ min left$/)).toBeVisible()
+    await expect(page.getByText(/min elapsed/)).toHaveCount(0) // the old separate line is gone
 
-    // Push startedAt into the break phase without a real 25-minute wait.
+    // Push startedAt into the break phase without a real 26-minute wait.
     await page.evaluate(() => {
       return new Promise<void>((resolve) => {
         chrome.storage.local.get('session', ({ session }: any) => {
-          session.startedAt = new Date(Date.now() - 26 * 60_000).toISOString() // 1 min into break
+          session.startedAt = new Date(Date.now() - 26 * 60_000).toISOString()
           chrome.storage.local.set({ session }, () => resolve())
         })
       })
     })
     await page.reload()
-    await expect(page.getByText(/^break — \d+ min left$/)).toBeVisible()
+    await expect(page.getByText(/^\d+ min · break, \d+ min left$/)).toBeVisible()
 
-    // No cycle at all: no phase line should render.
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-  });
+  })
 
   test('a running session with no cycle configured shows no phase line', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: 'custom', exact: true }).click()
     await page.getByRole('button', { name: 'no cycles', exact: true }).click()
     await page.locator('input.m-field').first().fill('no cycle test')
     await page.getByRole('button', { name: 'Start', exact: true }).click()
@@ -474,96 +509,155 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   });
 
-  test('a running session with a cycle configured shows progress on the intention pill\'s own outline, not a separate mark', async ({ context, extensionId, freshAccount }) => {
+  test('the intention pill\'s loop starts at true top-center and traces clockwise', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: '25/5' }).click()
-    await page.locator('input.m-field').first().fill('pill outline test')
-    await page.getByRole('button', { name: 'Start' }).click()
-
-    const pillWrap = page.locator('[data-timer-pill="true"]')
-    await expect(pillWrap).toBeVisible()
-    // The intention text is still inside the SAME pill wrapper, not a separate element.
-    // A freshly-started session is always within the sentence-edit grace window, so
-    // sentenceNode is always the editable <input> here, never the read-only <p>.
-    await expect(pillWrap.locator('input.m-field')).toHaveValue('pill outline test')
-    // The progress loop lives INSIDE the pill wrapper as an SVG (not a top-level sibling mark).
-    const svg = pillWrap.locator('svg')
-    await expect(svg).toBeVisible()
-    await expect(svg.locator('rect')).toHaveCount(2)
-
-    // The plain running-state mark (matching idle/ended) still exists as its own
-    // top-level element, unaffected — it no longer carries the fill.
-    const topLevelMark = page.locator('.m-mark[data-state="running"]')
-    await expect(topLevelMark).toBeVisible()
-    await expect(topLevelMark.locator('.m-row-bar')).toHaveCount(0)
-
-    // The phase text sits immediately after the pill, not after a separate elapsed line.
-    const phaseLine = page.getByText(/^work — \d+ min left$/)
-    await expect(phaseLine).toBeVisible()
-
-    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-  })
-
-  test('the pill shows no progress strip when no cycle is configured', async ({ context, extensionId, freshAccount }) => {
-    const page = await context.newPage()
-    await freshAccount(page)
-    await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: 'no cycles' }).click()
-    await page.locator('input.m-field').first().fill('no cycle pill test')
-    await page.getByRole('button', { name: 'Start' }).click()
-
-    const pillWrap = page.locator('[data-timer-pill="true"]')
-    await expect(pillWrap).toBeVisible()
-    await expect(pillWrap.locator('.m-mark')).toHaveCount(0)
-    await expect(page.getByText(/min left$/)).toHaveCount(0)
-
-    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-  })
-
-  test('the intention pill\'s progress is drawn as an SVG loop around its full perimeter, not a bottom-only strip', async ({ context, extensionId, freshAccount }) => {
-    const page = await context.newPage()
-    await freshAccount(page)
-    await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: '25/5' }).click()
-    await page.locator('input.m-field').first().fill('loop test')
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('loop start test')
     await page.getByRole('button', { name: 'Start' }).click()
 
     const pillWrap = page.locator('[data-timer-pill="true"]')
     await expect(pillWrap).toBeVisible()
     const svg = pillWrap.locator('svg')
     await expect(svg).toBeVisible()
-    const rects = svg.locator('rect')
-    await expect(rects).toHaveCount(2) // one track rect, one progress rect
+    const paths = svg.locator('path')
+    await expect(paths.first()).toBeVisible()
 
-    // The progress rect's stroke-dasharray should reflect a genuine, non-zero elapsed
-    // fraction of the perimeter, not a fixed placeholder value.
-    const dasharray = await rects.nth(1).getAttribute('stroke-dasharray')
-    expect(dasharray).toBeTruthy()
-    const [filled, total] = dasharray!.split(' ').map(Number)
-    expect(filled).toBeGreaterThan(0)
-    expect(filled).toBeLessThan(total)
-
-    // The wrapper's own CSS border is suppressed while the SVG carries the visible outline.
-    await expect(pillWrap).toHaveCSS('border-style', 'none')
+    // Every segment shares the identical `d` (the authored top-center-start path) —
+    // confirms this is the new path-based construction, not the old two-<rect> one.
+    const dValues = await paths.evaluateAll((els) => els.map((e) => e.getAttribute('d')))
+    expect(new Set(dValues).size).toBe(1)
+    expect(dValues[0]).toMatch(/^M [\d.]+ [\d.]+ H/) // starts with a horizontal move from top-center
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
-  test('the pill keeps its plain CSS border, no SVG, when no cycle is configured', async ({ context, extensionId, freshAccount }) => {
+  test('the pill shows a visible arc immediately at session start, before any real attention time', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
-    await page.getByRole('button', { name: 'no cycles' }).click()
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('cold start test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    const svg = pillWrap.locator('svg')
+    await expect(svg).toBeVisible()
+    const firstPath = svg.locator('path').first()
+    const dasharray = await firstPath.evaluate((e) => getComputedStyle(e).strokeDasharray)
+    const [drawn] = dasharray.split(',').map((n) => parseFloat(n))
+    expect(drawn).toBeGreaterThan(0) // a visible arc exists even with ~0 real elapsed time
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the loop is a solid line throughout, no dashed segments anywhere', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('solid line test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    const svg = pillWrap.locator('svg')
+    await expect(svg).toBeVisible()
+    const strokeWidths = await svg.locator('path').evaluateAll((els) => els.map((e) => getComputedStyle(e).strokeWidth))
+    for (const w of strokeWidths) expect(w).toBe('2px') // --m-stroke-loud, uniform across every segment
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the pill\'s border is visually suppressed without changing its measured size', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '25/5', exact: true }).click()
+    await page.locator('input.m-field').first().fill('measurement test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const pillWrap = page.locator('[data-timer-pill="true"]')
+    await expect(pillWrap).toHaveAttribute('data-loop', 'on')
+    await expect(pillWrap).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)') // transparent, not border-style:none
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the loop still draws when no cycle is configured, filling from live attention data alone', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: 'custom', exact: true }).click()
+    await page.getByRole('button', { name: 'no cycles', exact: true }).click()
     await page.locator('input.m-field').first().fill('no cycle loop test')
     await page.getByRole('button', { name: 'Start' }).click()
 
     const pillWrap = page.locator('[data-timer-pill="true"]')
-    await expect(pillWrap).toBeVisible()
-    await expect(pillWrap.locator('svg')).toHaveCount(0)
-    await expect(pillWrap).not.toHaveCSS('border-style', 'none')
+    await expect(pillWrap.locator('svg')).toBeVisible() // the loop is NOT gated on a cycle existing
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
+
+})
+
+test('the outcome screen shows a colored attention band between the intention and the per-domain rows', async ({ context, extensionId, freshAccount }) => {
+  const setupPage = await context.newPage()
+  await freshAccount(setupPage)
+  await pairPopup(setupPage, extensionId)
+  await setupPage.locator('input.m-field').first().fill('outcome band test')
+  await setupPage.getByRole('button', { name: 'Start' }).click()
+
+  const sessionId: string = await setupPage.evaluate(
+    () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+  )
+  const { token } = await setupPage.evaluate(
+    () => new Promise<{ token: string }>((r) => chrome.storage.local.get('token', (v: any) => r(v))),
+  )
+
+  // Wait for the session-creation POST (fired from sw.js startSession()) to land server-side,
+  // polling instead of a fixed sleep — the Start button click is fire-and-forget on the client.
+  await expect
+    .poll(async () => {
+      const res = await setupPage.request.get(`/api/sessions/${sessionId}/review`, {
+        headers: { authorization: `Bearer ${token}` },
+      })
+      return res.status()
+    }, { timeout: 5_000 })
+    .not.toBe(404)
+
+  await setupPage.request.post('/api/events', {
+    headers: { authorization: `Bearer ${token}` },
+    data: {
+      sessionId,
+      events: [
+        { kind: 'attention', domain: 'chatgpt.com', seconds: 300, at: new Date().toISOString() },
+        { kind: 'away', domain: null, seconds: 60, at: new Date().toISOString() },
+      ],
+    },
+  })
+  await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  await setupPage.reload()
+
+  const band = setupPage.locator('.m-mark[data-band="session"]')
+  await expect(band).toBeVisible()
+  const bars = band.locator('.m-row-bar')
+  await expect(bars).toHaveCount(2) // one attention-1, one away
+  await expect(bars.nth(0)).toHaveAttribute('data-kind', 'attention-1')
+  await expect(bars.nth(1)).toHaveAttribute('data-kind', 'away')
+
+  // Additive — the existing text rows are still there too.
+  await expect(setupPage.getByText(/chatgpt\.com — \d+ min/)).toBeVisible()
+})
+
+test('the outcome screen shows no band when there is no attention data at all', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+  await page.locator('input.m-field').first().fill('empty outcome test')
+  await page.getByRole('button', { name: 'Start' }).click()
+  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  await page.reload()
+
+  await expect(page.locator('.m-mark[data-band="session"]')).toHaveCount(0)
 })

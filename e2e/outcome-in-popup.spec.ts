@@ -52,7 +52,8 @@ test('an offline-started-and-stopped session shows a transient failure, not a si
   await context.setOffline(true)
   await page.locator('input.m-field').first().fill('offline outcome test')
   await page.getByRole('button', { name: 'Start' }).click()
-  await expect(page.getByText(/min elapsed/)).toBeVisible({ timeout: 3_000 })
+  // With the default cycle (25/5), the running view shows the consolidated format
+  await expect(page.getByText(/^\d+ min · \d+ min left$/)).toBeVisible({ timeout: 3_000 })
 
   await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
 

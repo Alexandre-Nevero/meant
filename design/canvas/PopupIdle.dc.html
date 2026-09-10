@@ -16,56 +16,148 @@
     @media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
   </style>
 </helmet>
-<div style="width: 360px; height: 528px; box-sizing: border-box; background: #F3F1EE; font-family: 'Public Sans', system-ui, sans-serif; color: #14120F; letter-spacing: -0.02em; padding: 20px; display: flex; flex-direction: column; gap: 18px;">
+<!-- Round 5: the old always-visible duration row ("25 min / 50 min / until I stop") plus a
+     separate always-visible cycle row is gone — Task 4 merged both into one progressive-
+     disclosure picker: {25/5, 50/10, custom}, single-select, always visible. Only "custom"
+     reveals anything further (labelled work/break number inputs, plus until-I-stop/no-cycles).
+     A static artboard can't show a click, so both states are drawn explicitly, side by side. -->
+<div style="width: 840px; height: 650px; box-sizing: border-box; background: #E9E6E2; font-family: 'Public Sans', system-ui, sans-serif; color: #14120F; letter-spacing: -0.02em; padding: 40px; display: flex; gap: 40px;">
 
-  <p style="margin: 0; font-size: 13px; color: #8B8681;">What do you mean to do?</p>
+  <!-- COLLAPSED (default) -->
+  <div style="display: flex; flex-direction: column; gap: 14px; flex-grow: 1;">
+    <p style="margin: 0; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 11px; color: #8B8681; text-transform: uppercase; letter-spacing: 0.08em;">Collapsed — default, nothing revealed</p>
 
-  <div style="border: 1.5px solid #14120F; border-radius: 26px; padding: 16px 22px; min-height: 76px; display: flex; align-items: flex-start;">
-    <p style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 20px; line-height: 1.3; letter-spacing: -0.02em; color: #8B8681;"><span class="caret" style="color: #14120F;">|</span></p>
-  </div>
+    <div style="background: #F3F1EE; border-radius: 20px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px;">
 
-  <div style="display: flex; gap: 8px;">
-    <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">25 min</button>
-    <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">50 min</button>
-    <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">until I stop</button>
-  </div>
-
-  <div style="display: flex; gap: 8px;">
-    <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">25/5</button>
-    <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">50/10</button>
-    <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">custom</button>
-    <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">no cycles</button>
-  </div>
-
-  <div style="display: flex; flex-direction: column; gap: 12px;">
-
-    <div style="display: flex; flex-direction: column; gap: 7px;">
-      <p style="margin: 0; font-size: 13px; color: #8B8681;">where it happens</p>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">claude.ai</button>
-        <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">github.com</button>
-        <button style="padding: 8px 14px; font-size: 13px; color: #8B8681; background: transparent; border: 0.5px dashed #C7C2BB; border-radius: 999px; cursor: pointer;">+</button>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <p style="margin: 0; width: 34px; height: 16px; box-sizing: border-box; border: 1.5px solid #14120F; border-radius: 999px; position: relative; overflow: hidden;">
+          <span style="position: absolute; inset: 2px; border-radius: 7px; background: linear-gradient(to right, #C75B39 0 58%, transparent 58% 61%, #D68A6E 61% 76%, transparent 76% 79%, #E2B29E 79% 100%);"></span>
+        </p>
+        <div style="display: flex; gap: 8px;">
+          <button style="width: auto; padding: 8px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer; display: inline-flex;">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M7 4v3l2 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <button style="width: auto; padding: 8px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer; display: inline-flex;">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M6 2H2v10h10V8M8 2h4v4M12 2 6 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <div style="display: flex; flex-direction: column; gap: 7px;">
-      <p style="margin: 0; font-size: 13px; color: #8B8681;">blocking 4</p>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">gmail.com</button>
-        <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">amazon.com</button>
-        <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">linkedin.com</button>
-        <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">tiktok.com</button>
-        <button style="padding: 8px 14px; font-size: 13px; color: #8B8681; background: transparent; border: 0.5px dashed #C7C2BB; border-radius: 999px; cursor: pointer;">+</button>
+      <p style="margin: 0; font-size: 13px; color: #8B8681;">What do you mean to do?</p>
+
+      <div style="border: 1.5px solid #14120F; border-radius: 26px; padding: 16px 22px; min-height: 76px; display: flex; align-items: flex-start; box-sizing: border-box;">
+        <p style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 20px; line-height: 1.3; letter-spacing: -0.02em; color: #8B8681;"><span class="caret" style="color: #14120F;">|</span></p>
       </div>
-    </div>
 
+      <!-- level 1: the only row visible by default. "custom" gets a 12px lead-in gap,
+           separating the two numeric presets from it (docs/design-toolkit.md §2, matches
+           [data-chip-layout="paired"] > .m-chip:nth-child(3) in extension/meant.css). -->
+      <div style="display: flex; gap: 8px;">
+        <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">25/5</button>
+        <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">50/10</button>
+        <button style="margin-left: 12px; padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">custom</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <p style="margin: 0; font-size: 13px; color: #8B8681;">where it happens</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">claude.ai</button>
+            <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">github.com</button>
+            <button style="padding: 8px 14px; font-size: 13px; color: #8B8681; background: transparent; border: 0.5px dashed #C7C2BB; border-radius: 999px; cursor: pointer;">+</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <p style="margin: 0; font-size: 13px; color: #8B8681;">what to block</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">gmail.com</button>
+            <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">amazon.com</button>
+            <button style="padding: 8px 14px; font-size: 13px; color: #8B8681; background: transparent; border: 0.5px dashed #C7C2BB; border-radius: 999px; cursor: pointer;">+</button>
+          </div>
+        </div>
+      </div>
+
+      <button style="margin-top: auto; padding: 14px 0; font-size: 16px; letter-spacing: -0.02em; color: #F3F1EE; background: #14120F; border: none; border-radius: 28px; cursor: pointer;">Start</button>
+    </div>
   </div>
 
-  <button style="margin-top: auto; padding: 14px 0; font-size: 16px; letter-spacing: -0.02em; color: #F3F1EE; background: #14120F; border: none; border-radius: 28px; cursor: pointer;">Start</button>
+  <!-- CUSTOM (revealed) — "custom" clicked: the level-1 row stays, and a second row appears
+       beneath it with labelled work/break number chips plus the until-I-stop/no-cycles pair. -->
+  <div style="display: flex; flex-direction: column; gap: 14px; flex-grow: 1;">
+    <p style="margin: 0; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 11px; color: #8B8681; text-transform: uppercase; letter-spacing: 0.08em;">Custom — revealed after clicking "custom"</p>
+
+    <div style="background: #F3F1EE; border-radius: 20px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px;">
+
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <p style="margin: 0; width: 34px; height: 16px; box-sizing: border-box; border: 1.5px solid #14120F; border-radius: 999px; position: relative; overflow: hidden;">
+          <span style="position: absolute; inset: 2px; border-radius: 7px; background: linear-gradient(to right, #C75B39 0 58%, transparent 58% 61%, #D68A6E 61% 76%, transparent 76% 79%, #E2B29E 79% 100%);"></span>
+        </p>
+        <div style="display: flex; gap: 8px;">
+          <button style="width: auto; padding: 8px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer; display: inline-flex;">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M7 4v3l2 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <button style="width: auto; padding: 8px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer; display: inline-flex;">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M6 2H2v10h10V8M8 2h4v4M12 2 6 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <p style="margin: 0; font-size: 13px; color: #8B8681;">What do you mean to do?</p>
+
+      <div style="border: 1.5px solid #14120F; border-radius: 26px; padding: 16px 22px; min-height: 76px; display: flex; align-items: flex-start; box-sizing: border-box;">
+        <p style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 20px; line-height: 1.3; letter-spacing: -0.02em; color: #8B8681;"><span class="caret" style="color: #14120F;">|</span></p>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">25/5</button>
+        <button style="padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">50/10</button>
+        <button style="margin-left: 12px; padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">custom</button>
+      </div>
+
+      <!-- the reveal: labelled work/break chip-inputs, then the two exclusive-ish
+           until-I-stop / no-cycles chips (extension/meant.css [data-chip-layout="custom"]). -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #8B8681;">
+          work
+          <span style="width: 56px; padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; text-align: center; color: #14120F; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; box-sizing: border-box; display: inline-block;">25</span>
+        </label>
+        <span>/</span>
+        <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #8B8681;">
+          break
+          <span style="width: 56px; padding: 8px 14px; font-family: 'Sometype Mono', ui-monospace, monospace; font-size: 12px; text-align: center; color: #14120F; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; box-sizing: border-box; display: inline-block;">5</span>
+        </label>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button style="padding: 8px 14px; font-size: 13px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">until I stop</button>
+        <button style="padding: 8px 14px; font-size: 13px; color: #8B8681; background: transparent; border: 0.5px solid #C7C2BB; border-radius: 999px; cursor: pointer;">no cycles</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <p style="margin: 0; font-size: 13px; color: #8B8681;">where it happens</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">claude.ai</button>
+            <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">github.com</button>
+            <button style="padding: 8px 14px; font-size: 13px; color: #8B8681; background: transparent; border: 0.5px dashed #C7C2BB; border-radius: 999px; cursor: pointer;">+</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <p style="margin: 0; font-size: 13px; color: #8B8681;">what to block</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">gmail.com</button>
+            <button style="padding: 8px 14px; font-size: 13px; color: #14120F; background: transparent; border: 0.5px solid #14120F; border-radius: 999px; cursor: pointer;">amazon.com</button>
+            <button style="padding: 8px 14px; font-size: 13px; color: #8B8681; background: transparent; border: 0.5px dashed #C7C2BB; border-radius: 999px; cursor: pointer;">+</button>
+          </div>
+        </div>
+      </div>
+
+      <button style="margin-top: auto; padding: 14px 0; font-size: 16px; letter-spacing: -0.02em; color: #F3F1EE; background: #14120F; border: none; border-radius: 28px; cursor: pointer;">Start</button>
+    </div>
+  </div>
 
 </div>
 </x-dc>
-<script data-dc-script data-props='{"$preview":{"width":360,"height":528}}'>
+<script data-dc-script data-props='{"$preview":{"width":840,"height":650}}'>
 class Component extends DCLogic { renderVals() { return {}; } }
 </script>
 </body>

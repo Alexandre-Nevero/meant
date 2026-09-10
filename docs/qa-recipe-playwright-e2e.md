@@ -446,29 +446,29 @@ compact cluster without dominating the popup.
     row appears as a compact ~4-line chip grid with an internal scrollbar, not a tall
     tower of wrapping chips extending past the Start button.)
 
-### U — Cycle phase display in the running popup (Task 10)
+### U — Cycle phase display in the running popup (Task 10, consolidated in Task 5 review round)
 
-The running popup showed elapsed minutes but no sense of where you sit in a configured
-work/break cycle. The fix adds a pure `cyclePhase(session)` helper (`session.cycle` +
-`session.startedAt` in, `{phase, elapsedInPhaseMs, phaseMs, remainingMinutes}` or `null`
-out) and wires it into `running()`: a phase line (`"work — 15 min left"` /
-`"break — 3 min left"`) plus a two-segment fill — originally in a separate top-level
-`.m-mark:not(:empty)` band, since restructured by Task 5 of the follow-up review-fixes
-plan to live inside `[data-timer-pill]` instead (see Case AB below; the top-level
-`.m-mark[data-state="running"]` is now always empty, matching idle/ended). Read-only
-display only: `extension/lib/attribution.js`'s undriven `'break'` mode stays undriven;
-break time keeps being tracked as ordinary attention/away exactly as before. No cycle
-configured ⇒ no phase line, no band. No `chrome.storage.onChanged` listener was added —
-the display only recomputes when the popup itself re-renders, never on a live
-per-second timer.
+The running popup originally showed elapsed minutes but no sense of where you sit in a
+configured work/break cycle. Task 10 added a pure `cyclePhase(session)` helper and a two-line
+display: one line for elapsed time (`"X min elapsed"`) and a second for the phase
+(`"work — 15 min left"` / `"break — 3 min left"`). The follow-up review round consolidated
+these into a single line since duration is now merged into the cycle — "left in this cycle"
+and "left in this session" are the same number for every mode except "until I stop", so two
+lines would say one thing twice. The new consolidated format is `"X min · Y min left"` for
+work phases and `"X min · break, Y min left"` for break phases. Read-only display only:
+`extension/lib/attribution.js`'s undriven `'break'` mode stays undriven; break time keeps
+being tracked as ordinary attention/away exactly as before. No cycle configured ⇒ only an
+elapsed line (`"X min elapsed"`), never the empty phrase line. No `chrome.storage.onChanged`
+listener was added — the display only recomputes when the popup itself re-renders, never on
+a live per-second timer.
 
-50. Start a session with the picker's `25/5` preset. **Pass:** a `work — N min left` line
-    is visible. Push `session.startedAt` back 26 minutes via `chrome.storage.local` (25/5
-    cycle: 26 min elapsed lands 1 min into the break phase — `posInCycle` (1,560,000ms)
-    ≥ `workMs` (1,500,000ms)) and reload. **Pass:** the line now reads
-    `break — N min left`.
-51. Start a session with `no cycles` selected. **Pass:** no `... min left` text renders
-    anywhere in the popup.
+50. Start a session with the picker's `25/5` preset. **Pass:** a `25 min · N min left` line
+    is visible (consolidated elapsed and phase). Push `session.startedAt` back 26 minutes
+    via `chrome.storage.local` (25/5 cycle: 26 min elapsed lands 1 min into the break phase
+    — `posInCycle` (1,560,000ms) ≥ `workMs` (1,500,000ms)) and reload. **Pass:** the line
+    now reads `26 min · break, N min left`.
+51. Start a session with `no cycles` selected. **Pass:** a `X min elapsed` line (no phase,
+    no "min left") is visible — no consolidated format when no cycle is configured.
 
 ### V — Blocking UI: the interstitial names the domain, the popup label stops mismatching its sibling (Task 12)
 
@@ -800,34 +800,221 @@ text. No new class: `data-popup-header` is an attribute, and `.m-mark`/`.m-btn`/
     `page.locator('.m-mark')` (previously unique) is scoped to `[data-state="idle"]` now
     that the reused History icon is a second `.m-mark` on the same page.
 
-### AH — Cycle-preset row visual grouping without breaking exclusive selection (Task 6)
+### AH — Cycle-preset row visual grouping without breaking exclusive selection (Task 6,
+updated Task 4 for the merged progressive-disclosure picker)
 
-The cycle-preset row (25/5 · 50/10 · custom · no cycles) renders as four sibling buttons
-in a single `.m-chip-row` with exclusive single-select behavior spanning all 4 options via
-one `chipGroup()` call. To visually separate the two numeric presets (work/break minutes)
-from the custom/no-cycles options without splitting into two separate chipGroups (which
-would break exclusive selection across the gap), this adds a CSS-only visual gap before
-the 3rd chip. The row can't use the existing `data-chip-layout="cluster"` pattern (which
-wraps two separate label+chipGroup pairs in `whereGroup`/`blockGroup` elsewhere) — that
-pattern explicitly requires two independent groups. Instead, `cycle.row.dataset.chipLayout
-= 'paired'` tags the single row with a new attribute value, and `[data-surface="popup"]
+The cycle-preset row (25/5 · 50/10 · custom) renders as three sibling buttons in a single
+`.m-chip-row` with exclusive single-select behavior spanning all 3 options via one
+`chipGroup()` call. `no cycles` no longer lives at this level — Task 4 moved it under
+`custom`'s reveal (see Case AK). To visually separate the two numeric presets (work/break
+minutes) from `custom` without splitting into two separate chipGroups (which would break
+exclusive selection across the gap), this adds a CSS-only visual gap before the 3rd chip.
+The row can't use the existing `data-chip-layout="cluster"` pattern (which wraps two
+separate label+chipGroup pairs in `whereGroup`/`blockGroup` elsewhere) — that pattern
+explicitly requires two independent groups. Instead, `picker.row.dataset.chipLayout =
+'paired'` tags the single row with a new attribute value, and `[data-surface="popup"]
 [data-chip-layout="paired"] > .m-chip:nth-child(3) { margin-left: 12px; }` adds a larger
 gap before the 3rd chip only.
 
 74. E2E test: `e2e/popup.spec.ts` "the cycle-preset row visually separates the two
-    duration presets from custom/no cycles". Pair the popup (idle view). **Pass:**
-    `[data-chip-layout="paired"]` is visible and contains exactly 4 `.m-chip` elements.
-    Measure the gaps: the gap between the 1st and 2nd chip (within the first group) is
-    smaller than the gap between the 2nd and 3rd chip (the visual separator). **Pass:**
-    exclusive single-select still spans all 4 buttons, including across the new visual
-    gap — clicking the 1st chip (25/5) to press it, then clicking the 3rd chip (custom)
-    un-presses the 1st, proving this is still ONE chipGroup, not two.
+    presets from custom". Pair the popup (idle view). **Pass:**
+    `[data-chip-layout="paired"]` is visible and contains exactly 3 `.m-chip` elements.
+    Measure the gaps: the gap between the 1st and 2nd chip (within the group) is smaller
+    than the gap between the 2nd and 3rd chip (the visual separator before "custom").
+    **Pass:** exclusive single-select still spans all 3 buttons, including across the new
+    visual gap — clicking the 1st chip (25/5) to press it, then clicking the 3rd chip
+    (custom) un-presses the 1st, proving this is still ONE chipGroup, not two.
     Visual check (temp spec + screenshot, deleted after): rendered the idle popup at
     360px width and screenshotted the cycle-preset row. Confirmed by eye: the two numeric
     presets ("25/5", "50/10") read as one visual pair on the left; a clearly larger gap
-    sits before "custom"; "custom" and "no cycles" read together as a second pair on the
-    right; the row overall reads as two related visual groups, not one undifferentiated
-    strip of four identical chips.
+    sits before "custom" on the right; the row overall reads as two related visual
+    groups, not one undifferentiated strip of three identical chips.
+
+### AI — `session.tally` accumulates real attention seconds (Task 2)
+
+`extension/sw.js`'s `session.tally` shape (`{ attention: {[domain]: seconds}, away: number,
+break: number }`) was reserved by an earlier round but never actually written to —
+`transition()` closed slices and enqueued events but never touched `tally`. This also
+surfaced a real bug: `startSession()` seeded `tally: {}` (a bare empty object), and
+`transition()`'s intended fallback `session.tally ?? { attention: {}, away: 0, break: 0 }`
+never fires for `{}` (only `null`/`undefined` trigger `??`), so the very first attention
+event to close would have thrown `Cannot set properties of undefined` against
+`tally.attention[domain]`. Fixed by seeding the correct shape at session start and by
+having `transition()` itself defensively normalize any pre-existing bare-`{}` session data
+(`session.tally?.attention ? session.tally : { attention: {}, away: 0, break: 0 }`), then
+accumulating each closed event's seconds into the matching bucket every time `transition()`
+runs.
+
+75. E2E test: `e2e/session-lifecycle.spec.ts` "session.tally accumulates real attention
+    seconds as tabs are switched". Start a session while already on `example.com`, stay
+    long enough to cross `attribution.js`'s 1-second emission floor, then switch to
+    `example.org` (closing the `example.com` slice, which is what actually writes its
+    seconds into `session.tally`). **Pass:** `session.tally.attention['example.com']`
+    is a number greater than 0.
+
+### AJ — Timer pill loop becomes live, per-site segmented, top-center-start, solid (Task 3)
+
+Case AF's two-`<rect>` construction (dashed `var(--m-edge)` remainder track plus a solid
+`var(--m-clay)` elapsed track, gated on `if (phase)`) is replaced entirely. The loop is now
+one authored SVG `<path>` `d` (clockwise from true top-dead-centre: `M x+w/2 y H … A … V … H
+…`, no `Z`), reused verbatim for every segment — a real per-site attention loop instead of a
+generic phase-progress ring. Segments come from `withOpenSlice(session.tally, session.slice,
+Date.now())` piped through `toSegments()` (both from `./lib/tally.js`, Task 1), painted
+`--m-clay`/`--m-clay-2`/`--m-clay-3` for the top three attention domains and `--m-edge` for
+the remainder — away/break fold into the remainder unpainted, per "away is a hatch, never
+solid grey". A 5%-of-perimeter floor (item D) guarantees a visible arc even at t≈0. The loop
+now draws **unconditionally** — no `if (phase)` gate — since it visualizes live attention,
+not phase progress; a session with no cycle configured still shows it. The wrapper's own CSS
+border is hidden via `border-color: transparent` (a new `[data-timer-pill][data-loop="on"]`
+rule), not `style.border = 'none'` — the old approach changed `border-style`, which shifts
+`clientWidth`/`clientHeight` by the stroke width right before it's measured; `border-color:
+transparent` keeps the box identically sized. The now-fully-dead `[data-timer-pill] >
+.m-mark:not(:empty)` bottom-strip rule (zero producers since two rounds ago) is removed.
+
+76. E2E test: `e2e/popup.spec.ts` "the intention pill's loop starts at true top-center and
+    traces clockwise". Start a `25/5` session. **Pass:** every `<path>` inside the pill's
+    `<svg>` shares one identical `d` value, and that `d` matches `^M [\d.]+ [\d.]+ H` — a
+    horizontal move immediately after the top-center `M`, confirming the new path-based
+    construction (not the old two-`<rect>` one).
+77. E2E test: `e2e/popup.spec.ts` "the pill shows a visible arc immediately at session
+    start, before any real attention time". Start a `25/5` session. **Pass:** the first
+    path's computed `stroke-dasharray`'s drawn length is greater than 0 even with ~0 real
+    elapsed attention — the 5% floor.
+78. E2E test: `e2e/popup.spec.ts` "the loop is a solid line throughout, no dashed segments
+    anywhere". Start a `25/5` session. **Pass:** every path's computed `stroke-width` is
+    exactly `2px` (`--m-stroke-loud`), uniform across every segment — no dashed track.
+79. E2E test: `e2e/popup.spec.ts` "the pill's border is visually suppressed without
+    changing its measured size". Start a `25/5` session. **Pass:** the pill wrapper carries
+    `data-loop="on"` and its computed `border-color` is `rgba(0, 0, 0, 0)` (transparent via
+    CSS, not `border-style: none`).
+80. E2E test: `e2e/popup.spec.ts` "the loop still draws when no cycle is configured,
+    filling from live attention data alone". Un-skipped by Task 4 (was `test.fixme`,
+    pending that task's `custom` → `no cycles` picker click sequence; now a plain `test`
+    and passing). Documents that this task's loop is unconditional: it will draw even with
+    no cycle configured.
+    Visual check (temp spec + screenshot, deleted after): started a `25/5` session,
+    navigated across two real domains (`example.com`, `www.iana.org`) so real segments
+    exist, pushed `session.startedAt` back and reloaded, then screenshotted the pill at
+    native 360px width. Confirmed by eye: a solid clay arc begins exactly at the pill's
+    true top-center and runs clockwise, no dashed segments anywhere, and the remainder
+    closes the loop as a plain, muted `--m-edge` line rather than a dashed one. With
+    real accumulated attention only a few seconds against a 1500s (25 min) denominator,
+    the drawn arc matched the 5% floor rather than the real (much smaller) proportion,
+    confirming item D's cold-start floor. The `custom` → `no cycles` case is deferred to
+    Task 4, once its picker lands.
+
+### AK — Progressive-disclosure duration + cycle picker replaces the two old separate rows
+(Task 4)
+
+The idle popup's two separate always-visible pickers — a "session length" row (25 min /
+50 min / until I stop) and a "cycle" row (25/5 / 50/10 / custom / no cycles, Case AH) —
+are merged into ONE picker: `{25/5, 50/10, custom}` always visible; clicking `custom`
+reveals labelled `work`/`break` number inputs plus two more chips (`until I stop` /
+`no cycles`), at most one of which can be pressed at a time. `extension/popup.js`'s
+`cyclePicker()`/`cyclePresetKey()` are deleted and replaced by `cycleDurationPicker()` /
+`restore()`; its `.value` getter returns `{ plannedMinutes, cycle }` directly — the exact
+shape `chrome.runtime.sendMessage({ type: 'start', ... })` already expected from two
+separate `duration.value`/`cycle.value` reads, so `sw.js`/`startSession()` needed no
+change. A same-round CSS fix: the custom work/break `<input>`s are chip-shaped
+(`.m-chip`) but are real text fields, not buttons — `data-chip-role="number"` gives them
+`cursor: text` (previously inherited the chip's `cursor: pointer`, a real defect) and a
+distinct disabled style for the break input under "no cycles".
+
+81. E2E test: `e2e/popup.spec.ts` "the idle popup shows only 25/5, 50/10, and custom at
+    first — no duration row, no until-I-stop, no no-cycles". Pair the popup (idle view).
+    **Pass:** `25/5`, `50/10`, `custom` are visible; `25 min`, `50 min`, `until I stop`,
+    `no cycles` all have zero count (not present until `custom` is clicked); `25/5` is
+    pressed by default (the confirmed first-ever-session default, 30 planned minutes).
+82. E2E test: `e2e/popup.spec.ts` "clicking custom reveals labelled work/break inputs
+    plus until-I-stop and no-cycles". Click `custom`. **Pass:** a `work` label is
+    visible; both `input[data-chip-role="number"]` fields (work, break) are visible; the
+    work input's computed `cursor` is `text`, not `pointer`; `until I stop` and
+    `no cycles` chips are both visible.
+83. E2E test: `e2e/popup.spec.ts` "no cycles disables the break input and relabels work
+    to minutes, and stays reachable as a plain fixed-length session". Click `custom`,
+    then `no cycles`. **Pass:** the `work` label text becomes `minutes`; the break input
+    is disabled. Fill the (now "minutes") input with `45`, type a sentence, click
+    `Start`. **Pass:** `session.plannedMinutes` is `45` and `session.cycle` is `null` —
+    "no cycles" still produces a plain fixed-length session, just reached through the
+    new reveal instead of a top-level chip.
+84. E2E test: `e2e/popup.spec.ts` "until I stop keeps the typed cycle but removes the
+    planned-duration cap". Click `custom`, then `until I stop` (inputs left at their
+    defaults), type a sentence, click `Start`. **Pass:** `session.plannedMinutes` is
+    `null`; `session.cycle` is `{ work: 25, break: 5 }` — the default custom pair, since
+    neither input was edited.
+85. E2E test: `e2e/popup.spec.ts` "picking 25/5 caps the session at exactly 30 planned
+    minutes". Click `25/5`, type a sentence, click `Start`. **Pass:**
+    `session.plannedMinutes` is exactly `30` (25 + 5).
+86. E2E test: `e2e/popup.spec.ts` "the loop still draws when no cycle is configured,
+    filling from live attention data alone" (Case AJ, item 80) — un-skipped this task;
+    now a plain `test`, passing with the two-click `custom` → `no cycles` sequence its
+    body already used.
+
+Superseded and deleted this task (the old always-visible 5-chip layout they exercised no
+longer exists): `e2e/popup.spec.ts`'s "renders the approved layout: sentence, duration,
+cycle, site rows, Start" and "single-select chips toggle exclusively: picking one flips
+the previous one off".
+
+Visual check (temp spec + screenshot, deleted after): rendered the idle popup at 360px
+width and screenshotted three states — default, after clicking `custom`, after also
+clicking `no cycles`. Confirmed by eye: level 1 shows exactly 3 aligned chips (`25/5`,
+`50/10`, `custom`) with the Case AH gap before `custom`; the custom reveal shows clearly
+labelled `work`/`break` inputs (a text cursor, not a pointer) plus the `until I stop`/
+`no cycles` chips beneath, all aligned, nothing overlapping; the `no cycles` state
+visibly greys the break input and relabels `work` to `minutes`.
+
+### AL — Running-screen copy consolidation: elapsed + phase into one line (Task 5 review round)
+
+With Task 4's merger of `plannedMinutes` into the cycle, the running popup's two separate
+text lines (`"X min elapsed"` and `"work — Y min left"`) became redundant — "left in this
+cycle" and "left in this session" are now always the same number (except "until I stop").
+The fix consolidates them into one line, visible only when a cycle is configured:
+`"X min · Y min left"` for work phases, `"X min · break, Y min left"` for breaks. When no
+cycle is configured, the display falls back to the plain `"X min elapsed"` line (phase is
+falsy, so no consolidation applies). Both the old and new text are read-only, non-ticking
+displays — recomputed only when the popup itself re-renders.
+
+87. E2E test: `e2e/popup.spec.ts` "a running session with a cycle configured shows one
+    consolidated line, not two, and never ticks". Start a session with the `25/5` preset
+    and a sentence. **Pass:** a line matching `/^\d+ min · \d+ min left$/` is visible and
+    a search for "min elapsed" returns zero matches — confirming the old two-line format
+    (separate elapsed line) is gone. Push `session.startedAt` back 26 minutes to land
+    in the break phase and reload. **Pass:** the line now matches `/^\d+ min · break,
+    \d+ min left$/`, confirming the break phase text swaps in with the consolidated
+    format intact.
+88. E2E test: `e2e/popup.spec.ts` "a running session with no cycle configured shows no
+    phase line" (Case U, item 51, re-affirmed). Start a session with `no cycles` selected.
+    **Pass:** a line matching `/^\d+ min elapsed$/` is visible and no "min left" text
+    appears anywhere — the fallback plain elapsed line, confirming this branch is
+    unchanged by the consolidation fix.
+
+### AM — Outcome-screen attention band, giving `.m-row-bar` its first producer (Task 6)
+
+A prior round shipped the paint rules for `.m-row-bar[data-kind="..."]` (attention-1/2/3,
+away, remainder) and the `.m-mark:not(:empty)` flex layout, but nothing ever rendered them
+outside the running popup's timer loop — the post-session outcome screen still listed
+attention only as plain text rows. `outcome()` now also builds a `.m-mark[data-band="session"]`
+between the intention sentence and the per-domain text rows: one `.m-row-bar[data-kind=...]`
+per non-zero segment (`attention-1/2/3` for `data.topAttention` in order, `away` last when
+`data.awaySeconds > 0`), each with `style.flex` set to its raw seconds — the one legitimate
+inline style, since it IS the data. No band renders at all when every segment would be zero.
+
+89. E2E test: `e2e/popup.spec.ts` "the outcome screen shows a colored attention band between
+    the intention and the per-domain rows". Start a session, post one `attention` event
+    (300s, chatgpt.com) and one `away` event (60s) via `/api/events`, stop, reload onto the
+    outcome screen. **Pass:** `.m-mark[data-band="session"]` is visible, contains exactly 2
+    `.m-row-bar` children, the first has `data-kind="attention-1"` and the second
+    `data-kind="away"` — and the existing `chatgpt.com — N min` text row is still present
+    (additive, not a replacement).
+90. E2E test: `e2e/popup.spec.ts` "the outcome screen shows no band when there is no
+    attention data at all". Start and immediately stop a session with no events posted.
+    **Pass:** `.m-mark[data-band="session"]` has zero matches — an empty session renders no
+    band rather than an empty or zero-width one.
+
+Manual/visual: with 3 attention domains (600s/300s/150s) plus 120s away posted before stop,
+the band renders as one full-width bar with four swatches in decreasing width, left to right:
+solid dark clay, solid mid clay, solid light clay, then the diagonal-hatch away pattern —
+same left-to-right order as the text rows underneath.
 
 ## What Sonnet writes vs. what Haiku runs
 

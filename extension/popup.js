@@ -2,6 +2,7 @@ import { post, get, apiBase } from './api.js'
 import { isEditable } from './lib/sentence-lock.js'
 import { normalizeDomain } from './lib/normalize-domain.js'
 import { resolveSitePhrase } from './lib/resolve-sites.js'
+import { withOpenSlice, toSegments } from './lib/tally.js'
 
 const root = document.getElementById('root')
 
@@ -219,57 +220,102 @@ function header(mark) {
   return wrap
 }
 
-function cyclePresetKey(cycle) {
-  if (!cycle) return 'none'
-  const preset = CYCLE_PRESETS.find((p) => p.work === cycle.work && p.break === cycle.break)
-  return preset ? `${preset.work}/${preset.break}` : 'custom'
-}
+/** 25/5 · 50/10 · custom — one single-select, always visible. Custom reveals labelled
+ *  work/break inputs plus two more chips (until I stop / no cycles), at-most-one-of-two.
+ *  `.value` is `{ plannedMinutes, cycle }` directly — the exact shape the Start handler
+ *  already sends to sw.js, so nothing downstream of this picker needs to change. */
+function cycleDurationPicker(lastChoice) {
+  const restored = restore(lastChoice)
+  let mode = restored.mode
+  let customMode = restored.customMode
 
-/** 25/5 · 50/10 · custom · no cycles. `custom` reveals two number inputs (`customRow`,
- *  rendered separately so the caller controls where it sits). `.value` is `{work,break}` or
- *  `null` — `null` (picking "no cycles") is today's one-continuous-block behaviour. */
-function cyclePicker(initialCycle) {
-  const key = cyclePresetKey(initialCycle)
-  const options = [
-    ...CYCLE_PRESETS.map((p) => ({ label: `${p.work}/${p.break}`, value: `${p.work}/${p.break}` })),
-    { label: 'custom', value: 'custom' },
-    { label: 'no cycles', value: 'none' },
-  ]
+  const workLabelText = el('span', null, customMode === 'none' ? 'minutes' : 'work')
+  const workLabel = el('label', 'm-meta')
+  const workInput = el('input', 'm-chip')
+  workInput.type = 'number'
+  workInput.min = '1'
+  workInput.dataset.chipRole = 'number'
+  workInput.value = String(restored.work)
+  workLabel.append(workLabelText, workInput)
 
-  const customWork = el('input', 'm-chip')
-  customWork.type = 'number'
-  customWork.min = '1'
-  customWork.style.width = '64px'
-  const customBreak = el('input', 'm-chip')
-  customBreak.type = 'number'
-  customBreak.min = '1'
-  customBreak.style.width = '64px'
-  customWork.value = String(key === 'custom' ? initialCycle.work : 25)
-  customBreak.value = String(key === 'custom' ? initialCycle.break : 5)
+  const breakLabelText = el('span', null, 'break')
+  const breakLabel = el('label', 'm-meta')
+  const brkInput = el('input', 'm-chip')
+  brkInput.type = 'number'
+  brkInput.min = '1'
+  brkInput.dataset.chipRole = 'number'
+  brkInput.value = String(restored.brk)
+  brkInput.disabled = customMode === 'none'
+  breakLabel.append(breakLabelText, brkInput)
 
-  const customRow = el('div', 'm-chip-row')
-  customRow.append(customWork, el('span', null, '/'), customBreak)
-  customRow.hidden = key !== 'custom'
+  const inputsRow = el('div')
+  inputsRow.dataset.chipLayout = 'custom'
+  inputsRow.append(workLabel, el('span', null, '/'), breakLabel)
 
-  const group = chipGroup(options, {
-    mono: true,
-    value: key,
-    onChange: (v) => { customRow.hidden = v !== 'custom' },
-  })
+  const openChip = el('button', 'm-chip', 'until I stop')
+  openChip.type = 'button'
+  openChip.setAttribute('aria-pressed', String(customMode === 'open'))
+  const noneChip = el('button', 'm-chip', 'no cycles')
+  noneChip.type = 'button'
+  noneChip.setAttribute('aria-pressed', String(customMode === 'none'))
+  const customChipsRow = el('div', 'm-chip-row')
+  customChipsRow.append(openChip, noneChip)
+
+  const customRow = el('div')
+  customRow.append(inputsRow, customChipsRow)
+  customRow.hidden = mode !== 'custom'
+
+  function setCustomMode(next) {
+    customMode = next
+    openChip.setAttribute('aria-pressed', String(next === 'open'))
+    noneChip.setAttribute('aria-pressed', String(next === 'none'))
+    brkInput.disabled = next === 'none'
+    workLabelText.textContent = next === 'none' ? 'minutes' : 'work'
+  }
+  openChip.addEventListener('click', () => setCustomMode(customMode === 'open' ? 'timed' : 'open'))
+  noneChip.addEventListener('click', () => setCustomMode(customMode === 'none' ? 'timed' : 'none'))
+  // Typing in either field is itself a choice of "timed" — editing numbers a pressed
+  // chip is ignoring would be a trap. workInput's guard is asymmetric on purpose: under
+  // "no cycles" the work field IS the session length, so editing it must not leave "none".
+  workInput.addEventListener('input', () => { if (customMode === 'open') setCustomMode('timed') })
+  brkInput.addEventListener('input', () => { if (customMode !== 'timed') setCustomMode('timed') })
+
+  const level1 = chipGroup(
+    [{ label: '25/5', value: '25/5' }, { label: '50/10', value: '50/10' }, { label: 'custom', value: 'custom' }],
+    { mono: true, value: mode, onChange: (v) => { mode = v; customRow.hidden = v !== 'custom' } },
+  )
+  level1.row.dataset.chipLayout = 'paired'
 
   return {
-    row: group.row,
+    row: level1.row,
     customRow,
     get value() {
-      const v = group.value
-      if (v === 'none') return null
-      if (v === 'custom') {
-        return { work: Number(customWork.value) || 25, break: Number(customBreak.value) || 5 }
+      const w = Number(workInput.value) || 25
+      const b = Number(brkInput.value) || 5
+      if (level1.value !== 'custom') {
+        const [pw, pb] = level1.value.split('/').map(Number)
+        return { plannedMinutes: pw + pb, cycle: { work: pw, break: pb } }
       }
-      const [work, brk] = v.split('/').map(Number)
-      return { work, break: brk }
+      if (customMode === 'none') return { plannedMinutes: w, cycle: null }
+      if (customMode === 'open') return { plannedMinutes: null, cycle: { work: w, break: b } }
+      return { plannedMinutes: w + b, cycle: { work: w, break: b } }
     },
   }
+}
+
+/** Reconstructs the picker's {mode, customMode, work, brk} starting state from a saved
+ *  { plannedMinutes, cycle } choice — or the default when there is none yet. */
+function restore(lastChoice) {
+  if (!lastChoice) return { mode: '25/5', customMode: 'timed', work: 25, brk: 5 }
+  const { plannedMinutes: pm, cycle: c } = lastChoice
+  if (!c) return { mode: 'custom', customMode: 'none', work: pm ?? 25, brk: 5 }
+  const preset = CYCLE_PRESETS.find((p) => p.work === c.work && p.break === c.break)
+  if (preset && pm === preset.work + preset.break) {
+    return { mode: `${preset.work}/${preset.break}`, customMode: 'timed', work: c.work, brk: c.break }
+  }
+  // A preset pair with a mismatched duration is an old-model session (e.g. 50 min through
+  // two 25/5 cycles) — lands in custom, exactly where the new model puts that shape.
+  return { mode: 'custom', customMode: pm == null ? 'open' : 'timed', work: c.work, brk: c.break }
 }
 
 async function fetchLists() {
@@ -354,14 +400,8 @@ async function idle() {
   const knownWorkSites = lists.workSites ?? []
   const distractSites = lists.distractSites ?? []
 
-  const duration = chipGroup(
-    [{ label: '25 min', value: '25' }, { label: '50 min', value: '50' }, { label: 'until I stop', value: '' }],
-    { mono: true, value: lastChoice ? (lastChoice.plannedMinutes == null ? '' : String(lastChoice.plannedMinutes)) : '25' },
-  )
-
-  // First ever session: cycle defaults to 50/10 (Step 3). A returning session recalls last time's pick.
-  const cycle = cyclePicker(lastChoice ? lastChoice.cycle : { work: 50, break: 10 })
-  cycle.row.dataset.chipLayout = 'paired'
+  // First ever session: 25/5 (30 min). A returning session recalls last time's pick.
+  const picker = cycleDurationPicker(lastChoice)
 
   // First ever session: workSites from the API, none pre-selected.
   const workSiteValues = lastChoice ? lastChoice.workSites : []
@@ -399,8 +439,7 @@ async function idle() {
   start.dataset.variant = 'primary'
   start.addEventListener('click', async () => {
     start.disabled = true
-    const plannedMinutes = duration.value ? Number(duration.value) : null
-    const cycleValue = cycle.value
+    const { plannedMinutes, cycle: cycleValue } = picker.value
     const workSitesValue = workSites.value
     const blockedDomainsValue = blocked.value
     const res = await chrome.runtime.sendMessage({
@@ -415,7 +454,7 @@ async function idle() {
     if (!res?.ok) {
       console.error('popup: start failed', res, chrome.runtime.lastError)
       start.disabled = false
-      show(header(mark), label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start,
+      show(header(mark), label, field, picker.row, picker.customRow, siteCluster, start,
         el('p', 'm-meta', res?.offline ? 'No connection. A session needs one to start.' : 'Could not start.'))
       return
     }
@@ -448,7 +487,7 @@ async function idle() {
     render()
   })
 
-  show(header(mark), label, field, duration.row, cycle.row, cycle.customRow, siteCluster, start, disconnect)
+  show(header(mark), label, field, picker.row, picker.customRow, siteCluster, start, disconnect)
 }
 
 // Pure computation, no chrome.* API — which phase (work/break) the elapsed time
@@ -476,9 +515,16 @@ function running(session) {
 
   const startedAt = new Date(session.startedAt).getTime()
   const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000)
-  const elapsed = el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
 
-  const phaseLine = phase ? el('p', 'm-meta', `${phase.phase} — ${phase.remainingMinutes} min left`) : null
+  // A single read, not a ticking clock — toolkit §9 refuses "a countdown that ticks".
+  // With duration merged into the cycle (Task 4), "left in this cycle" and "left in this
+  // session" are the same number for every mode except "until I stop" — two lines would
+  // say one thing twice, so this collapses them into one.
+  const phaseLine = phase
+    ? el('p', 'm-meta', phase.phase === 'break'
+        ? `${elapsedMinutes} min · break, ${phase.remainingMinutes} min left`
+        : `${elapsedMinutes} min · ${phase.remainingMinutes} min left`)
+    : el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
 
   const blockedList = session.blockedDomains?.length
     ? el('p', 'm-meta', `blocking: ${session.blockedDomains.join(', ')}`)
@@ -510,55 +556,129 @@ function running(session) {
     sentenceNode = el('p', 'm-sentence', session.intention)
   }
 
-  // The intention's own box doubles as the cycle's static progress indicator: an SVG
-  // stroke traced around the pill's existing rounded-rect shape (same 26px corner radius
-  // as --m-r-field — this doesn't change the pill's shape, only how its outline is
-  // drawn), instead of a flat strip on one edge. `.m-field`/`.m-sentence` cannot show a
-  // two-tone border directly (an <input> can't hold child DOM nodes, and CSS
-  // border-image doesn't combine reliably with border-radius across browsers) — an SVG
-  // sibling avoids both problems. Static only — recomputed on the popup's own natural
-  // re-render, never a live tick; getTotalLength() gives the exact rendered perimeter for
-  // THIS pill's real, measured size (it can grow to two lines), no manual formula needed.
+  // The intention's own box doubles as the session's live attention loop: an authored SVG
+  // path traced around the pill's existing rounded-rect shape (same 26px corner radius as
+  // --m-r-field — this doesn't change the pill's shape, only how its outline is drawn),
+  // segmented by which sites the time actually went to. Unconditional — this draws every
+  // time, independent of whether a cycle is configured, since it visualizes live attention
+  // data, not phase progress. Static only: one requestAnimationFrame measurement frame,
+  // gated on document.fonts.ready so a font-swap reflow can't leave the viewBox stale.
   const pillWrap = el('div')
   pillWrap.dataset.timerPill = 'true'
   pillWrap.append(sentenceNode)
-  if (phase) {
-    requestAnimationFrame(() => {
-      pillWrap.style.border = 'none'
-      const width = pillWrap.clientWidth
-      const height = pillWrap.clientHeight
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-      svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
-      svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;'
 
-      const r = 26
-      function track(strokeColor) {
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-        rect.setAttribute('x', '0.75')
-        rect.setAttribute('y', '0.75')
-        rect.setAttribute('width', String(width - 1.5))
-        rect.setAttribute('height', String(height - 1.5))
-        rect.setAttribute('rx', String(r))
-        rect.setAttribute('ry', String(r))
-        rect.setAttribute('fill', 'none')
-        rect.setAttribute('stroke', strokeColor)
-        rect.setAttribute('stroke-width', '1.5')
-        return rect
-      }
+  const merged = withOpenSlice(session.tally, session.slice, Date.now())
+  const segments = toSegments(merged)
 
-      const remainderTrack = track('var(--m-edge)')
-      remainderTrack.setAttribute('stroke-dasharray', '3 3')
-      const elapsedTrack = track('var(--m-clay)')
-      svg.append(remainderTrack, elapsedTrack)
-      pillWrap.append(svg)
+  document.fonts.ready.then(() => requestAnimationFrame(() => {
+    pillWrap.dataset.loop = 'on' // CSS makes the border transparent without changing clientWidth/Height
+    const width = pillWrap.clientWidth
+    const height = pillWrap.clientHeight
 
-      const perimeter = elapsedTrack.getTotalLength()
-      const elapsedFraction = phase.elapsedInPhaseMs / phase.phaseMs
-      elapsedTrack.setAttribute('stroke-dasharray', `${perimeter * elapsedFraction} ${perimeter}`)
-    })
-  }
+    const SVG_NS = 'http://www.w3.org/2000/svg'
+    const svg = document.createElementNS(SVG_NS, 'svg')
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+    svg.setAttribute('aria-hidden', 'true') // the figures beside it carry the same information
+    svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;'
 
-  show(header(mark), pillWrap, ...(phaseLine ? [phaseLine] : []), elapsed, ...(blockedList ? [blockedList] : []), stop)
+    // Clockwise from top-dead-centre. Same rounded-rect geometry as --m-r-field (26px), so
+    // the pill's shape does not change — only where the outline's zero point is and how it
+    // is painted. inset = 1 (half the 2px stroke), r = 26.
+    const inset = 1
+    const r = 26
+    function loopPath() {
+      const x = inset, y = inset
+      const w = width - inset * 2, h = height - inset * 2
+      const rr = Math.min(r, w / 2, h / 2) // matches the rx/ry clamp <rect> would apply
+      return [
+        `M ${x + w / 2} ${y}`,
+        `H ${x + w - rr}`,
+        `A ${rr} ${rr} 0 0 1 ${x + w} ${y + rr}`,
+        `V ${y + h - rr}`,
+        `A ${rr} ${rr} 0 0 1 ${x + w - rr} ${y + h}`,
+        `H ${x + rr}`,
+        `A ${rr} ${rr} 0 0 1 ${x} ${y + h - rr}`,
+        `V ${y + rr}`,
+        `A ${rr} ${rr} 0 0 1 ${x + rr} ${y}`,
+        `H ${x + w / 2}`,
+      ].join(' ')
+      // No `Z` — the path already returns to its start point, and a `Z` would add a
+      // zero-length close that some engines count in getTotalLength().
+    }
+    const d = loopPath()
+
+    // A throwaway path just to measure the real rendered perimeter — getTotalLength()
+    // gives the exact number for THIS pill's real, measured size (it can wrap to two
+    // lines), no manual perimeter formula needed.
+    const measurer = document.createElementNS(SVG_NS, 'path')
+    measurer.setAttribute('d', d)
+    svg.append(measurer)
+    const L = measurer.getTotalLength()
+    measurer.remove()
+
+    // §3.1 — the loop's full length means the session's planned duration. "until I stop"
+    // (plannedMinutes == null) has no target, so the loop just fills with real proportions
+    // (denom = measured). Math.max(..., measured) clamps a session that overruns its plan
+    // instead of letting segments run past L.
+    const measured = segments.reduce((sum, s) => sum + s.flex, 0)
+    const denom = session.plannedMinutes == null
+      ? Math.max(measured, 1)
+      : Math.max(session.plannedMinutes * 60, measured)
+
+    const PAINT = {
+      'attention-1': 'var(--m-clay)',
+      'attention-2': 'var(--m-clay-2)',
+      'attention-3': 'var(--m-clay-3)',
+      remainder: 'var(--m-edge)',
+    }
+    const GAP = 3 // px of path length — matches .m-mark:not(:empty) { gap: 3px }
+    const MIN_ARC = 0.05 * L // item D — never render nothing at t≈0
+    const MIN_DRAWN = 8 // below this a segment cannot read as a segment
+
+    function arc(kind, start, len) {
+      const p = document.createElementNS(SVG_NS, 'path')
+      p.setAttribute('d', d) // the same authored d for every segment
+      p.dataset.kind = kind // debuggable, and greppable against .m-row-bar
+      p.style.fill = 'none'
+      p.style.stroke = PAINT[kind]
+      p.style.strokeWidth = '2' // --m-stroke-loud — the smallest weight that holds --m-clay-3
+      p.style.strokeLinecap = 'butt' // round caps would eat into the 3px gaps
+      p.style.strokeDasharray = `${len} ${L - len}` // sums to exactly L: a segment crossing
+      p.style.strokeDashoffset = `${(L - start) % L}` // the seam wraps instead of clipping
+      svg.append(p)
+    }
+
+    // 1. shares, in path-length units — away/break fold into the remainder (see PAINT: no
+    //    away/break entry — a hatch can't survive a 2px stroke, and "away is a hatch, never
+    //    solid grey" rules out painting it solid; the full away/break vocabulary lives on
+    //    the outcome screen's 14px band instead, Task 6).
+    const shares = segments
+      .filter((s) => s.kind.startsWith('attention'))
+      .map((s) => ({ kind: s.kind, len: (s.flex / denom) * L }))
+      .filter((s) => s.len >= MIN_DRAWN) // a sub-8px sliver is noise; its time falls into
+                                          // the remainder, unpainted
+
+    // 2. the floor (item D) — first segment only, never a permanent offset once real
+    //    progress exceeds it.
+    if (shares.length === 0) shares.push({ kind: 'attention-1', len: MIN_ARC }) // cold start
+    else shares[0].len = Math.max(shares[0].len, MIN_ARC)
+
+    // 3. lay them out clockwise from 0 (= top-dead-centre), gaps carved out of each
+    //    segment's tail.
+    let cursor = 0
+    for (const s of shares) {
+      arc(s.kind, cursor, Math.max(s.len - GAP, 2))
+      cursor += s.len
+    }
+
+    // 4. the remainder closes the loop, leaving one final gap before wrapping to top-centre.
+    const remainder = L - cursor
+    if (remainder > GAP + MIN_DRAWN) arc('remainder', cursor, remainder - GAP)
+
+    pillWrap.append(svg)
+  }))
+
+  show(header(mark), pillWrap, phaseLine, ...(blockedList ? [blockedList] : []), stop)
 }
 
 async function outcome(sessionId) {
@@ -590,6 +710,25 @@ async function outcome(sessionId) {
   } else {
     nodes.push(el('p', 'm-meta', "You didn't say what you meant to do."))
   }
+
+  const bandSegments = toSegments({
+    attention: Object.fromEntries(data.topAttention.map((r) => [r.domain, r.seconds])),
+    away: data.awaySeconds,
+    break: 0,
+  })
+  if (bandSegments.length > 0) {
+    const band = el('p', 'm-mark')
+    band.dataset.state = 'ended'
+    band.dataset.band = 'session'
+    for (const s of bandSegments) {
+      const bar = el('span', 'm-row-bar')
+      bar.dataset.kind = s.kind
+      bar.style.flex = String(s.flex) // the one legitimate inline style: it IS the data
+      band.append(bar)
+    }
+    nodes.push(band)
+  }
+
   for (const row of data.topAttention) {
     nodes.push(el('p', 'm-meta', `${row.domain} — ${Math.round(row.seconds / 60)} min`))
   }
