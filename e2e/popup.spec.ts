@@ -465,7 +465,7 @@ test.describe('popup, idle state', () => {
 
 // Case K — the running popup's own nav row and blocked-sites visibility (Task 6 brief).
 test.describe('popup, running state', () => {
-  test('shows a blocking line for the configured domains, plus History/meant.app', async ({ context, extensionId, freshAccount }) => {
+  test('shows a blocking row for the configured domains, plus History/meant.app', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
@@ -476,7 +476,8 @@ test.describe('popup, running state', () => {
     await page.locator('input.m-field').first().fill('running state test')
     await page.getByRole('button', { name: 'Start', exact: true }).click()
 
-    await expect(page.getByText(/^blocking: .*example\.org/)).toBeVisible()
+    await expect(page.getByText('blocking', { exact: true })).toBeVisible()
+    await expect(page.locator('.m-row', { hasText: 'example.org' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'View session history', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Open meant.app', exact: true })).toBeVisible()
 
@@ -640,6 +641,74 @@ test.describe('popup, running state', () => {
 
     const pillWrap = page.locator('[data-timer-pill="true"]')
     await expect(pillWrap.locator('svg')).toBeVisible() // the loop is NOT gated on a cycle existing
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the running popup shows a live per-domain row list, matching the outcome screen\'s row vocabulary', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairPopup(setupPage, extensionId)
+    await setupPage.locator('input.m-field').first().fill('live rows test')
+    await setupPage.getByRole('button', { name: 'Start' }).click()
+
+    const sessionId: string = await setupPage.evaluate(
+      () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+    )
+    const { token } = await setupPage.evaluate(
+      () => new Promise<{ token: string }>((r) => chrome.storage.local.get('token', (v: any) => r(v))),
+    )
+    await expect
+      .poll(async () => {
+        const res = await setupPage.request.get(`/api/sessions/${sessionId}/review`, {
+          headers: { authorization: `Bearer ${token}` },
+        })
+        return res.status()
+      }, { timeout: 5_000 })
+      .not.toBe(404)
+    await setupPage.request.post('/api/events', {
+      headers: { authorization: `Bearer ${token}` },
+      data: {
+        sessionId,
+        events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 300, at: new Date().toISOString() }],
+      },
+    })
+    await setupPage.evaluate(({ sessionId, at }: any) => {
+      return new Promise<void>((resolve) => {
+        chrome.storage.local.get('session', ({ session }: any) => {
+          session.tally = { attention: { 'chatgpt.com': 300 }, away: 0, break: 0 }
+          chrome.storage.local.set({ session }, () => resolve())
+        })
+      })
+    }, { sessionId, at: new Date().toISOString() })
+    await setupPage.reload()
+
+    const row = setupPage.locator('.m-row', { hasText: 'chatgpt.com' })
+    await expect(row).toBeVisible()
+    await expect(row.locator('.m-row-bar')).toHaveAttribute('data-kind', 'attention-1')
+    await expect(row.locator('.m-row-figure')).toHaveText(/\d+ min/)
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('the blocking list renders as rows, one per blocked domain, not a single sentence', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: '+', exact: true }).nth(1).click() // blocking row's own +
+    await page.keyboard.type('youtube.com, facebook.com')
+    await page.keyboard.press('Enter')
+    await page.locator('input.m-field').first().fill('blocking rows test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    await expect(page.getByText(/^blocking: /)).toHaveCount(0) // the old single-sentence line is gone
+    await expect(page.getByText('blocking', { exact: true })).toBeVisible() // a plain label instead
+    const youtubeRow = page.locator('.m-row', { hasText: 'youtube.com' })
+    const facebookRow = page.locator('.m-row', { hasText: 'facebook.com' })
+    await expect(youtubeRow).toBeVisible()
+    await expect(facebookRow).toBeVisible()
+    await expect(youtubeRow.locator('.m-row-bar')).toHaveAttribute('data-kind', 'step-open')
+    await expect(youtubeRow.locator('.m-row-figure')).toHaveCount(0) // no time figure for a blocked-list row
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })

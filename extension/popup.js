@@ -527,10 +527,6 @@ function running(session) {
         : `${elapsedMinutes} min · ${phase.remainingMinutes} min left`)
     : el('p', 'm-meta', `${elapsedMinutes} min elapsed`)
 
-  const blockedList = session.blockedDomains?.length
-    ? el('p', 'm-meta', `blocking: ${session.blockedDomains.join(', ')}`)
-    : null
-
   const stop = el('button', 'm-btn', 'Stop')
   stop.dataset.variant = 'quiet'
   stop.addEventListener('click', async () => {
@@ -571,6 +567,28 @@ function running(session) {
 
   const merged = withOpenSlice(session.tally, session.slice, Date.now())
   const segments = toSegments(merged)
+
+  const attentionRows = segments
+    .filter((s) => s.kind.startsWith('attention'))
+    .map((s) => {
+      const row = el('div', 'm-row')
+      const bar = el('span', 'm-row-bar')
+      bar.dataset.kind = s.kind
+      const domain = el('p', 'm-row-domain', s.domain)
+      const figure = el('p', 'm-row-figure', `${Math.round(s.flex / 60)} min`)
+      row.append(bar, domain, figure)
+      return row
+    })
+
+  const blockingLabel = session.blockedDomains?.length ? el('p', 'm-meta', 'blocking') : null
+  const blockedRows = (session.blockedDomains ?? []).map((domain) => {
+    const row = el('div', 'm-row')
+    const bar = el('span', 'm-row-bar')
+    bar.dataset.kind = 'step-open' // neutral outline swatch — blocked domains are config, not measured attention
+    const label = el('p', 'm-row-domain', domain)
+    row.append(bar, label)
+    return row
+  })
 
   document.fonts.ready.then(() => requestAnimationFrame(() => {
     pillWrap.dataset.loop = 'on' // CSS makes the border transparent without changing clientWidth/Height
@@ -680,7 +698,15 @@ function running(session) {
     pillWrap.append(svg)
   }))
 
-  show(header(mark), pillWrap, phaseLine, ...(blockedList ? [blockedList] : []), stop)
+  show(
+    header(mark),
+    pillWrap,
+    phaseLine,
+    ...attentionRows,
+    ...(blockingLabel ? [blockingLabel] : []),
+    ...blockedRows,
+    stop,
+  )
 }
 
 async function outcome(sessionId) {

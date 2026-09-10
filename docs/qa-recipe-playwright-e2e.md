@@ -271,8 +271,9 @@ longer exists.
     meant.app` button (by `aria-label`, icon-only — see Case AG) are both visible, inside
     `[data-popup-header="true"]`.
 38. Configure at least one blocked domain and Start a session. **Pass:** the running view
-    shows a `blocking: <domain list>` line (`.m-meta`, right after the elapsed-time line)
-    matching the configured domains, plus the same header icon buttons.
+    shows a `blocking` label (`.m-meta`) followed by one `.m-row` per configured domain
+    (superseded by Task 5 of this round — Case AQ below — which replaced the single
+    `blocking: <domains>` sentence with this row list), plus the same header icon buttons.
 39. **Visual, human/screenshot check:** at the popup's real 360px width, confirm nothing
     animates — no `transition`/`transform` introduced anywhere in this task's CSS or JS
     (PRODUCT.md: the popup animates nothing) — and the two nav buttons render at a
@@ -1076,6 +1077,45 @@ digit text sits vertically centered, not floating high on the browser's default 
     `lineHeight` is not `'normal'` (confirming the explicit `line-height: 1` rule applies,
     so the text baseline is controlled and not using the UA default that would leave digits
     sitting high).
+
+### AQ — Live per-domain attention rows and blocked-domain rows in the running popup (Task 5, current round)
+
+`running()` computed `segments` (via `toSegments(withOpenSlice(...))`) every render already,
+for the intention pill's clockwise loop — but never rendered the per-domain breakdown as
+rows, and `session.blockedDomains` rendered as one plain sentence
+(`` `blocking: ${session.blockedDomains.join(', ')}` ``, a single `.m-meta` line). Both are
+replaced with the same `.m-row`/`.m-row-bar`/`.m-row-domain`/`.m-row-figure` vocabulary the
+outcome screen's attention band already defined in CSS but had no JS producer for yet:
+`attentionRows` (one `.m-row` per `attention*`-kind segment, its `.m-row-bar`'s `data-kind`
+matching the segment's own kind so the swatch color lines up with the intention pill's loop,
+a `.m-row-figure` showing rounded minutes) and `blockedRows` (one `.m-row` per blocked
+domain, `data-kind="step-open"` — a neutral outline swatch, no time figure, since a blocked
+domain is configuration, not measured attention), with a plain `blocking` label
+(`.m-meta`) standing in for the old sentence. Both new row lists render between the phase
+line and the Stop button.
+
+94. E2E test: `e2e/popup.spec.ts` "the running popup shows a live per-domain row list,
+    matching the outcome screen's row vocabulary". Start a session, post a real
+    `chatgpt.com` attention event and mirror it into `session.tally`, reload the popup.
+    **Pass:** a `.m-row` containing `chatgpt.com` is visible, its `.m-row-bar` has
+    `data-kind="attention-1"`, and its `.m-row-figure` reads `N min`.
+95. E2E test: `e2e/popup.spec.ts` "the blocking list renders as rows, one per blocked
+    domain, not a single sentence". Configure `youtube.com, facebook.com` as blocked, Start.
+    **Pass:** no text node matches `/^blocking: /` anywhere (the old sentence is gone); a
+    plain `blocking` label is visible; one `.m-row` per domain is visible, each `.m-row-bar`
+    carries `data-kind="step-open"`, and neither row has a `.m-row-figure` (blocked rows
+    carry no time).
+95a. Visual, human/screenshot check performed for this task: at the popup's real 360px
+    width, with three attention rows and two blocked rows both present, the CSS at
+    `extension/meant.css`'s `.m-row` rule (`grid-template-columns: 11px minmax(0, 1fr)`,
+    two tracks) only fits the bar + domain in one row — the third child, `.m-row-figure`,
+    auto-places onto its own implicit grid row below the domain rather than sitting beside
+    it. Observed result: every attention row renders as two visual lines (domain, then the
+    figure on its own line underneath) instead of one, making the row list taller than the
+    outcome screen's own equivalent band and giving the running view a visibly busier,
+    two-line-per-row feel at the popup's fixed width — worth a follow-up CSS pass (a third
+    column, or right-aligning the figure) even though it was out of this task's scope (no
+    new class names, no CSS edits specified in the brief).
 
 ## What Sonnet writes vs. what Haiku runs
 
