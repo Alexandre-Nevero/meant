@@ -300,7 +300,7 @@ button, input, select { font: inherit; color: inherit; }
 
 .m-row {
   display: grid;
-  grid-template-columns: 11px minmax(0, 1fr);
+  grid-template-columns: 11px minmax(0, 1fr) 56px;
   gap: 12px;
   align-items: center;
   padding: 8px 0;
@@ -325,6 +325,7 @@ button, input, select { font: inherit; color: inherit; }
   font-family: var(--m-figure);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 /* The companion no longer docks here — extension/companion-overlay.js floats it on the
