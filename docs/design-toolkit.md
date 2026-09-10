@@ -2,7 +2,7 @@
 
 **Version 0.2 · 2026-09-01 · Owner: Alexandre Andrei Nevero**
 **Visual truth:** the design canvas, "MEANT Band System" · **Token file:** [`design/tokens.css`](../design/tokens.css)
-**Product truth:** [PRODUCT.md](../PRODUCT.md), [context.md](../context.md)
+**Product truth:** [PRODUCT.md](../PRODUCT.md), [apexhuman.md](../apexhuman.md)
 
 > **0.1 is superseded, and not by a small margin.** Version 0.1 §3 specified the mark as *two cumulative lines, blue and clay, from a shared origin, that never cross* — a slopegraph. What was actually built and chosen is **an outline that holds the sentence plus a segment band that carries the attention**, with **no blue anywhere**. The canvas won; a spec that loses to its own execution is stale, not authoritative. Everything below is derived from the shipped artboards. `design/tokens.css` is generated from the same source and is what code imports.
 

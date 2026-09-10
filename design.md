@@ -121,18 +121,17 @@ children, not by a flag.
   `.m-row-bar[data-kind]` (the same primitive as a per-row swatch and a plan step marker),
   sized via inline `style={{ flex }}`, never a hardcoded width.
 
-**The companion** (`extension/sidepanel.js` + the `.m-companion-*` classes) is three nodes,
-not one, and the split is load-bearing, not decorative:
-
-| Node | Job | Why it's separate |
-|---|---|---|
-| `.m-companion-capsule` | The outline; only its stroke weight changes | Holds the `::after` cross-fade between `--m-stroke` and `--m-stroke-loud` |
-| `.m-companion-gaze` | Position + size — a `transform` **transition** | `translateY(27px) scaleY(0.333)` settled → `translateY(0) scaleY(1)` drifting. Pure transform, GPU-composited, interruptible |
-| `.m-companion-aperture` | Aliveness — breathe (4.2s) + blink (6.7s) **keyframes** | A running CSS `animation` overrides any `transition` targeting the same property on the *same element* — verified, not assumed, while building this. Keyframes and the gaze transition cannot share a node |
-
-Invariant, structural not aspirational: the companion never varies with the outcome answer,
-never celebrates, never moves in the first 60 seconds of a session, and is capped at 3
-turn-aways per 25-minute window (`extension/sw.js#updateCompanion`).
+**The companion is Orbit, not the gaze/capsule design above** — reversed 2026-09-05, after
+this design system had already committed to the three-node gaze/capsule split. `PRODUCT.md`'s
+companion section and `docs/prd-intent.md` §3.2 are current; `docs/dead-ends.md` records why.
+The three-node table above described `extension/sidepanel.js` and a `chrome.sidePanel`
+surface — **both retired.** The shipped companion is `extension/companion-overlay.js`, a
+self-contained Shadow DOM injected at `<all_urls>` as a content script (not a side panel, not
+built from `.m-mark`'s primitives): a 28px orbital dot, ring presence/style (never hue) tells
+state, one 0.6s return-pulse plays on drift-to-focus, continuous ~1.6s breathe. Same
+invariants as before, still structural not aspirational: never varies with the outcome
+answer, never celebrates, never moves in the first 60 seconds, capped at 3 turn-aways per
+25-minute window (`extension/sw.js#updateCompanion`).
 
 ---
 
@@ -174,7 +173,7 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 | `pair` | `app/pair/page.tsx` | centered, 320px card | **No** — single scheduled `setTimeout` flips to "expired," not a countdown | |
 | `popup` | `extension/popup.html` | fixed 360px | **No**, anywhere, ever | Opened dozens of times a day — see §7 |
 | `block` | `extension/blocked.html` | full page | **No** | Static "N minutes left," read once |
-| `companion` | `extension/sidepanel.html` | side panel, ~320–400px | Aliveness only (breathe/blink); gaze moves ≤3×/25min | The one surface where `.m-mark`'s primitives (capsule, clay fill) stop being a chart, on purpose |
+| `companion` | `extension/companion-overlay.js` (Shadow DOM, injected at `<all_urls>`) | 28px, floats over the page | Aliveness only (breathe); ring flips ≤3×/25min | Retired the side panel and `.m-mark`'s primitives entirely — see §4's Orbit note |
 
 ---
 
@@ -231,7 +230,7 @@ accessibility fix that requires a hex value or a new visual language goes back t
   an opacity-only crossfade would be fine to keep if one ever gets added here.
 - The companion's own motion budget (≤3 turn-aways/25min, none in the first 60s) is itself an
   accessibility control, not just a brand decision — arousal from being watched is the risk
-  this audience's work is most sensitive to (context.md, PRD invariant I2's citations).
+  this audience's work is most sensitive to (apexhuman.md, PRD invariant I2's citations).
 
 ### Icons
 

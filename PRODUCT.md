@@ -1,7 +1,8 @@
 # PRODUCT.md — MEANT
 
-> Derived from `docs/` (idea, prd, sitemap, flow, sdd), not from a fresh interview. Every line traces to a doc; nothing here is invented. Canonical product truth stays in `docs/`.
-> **Second audience:** this product is also the reference build for apexhuman.ai and will be filmed. That constrains design — see "Constraints" below. The course context itself lives in [context.md](context.md) and is not product truth.
+> Derived from `docs/` (idea, prd, sitemap, flow, sdd), not from a fresh interview. Every line traces to a doc; nothing here is invented. Canonical product truth stays in `docs/prd-intent.md` — this file is a regenerated summary of it, kept for tools that read a root-level `PRODUCT.md` by convention (the `impeccable` design skill among them). When this file and the PRD disagree, the PRD is right and this file is stale; say so, then regenerate this file rather than editing around the PRD.
+> **Second audience:** this product is also the reference build for apexhuman.ai and will be filmed. That constrains design — see "Constraints" below. The course context itself lives in [apexhuman.md](apexhuman.md) and is not product truth.
+> **Regenerated from PRD amendment 0.2b (2026-09-10).** **Status:** the AI stack (plan, judge, memory, coach — PRD §6) remains entirely unbuilt. The companion below (Orbit) and its drift signal are real and shipped, but the drift signal is a mechanical stand-in keyed on domain category, not a judgment (`docs/index.md` D25) — do not read the companion's presence as evidence the judge exists.
 > **Reflects amendment 0.2 (2026-08-28).** Prior version described a product with no AI, an employed user, and no companion. All three changed.
 
 **Name:** MEANT. (Working name "Intent" retired 2026-08-18: "Intent — Focus" already ships on the App Store.)

@@ -2,8 +2,11 @@
 
 **Project:** MEANT (`meant`)
 **Owner:** Alexandre Andrei Nevero
-**Last updated:** 2026-08-28
-**Suite:** FMD Lite 1.1.0
+**Last updated:** 2026-09-10
+**Suite:** FMD Lite 1.1.0 (doc suite shape) — decision log and `AGENTS.md` adopted the newer
+private FMD factory's conventions (`docs/adr/`, ADR format) on 2026-09-10; the `*-intent.md`
+doc set itself was not migrated to that factory's template names, to avoid breaking the ~30
+files that link them by current filename
 
 ---
 
@@ -12,7 +15,7 @@
 | Doc | File | Version | Status | Cycle | Updated |
 |---|---|---|---|---|---|
 | Idea Brief | [idea-intent.md](idea-intent.md) | 0.2 | Draft | 1 | 2026-08-28 |
-| PRD | [prd-intent.md](prd-intent.md) | 0.2 | Draft | 1 | 2026-08-28 |
+| PRD | [prd-intent.md](prd-intent.md) | 0.2b | Draft | 1 | 2026-09-10 |
 | Sitemap | [sitemap-intent.md](sitemap-intent.md) | 0.2 | Draft | 1 | 2026-08-28 |
 | User Flow | [flow-intent.md](flow-intent.md) | 0.2 | Draft | 1 | 2026-08-28 |
 | SDD | [sdd-intent.md](sdd-intent.md) | 0.2 | Draft | 1 | 2026-08-28 |
@@ -23,7 +26,7 @@
 |---|---|---|---|---|---|---|
 | Build Run-of-Show | [build-intent.md](build-intent.md) | `T#` | sdd-intent.md | 0.1 | **Historical** | 2026-08-18 |
 | Build Guide | [build.md](build.md) | `TASK-###`, `INV-#` | sdd-intent.md | 0.1 | **Historical** | 2026-08-18 |
-| Design Toolkit | [design-toolkit.md](design-toolkit.md) | — | ../PRODUCT.md | 0.1 | **Deleted in working tree** | 2026-08-18 |
+| Design Toolkit | [design-toolkit.md](design-toolkit.md) | — | ../PRODUCT.md | 0.1 | **Restored, 2026-09-01 (D22)** | 2026-08-18 |
 
 **Both build documents are records of the completed four-hour sitting, not plans for the 0.2 work.** `build-intent.md` says so itself: "this document is dead the moment the four hours end." They were deliberately left unamended so the record of what actually shipped stays intact. **Work at 0.2 needs a new run-of-show, and it does not exist yet.**
 
@@ -55,7 +58,7 @@
 | | |
 |---|---|
 | Form factor | Chrome/Edge extension (MV3) + web app with sign-in, a database, and one model gateway |
-| Time budget | **No limit on our build.** The binding constraint is reproduction: a non-technical student, alone and online, must rebuild a defined subset in 4–8 hours. See `../context.md` §5 and §6 |
+| Time budget | **No limit on our build.** The binding constraint is reproduction: a non-technical student, alone and online, must rebuild a defined subset in 4–8 hours. See `../apexhuman.md` §5 and §6 |
 | Purpose | **A reference product for apexhuman.ai** — the worked example that students, entrepreneurs, solopreneurs and SMEs learn from. Ships as three artifacts: the product, a rebuild manual, and a build video |
 | External services | Five maximum; **three allocated**: Vercel (hosting), Neon (database + auth, D21), Vercel AI Gateway (inference). Two unallocated |
 | Platforms | Wherever Chrome/Edge runs — macOS and Windows identically |
@@ -69,9 +72,11 @@
 
 | File | What it is |
 |---|---|
-| `../context.md` | **Course and delivery context (new 2026-08-28).** Who the reference product is for, the two Apex Human delivery shapes, the honest 4–8 hour student budget, and the three-tier rule that assigns every part of the build. **It replaces the "four hours, one builder" constraint that `build-intent.md` has been silently exporting to every other document** |
+| `../apexhuman.md` | **Course and delivery context (new 2026-08-28).** Who the reference product is for, the two Apex Human delivery shapes, the honest 4–8 hour student budget, and the three-tier rule that assigns every part of the build. **It replaces the "four hours, one builder" constraint that `build-intent.md` has been silently exporting to every other document** |
 | `PRODUCT.md` | Product context for design tooling, derived from these docs |
-| `docs/design-toolkit.md` | The committed visual world as a specification. **Currently deleted in the working tree, and `design/` was never produced — so the mark, its five states, and the token set do not exist yet.** The companion (S9) is a design decision waiting on this, not on code |
+| `docs/design-toolkit.md` | The committed visual world as a specification. **Restored 2026-09-01 (D22)** — `design/tokens.css` and `design/canvas/` exist, the class contract is implemented. Superseded by `design.md` as the read-first index over this file, `tokens.css`, and the canvas |
+| `design.md` | **Read-first index (2026-09-01+) over `design/canvas/`, `design/tokens.css`, and `docs/design-toolkit.md`** — the accessibility contrast checks and the class-contract quick reference live only here |
+| `docs/adr/` | **Decision changelog (2026-09-10).** Append-only, one file per decision; supersedes §6 below as the point of entry for new decisions — see `docs/adr/README.md` |
 | `docs/metaprompt-ui.md` | **Paste-in prompt for the UI/UX build (2026-09-01).** Supersedes the design and build metaprompts below, which describe the 0.1 product and will mislead a session that runs them |
 | `design/canvas/` | **The seven artboards, and visual truth.** They outrank `design-toolkit.md` and `tokens.css` when they disagree |
 | `docs/metaprompt-design.md` | **Stale.** Paste-in prompt for the 0.1 design session |
@@ -92,7 +97,7 @@
 | Doc | Reconciled with reality | Risk |
 |---|---|---|
 | idea-intent.md | 2026-08-28 | C7 and C17's ARR figure remain unverified. C5 is retained but explicitly no longer load-bearing |
-| prd-intent.md | 2026-08-28 | §6 reversed the 0.1 "no AI" position. Q4 (precision floor), Q5 (evidence threshold) and Q9 (is tier T-A enough?) are unanswered and each blocks a shipping decision |
+| prd-intent.md | 2026-09-10 | Amendment 0.2b folded in `PRODUCT.md`'s current facts (companion Orbit spec, corrected host-permission constraint, explicit "AI stack unbuilt" status). Q4 (precision floor), Q5 (evidence threshold) and Q9 (is tier T-A enough?) remain unanswered and each still blocks a shipping decision |
 | sdd-intent.md | 2026-08-28 | V4 and V5 both amended. **Q3 (companion placement) is unspiked and the Document PiP row in §11 contains a documented unknown.** Re-check MV3 details before building |
 | sitemap / flow | 2026-08-28 | S9's rendering surface depends on SDD Q3 and is therefore provisional |
 | **Code** | **not reconciled** | **`extension/` and `app/` implement 0.1. Nothing at 0.2 is built. The gap between these documents and the 977 lines on disk is now the largest it has ever been, and that is the main staleness risk in this project** |
@@ -109,6 +114,8 @@
 ---
 
 ## 6. Decisions taken outside a document
+
+**Superseded as the point of entry, 2026-09-10.** New decisions are appended as `docs/adr/ADR-NNNN-slug.md` files (one per decision, append-only, never edited after acceptance) — see `docs/adr/README.md`. Every `D#` below now also exists as `ADR-####` (same number, zero-padded) in that format; this table stays as a historical, at-a-glance index, but `docs/adr/` is where a future reader should look first, and where every future decision gets recorded.
 
 | # | Decision | Date | Where it belongs |
 |---|---|---|---|
@@ -130,14 +137,14 @@
 | **D16** | **The judge reads in two tiers.** `activeTab` cannot read page content on a tab change (C19), so T-A judges on hostname plus title with today's manifest, and T-B adds a text extract behind `optional_host_permissions` requested at runtime. `<all_urls>` never appears at install | 2026-08-28 | SDD §5.2, V4 |
 | **D17** | **V5 is amended from "never send" to "never store."** The old rule cannot survive cloud judging; deleting it would have removed the product's only structural defence against becoming surveillance. The replacement is narrower in what it permits and stronger in what it guarantees | 2026-08-28 | SDD §5.1 |
 | **D19** | **The teaching tiers are an architectural rule, not a lesson plan (I9).** A beginner rebuilds a subset and pastes the rest, so judge, companion, memory and coach must each detach without taking the product down. If the pieces do not come apart, the manual cannot exist | 2026-08-28 | PRD I9, PRD §9 |
-| **D20** | **Two gaps stop being excusable now the clock is gone:** the judge's eval set (PRD-F14, without which M7 and K4 are unmeasurable) and data deletion (PRD-F15, an obligation memory created for itself) | 2026-08-28 | PRD §3, `../context.md` §8 |
+| **D20** | **Two gaps stop being excusable now the clock is gone:** the judge's eval set (PRD-F14, without which M7 and K4 are unmeasurable) and data deletion (PRD-F15, an obligation memory created for itself) | 2026-08-28 | PRD §3, `../apexhuman.md` §8 |
 | **D18** | **Numbered migrations replace hand-applied `schema.sql`.** Defensible for four hours with no data; not defensible now that memory outlives the sessions that produced it | 2026-08-28 | SDD §3.2 |
-| **D21** | **Clerk replaced by Neon Auth (managed Better Auth), amending D7.** Auth now lives on the same account and branch as the database instead of a fourth separate vendor — one fewer signup on a student's provisioning list (`../context.md` §5). Package is beta (`@neondatabase/auth@0.5.x-beta`); no middleware/`proxy.ts` is used because its route-gating `auth.middleware()` would redirect `/` (the public sign-in page) to itself — every protected surface guards with `auth.getSession()` directly instead, matching the pattern already in place | 2026-09-01 | PRODUCT.md, SDD §4.3, §5, §9.3, sitemap §5, PRD §7, IDEA Q2 |
+| **D21** | **Clerk replaced by Neon Auth (managed Better Auth), amending D7.** Auth now lives on the same account and branch as the database instead of a fourth separate vendor — one fewer signup on a student's provisioning list (`../apexhuman.md` §5). Package is beta (`@neondatabase/auth@0.5.x-beta`); no middleware/`proxy.ts` is used because its route-gating `auth.middleware()` would redirect `/` (the public sign-in page) to itself — every protected surface guards with `auth.getSession()` directly instead, matching the pattern already in place | 2026-09-01 | PRODUCT.md, SDD §4.3, §5, §9.3, sitemap §5, PRD §7, IDEA Q2 |
 
 ---
 
 | **D22** | **Foundation styling shipped (Phases 1–2 of the UI build).** `app/globals.css` and `extension/meant.css` now implement the class contract against `design/tokens.css`; the mark is CSS states of `.m-mark`, not six SVG files — every artboard draws it with divs, and the header logo is the only real SVG in the canvas. `.m-mark:empty` renders the small decorative glyph every real call site already used (dashboard row, review header, popup, block page); `.m-mark:not(:empty)` becomes the real proportional band (`lib/band.ts`), reusing `.m-row-bar[data-kind]` for both the row swatch and the band segment. Full reasoning and the artboard-vs-doc departures (block page and popup no longer tick, per toolkit §9 and §6 respectively; the ledger drops the duration/domain columns for one band, per its own artboard) live in the build plan and `docs/dead-ends.md` | 2026-09-01 | `docs/design-toolkit.md` §2, §6, §8, §9; plan file `you-are-building-the-elegant-deer.md` |
-| **D23** | **Landing's CTA is "Sign in," not "Add to Chrome."** No Chrome Web Store listing exists and `context.md` §7 rule 8 forbids the build path needing one. Hero and footer become the real Neon Auth sign-in/sign-up form; the header keeps a quiet link out to the extension's own README section | 2026-09-01 | `PRODUCT.md`, sitemap S1 |
+| **D23** | **Landing's CTA is "Sign in," not "Add to Chrome."** No Chrome Web Store listing exists and `apexhuman.md` §7 rule 8 forbids the build path needing one. Hero and footer become the real Neon Auth sign-in/sign-up form; the header keeps a quiet link out to the extension's own README section | 2026-09-01 | `PRODUCT.md`, sitemap S1 |
 | **D24** | **A stale or revoked Neon Auth session cookie must not crash a page.** `auth.getSession()` can try to refresh or clear the cookie as a side effect, which Next.js only permits from a Server Action or Route Handler — called from a plain Server Component (every page in this app) it throws instead of reporting no session. `lib/auth/session.ts#currentUserId()` catches this and treats it as signed-out, the same principle E8 already applies to a revoked device token | 2026-09-01 | `lib/auth/session.ts`, SDD flow E8 |
 
 | **D25** | **The companion ships (Phase 3), with a mechanical drift signal instead of the judge.** No `task`/`judgment`/`memory` tables and no model this pass, so `.m-mark[data-state="drifting"]` — declared since 0.1, set nowhere until now — is driven by `sw.js#updateCompanion`: a domain from any known distraction category (`blocklists.js`) that isn't the one the session actually chose to block. Exercises the judge seam (I9) by construction, not assertion. `chrome.sidePanel` answers sitemap Q2/Q3 without running the PiP spike; the return-turn-is-free choice provisionally answers flow Q2, pending the 25-minute recording gate | 2026-09-01 | sitemap S9, Q2, Q3; flow Q2; PRD I9; plan file |

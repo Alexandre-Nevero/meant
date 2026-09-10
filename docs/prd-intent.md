@@ -6,11 +6,18 @@
 **Cycle:** 1
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
-**Last reconciled:** 2026-08-28
+**Last reconciled:** 2026-09-10
 **Upstream:** [idea-intent.md](idea-intent.md)
 **Downstream:** [sitemap-intent.md](sitemap-intent.md), [flow-intent.md](flow-intent.md), [sdd-intent.md](sdd-intent.md)
 
-> **Amendment 0.2a (2026-08-28).** `../context.md` replaced the four-hour build constraint with a reproduction requirement. Three consequences land here, and none of them are about scope: **I9** makes the teaching tiers an architectural rule; **PRD-F14 and F15** were excusable at four hours and are not now; and §7 gains two constraints nobody had written down.
+> **Amendment 0.2b (2026-09-10).** `PRODUCT.md` was carrying facts this document had not caught up to; folded back in here, since this PRD — not the derived `PRODUCT.md` — is canonical. Three corrections and one status clarification:
+> - **§3 gains 3.2**, the companion's shipped specifics (the Orbit reversal, 2026-09-05) — PRD-F10 described the witness only in the abstract; the shipped form is now recorded.
+> - **§7's host-permission constraint was wrong.** It said `<all_urls>` never appears in `host_permissions`. It shipped there on 2026-09-07 (see ADR in `docs/adr/`) — corrected below.
+> - **§6 gains a status line.** Every AI call in this section (plan, judge, coach, memory) remains entirely unbuilt as of this date. What shipped instead is a mechanical stand-in for the judge (`docs/index.md` D25) plus three rounds of popup/companion/navigation/timer UI work. Nothing here should read as "in progress" without that qualifier.
+> - **§11 is new**: the competitive-truth table, previously only in `PRODUCT.md`.
+> `PRODUCT.md` itself is now regenerated from this document rather than carrying independent facts — see its own header.
+
+> **Amendment 0.2a (2026-08-28).** `../apexhuman.md` replaced the four-hour build constraint with a reproduction requirement. Three consequences land here, and none of them are about scope: **I9** makes the teaching tiers an architectural rule; **PRD-F14 and F15** were excusable at four hours and are not now; and §7 gains two constraints nobody had written down.
 >
 > **Amendment 0.2 (2026-08-28).** §3 gains six features and eight invariants. §6 is rewritten from "v1 contains no AI" to a full agent specification — that reversal is the largest single change in this document and its reason is recorded in §6.1. §7 allocates a fourth external service. §8 gains five metrics, two of which are about the agent being right and one about not going bankrupt.
 
@@ -46,7 +53,7 @@ The number that accumulates is completed outcomes, not hours. Hours appear only 
 
 **Not served in v1:** anyone whose work is mostly outside a browser (IDE, terminal, native design tools). Anyone on a managed corporate endpoint where IT policy governs what may be installed — no longer the target since D10, and not designed for.
 
-**A boundary that must not blur.** There are two populations in this project and only one of them is in this document. **MEANT's user** is the self-employed browser-native worker above. **The student** — the entrepreneur, solopreneur, SME operator or undergraduate who rebuilds MEANT from the manual — is the subject of `../context.md`, not of this PRD. A feature that exists to serve the student is a course feature and belongs there. The only place the student legitimately reaches into this document is §3.1 I9 and §7, where their constraints genuinely bind the architecture.
+**A boundary that must not blur.** There are two populations in this project and only one of them is in this document. **MEANT's user** is the self-employed browser-native worker above. **The student** — the entrepreneur, solopreneur, SME operator or undergraduate who rebuilds MEANT from the manual — is the subject of `../apexhuman.md`, not of this PRD. A feature that exists to serve the student is a course feature and belongs there. The only place the student legitimately reaches into this document is §3.1 I9 and §7, where their constraints genuinely bind the architecture.
 
 ---
 
@@ -84,9 +91,20 @@ These are product rules, not preferences. Breaking one is a bug.
 | **I6** | The coach states no pattern below the evidence threshold | A pattern from three sessions is astrology, and being wrong about *you* costs far more than being wrong about a tab | Q7 |
 | **I7** | Page text is read for judging and never stored, logged, or retained. Only `{domain, verdict, confidence}` persists | Replaces the old "never send" rule with one that actually holds under cloud inference. This is the anti-surveillance control | SDD V5 (amended) |
 | **I8** | Checked tasks never enter the ledger. Only the outcome answer counts | Sub-goal completion "could breed self-congratulation," which is a more sophisticated version of the exact pain this product exists to attack | C13 |
-| **I9** | **Every feature above the mechanical loop is independently removable.** The product must run, ship, and be worth using with the judge off, the companion off, memory off, the coach off, or any combination | **This is the teaching tiers made structural.** A beginner rebuilds a subset and pastes the rest (`../context.md` §6); if the pieces do not detach, the subset does not run, and the manual cannot exist. It is also the K4 escape hatch generalised: any of these features may turn out to be wrong, and none of them may take the product down with it | `../context.md` §6, §7 rule 3; K4 |
+| **I9** | **Every feature above the mechanical loop is independently removable.** The product must run, ship, and be worth using with the judge off, the companion off, memory off, the coach off, or any combination | **This is the teaching tiers made structural.** A beginner rebuilds a subset and pastes the rest (`../apexhuman.md` §6); if the pieces do not detach, the subset does not run, and the manual cannot exist. It is also the K4 escape hatch generalised: any of these features may turn out to be wrong, and none of them may take the product down with it | `../apexhuman.md` §6, §7 rule 3; K4 |
 
-**Explicitly not features:** any ranking, score, streak, badge, leaderboard, productivity percentage, or hours headline. Any conversation with the companion during a session. Any celebration of `Yes` over `Not yet`.
+**Explicitly not features:** any ranking, score, streak, badge, leaderboard, productivity percentage, or hours headline. Any conversation with the companion during a session. Any celebration of `Yes` over `Not yet`. Moralizing about a bad session. Storing what the judge reads. Nagging for a declined permission. Anything an employer would want displayed. A suggestion the product cannot execute (I5).
+
+### 3.2 The companion, as shipped (the Orbit reversal, 2026-09-05)
+
+PRD-F10 above states the requirement in the abstract — presence, turning on drift, one tap, no words. The companion's **visual form** reversed after this PRD was written and is recorded here, not re-litigated: the 0.2 spec called it "a coach, not a pet," gaze/posture only, 80–120px, no on-screen acknowledgment of a returned drift. Mid-build, the owner chose a supplied reference ("Orbit") over that spec instead, on the explicit basis that the documented spec should update to match the shipped code, not the other way round. Full reasoning: `docs/dead-ends.md` ("The companion's design reversed…") and the ADR in `docs/adr/`.
+
+**What shipped instead:**
+- **It is a pet, not a coach.** A 28px orbital dot, bottom-right by default, draggable. Presence over posture — the opposite framing of the superseded spec.
+- **State is ring presence and style, never color.** Resting: dot only. Focus: solid ring. Drift: the same ring, dashed. Clay is the only accent color at any state, so state reads as a shape change, never a status light (holds I1 — the ring never varies with the outcome answer).
+- **Return gets one visible acknowledgment**, deliberately: a 0.6s ring-collapse pulse on the drift-to-focus transition, then the ring settles. A narrow, named exception to "nothing good happens on screen during a session" (I2) — scoped to the witness settling, not to an outcome celebration.
+- **Aliveness is a continuous, slow breathe (~1.6s) on the dot**, not a rare blink.
+- Built as `extension/companion-overlay.js`, a self-contained Shadow DOM injected at `<all_urls>` — not `.m-mark`'s primitives, and not `chrome.sidePanel` (superseded; see the host-permission correction in §7 and the ADR log).
 
 ---
 
@@ -162,9 +180,9 @@ As a user, I want to fix the agent when it is wrong, in one tap.
 
 | Not building | Why | Revisit |
 |---|---|---|
-| Voice | A fifth service and a whole surface. Text at the review is enough to test the coach. **Reason strengthened by `../context.md`:** every external service costs a *student* 10–15 minutes of provisioning out of a 4–8 hour budget, so the fifth slot is far more expensive than the integration budget alone suggests | After A9 and A10 hold |
+| Voice | A fifth service and a whole surface. Text at the review is enough to test the coach. **Reason strengthened by `../apexhuman.md`:** every external service costs a *student* 10–15 minutes of provisioning out of a 4–8 hour budget, so the fifth slot is far more expensive than the integration budget alone suggests | After A9 and A10 hold |
 | Conversation during a session | Talking to your focus tool is premium procrastination, and unbounded tokens | Never during a session |
-| On-device inference | Chosen against in D14: two code paths is the thing that stops a build shipping. **Reason strengthened by `../context.md`:** that argument was about *our* build; it now applies to every student's build, on hardware Apex does not spec a RAM or disk floor for. The Prompt API path (C8) stays open as an upgrade | v2, as a privacy upgrade, once one path works |
+| On-device inference | Chosen against in D14: two code paths is the thing that stops a build shipping. **Reason strengthened by `../apexhuman.md`:** that argument was about *our* build; it now applies to every student's build, on hardware Apex does not spec a RAM or disk floor for. The Prompt API path (C8) stays open as an upgrade | v2, as a privacy upgrade, once one path works |
 | Desktop / OS-level tracking and app blocking | Outside the browser thesis | When browser-only proves the loop |
 | Scheduled sessions, Locked Mode | Commitment devices belong on a product people already use daily | v2+ |
 | Sync across devices and browsers, Firefox/Safari | One browser, one profile is enough to test every assumption | Later |
@@ -174,6 +192,8 @@ As a user, I want to fix the agent when it is wrong, in one tap.
 ---
 
 ## 6. AI / Agent Specification
+
+**Status, as of 2026-09-10: nothing below is built.** No `task`, `judgment`, or `memory` table exists; no model call fires anywhere in the shipped product. Rounds 4–6 (`docs/superpowers/specs/`) shipped popup, companion, navigation, and timer UI — none of it the AI stack. In its place, `docs/index.md` D25 shipped a mechanical stand-in for the judge: the companion signals drift when the active tab's domain matches a known distraction category the session didn't choose to block, computed with no model in the path. This exercises the judge's seam (I9) by construction, and is not a step toward this section — it is a placeholder that must be removed, not extended, when PRD-F9 actually ships.
 
 ### 6.1 Why this section reversed
 
@@ -222,10 +242,10 @@ Two slots remain — D21 freed one by consolidating auth onto Neon. Spending eit
 **Constraints**
 
 - No OS permissions, no admin rights, no installer.
-- `<all_urls>` never appears in `host_permissions`. Installed host permissions are per blocked domain only; broad access exists solely as `optional_host_permissions`, requested at runtime and declinable forever (SDD V4, §5.2). This constrains where the companion can live, and it is why the judge has two input tiers.
+- **Corrected 2026-09-10:** `<all_urls>` appears in `host_permissions`, unconditionally, shipped 2026-09-07 (this line previously said the opposite and was stale against shipped code — see `docs/adr/` and `docs/dead-ends.md`). The content script (the companion) already ran at `<all_urls>`; `declarativeNetRequest`'s `redirect` action needs host permission for whatever domain it blocks, and a `optional_host_permissions` flow would mean a new permission prompt every time the user names a fresh site to block — worse UX than one honest upfront grant for a feature that fundamentally needs it. Not a new category of trust beyond what the content script already required. SDD V4/§5.2 need the same correction.
 - No screenshots, no keystrokes. Page text is read transiently for one classification and never stored (I7).
 - The model tier chosen inside the gateway is a **business-model decision**, not a quality decision. See M9.
-- **Every external service costs a student 10–15 minutes of provisioning.** Four of five allocated is roughly 40–60 minutes of a 4–8 hour rebuild before a line of product code exists. The integration budget was a taste constraint at 0.1; it is now arithmetic (`../context.md` §5).
+- **Every external service costs a student 10–15 minutes of provisioning.** Four of five allocated is roughly 40–60 minutes of a 4–8 hour rebuild before a line of product code exists. The integration budget was a taste constraint at 0.1; it is now arithmetic (`../apexhuman.md` §5).
 - **This product will be filmed being built.** That is a design constraint, not a marketing one: every build step must produce a **visible** change on screen, because console output is bad television and worse teaching. Empty states and error states are seen *first* by every viewer rather than last. The moments worth watching must be visual — which is one more reason the companion's gaze, and not a log line, is the drift signal.
 - **Nothing on the rebuild path may require a Chrome Web Store review.** Review runs days to weeks (C18). The product must be real and working while loaded unpacked; publishing is an epilogue, never a step.
 - **Windows and macOS identically.** Apex states a macOS 13+ / Windows 10+ floor and no RAM or disk floor. Any macOS-only convenience is banned.
@@ -251,7 +271,7 @@ Two slots remain — D21 freed one by consolidating auth onto Neon. Spending eit
 
 M1–M4, M6, M7 and M10 are `SELECT`s against tables the product needs anyway. M8 and M9 need billing and gateway spend, which arrive with the fourth service.
 
-**Reproduction rate is deliberately absent.** Whether a student rebuilds MEANT in 4–8 hours measures the *manual*, not the product. It belongs in `../context.md`, and putting it here would be the first step toward optimising the product for the course rather than for its user.
+**Reproduction rate is deliberately absent.** Whether a student rebuilds MEANT in 4–8 hours measures the *manual*, not the product. It belongs in `../apexhuman.md`, and putting it here would be the first step toward optimising the product for the course rather than for its user.
 
 **A9 is not on this list, and that is the point.** If a calm presence inhibits complex work, every metric here would improve while the user's actual output got worse. A9 can only be tested against something outside this data (Q9).
 
@@ -269,7 +289,7 @@ M1–M4, M6, M7 and M10 are `SELECT`s against tables the product needs anyway. M
 | Judge | Blocking, attention, review, ledger | K4 — if the judge is wrong too often, it goes and the product lives |
 | Companion | Everything except in-session presence | K5 — if a calm presence inhibits complex work (A9), the witness goes and the coach survives |
 | Memory | Everything, judged fresh every time, coach silent on patterns | Cost control failure (K6), and a user who taps "forget what you know about me" (PRD-F15) |
-| Coach | Everything except the review's observations and suggestions | A student rebuilding the T1 subset (`../context.md` §6) |
+| Coach | Everything except the review's observations and suggestions | A student rebuilding the T1 subset (`../apexhuman.md` §6) |
 
 Each seam must be exercised, not asserted. A feature that cannot be switched off has not been built to spec.
 
@@ -292,6 +312,18 @@ Each seam must be exercised, not asserted. A feature that cannot be switched off
 
 ---
 
+## 11. Competitive Truth
+
+| Product | Has | Lacks |
+|---|---|---|
+| Freedom | Blocking | Measurement, intention, outcome |
+| Rize | Measurement, AI categorisation | Intention, protection; hours are its headline |
+| Session (Apple only) | The full loop | Browser-native attention; asks what you *learned*, not what you *finished* |
+| Femma, FineStreak, Coach Call AI, Nudge, Centered | Voice check-ins, nudges, consequences | **Sight. Every one of them has to ask** |
+| Forest, Finch | The companion mechanic, proven commercially | Measure how you *feel*, not what you *finished* |
+
+---
+
 ## Self-Check
 
 - [x] Every `PRD-F#` traces to an `A#` or to IDEA §4
@@ -305,4 +337,6 @@ Each seam must be exercised, not asserted. A feature that cannot be switched off
 - [x] §9 states the four seams that must each be exercised, not asserted (I9)
 - [x] §2 states the boundary between MEANT's user and the course's student
 - [x] §8 states which measurement deliberately does not live here, and why
+- [x] §6 states plainly what is and is not built as of the last reconciled date (0.2b)
+- [x] §7's host-permission constraint matches shipped code, not the superseded design
 - [x] Registered in `docs/index.md`

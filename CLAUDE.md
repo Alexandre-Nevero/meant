@@ -1,6 +1,6 @@
 # MEANT
 
-Browser extension plus web app. See `PRODUCT.md` for what it is, `context.md` for who
+Browser extension plus web app. See `PRODUCT.md` for what it is, `apexhuman.md` for who
 it is for and why it must be rebuildable, `docs/` for canonical truth.
 
 ## Design — read before touching any UI

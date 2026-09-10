@@ -1,4 +1,4 @@
-# CONTEXT.md — what we are actually building, and for whom
+# APEXHUMAN.md — what we are actually building, and for whom
 
 **Owner:** Alexandre Andrei Nevero
 **Date:** 2026-08-28
@@ -171,7 +171,7 @@ Things previously cut for the clock that no longer have a reason to be cut. Each
 - Proper migrations instead of hand-applied SQL (`D18`)
 - Tests around the pure functions — attribution, gap calculation, session recovery
 - An eval set for the judge, which is how `M7` and `K4` become measurable rather than aspirational
-- The design system actually existing (`design/` was never produced; `design-toolkit.md` is deleted in the working tree)
+- ~~The design system actually existing~~ — **done, 2026-09-01.** `design/tokens.css`, `design/canvas/`, and `docs/design-toolkit.md` all exist now (`docs/index.md` D22)
 - Error states, empty states, and the first-run experience — the things a beginner's product always lacks and a real one cannot
 - Account deletion and "forget what you know about me," which `SDD §9.3` has flagged as a gap through two versions
 

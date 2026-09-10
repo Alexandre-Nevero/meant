@@ -1,6 +1,6 @@
 # Dead ends — running log
 
-Kept from the first commit of the UI build (`context.md` §7 rule 10: "our debugging is
+Kept from the first commit of the UI build (`apexhuman.md` §7 rule 10: "our debugging is
 the manual's troubleshooting chapter, and it is worth more than the happy path").
 Append here as they happen; do not reconstruct after the fact.
 

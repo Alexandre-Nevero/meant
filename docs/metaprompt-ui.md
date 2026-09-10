@@ -23,7 +23,7 @@ Your job is to close that gap and then build the surfaces nobody has drawn.
 3. **`docs/design-toolkit.md`** — §2 the mark, §3 the companion, §6 motion, §9 refuse, §10 acceptance.
 4. **`CLAUDE.md`** — the six invariants that are design decisions.
 5. **`docs/prd-intent.md`** §3.1 (I1–I9) and §4 (acceptance criteria), **`docs/sitemap-intent.md`** (S1–S9), **`docs/flow-intent.md`** (edge cases E1–E12).
-6. **`context.md`** §5–§7 — why this must stay rebuildable, and why it gets filmed.
+6. **`apexhuman.md`** §5–§7 — why this must stay rebuildable, and why it gets filmed.
 
 When the artboards and a doc disagree, the artboards are right and the doc is stale. **Say so; do not silently pick one.**
 
@@ -80,7 +80,7 @@ Every colour, radius, duration and font already exists in `design/tokens.css`. *
 
 ## Phases — sequenced by dependency, not by a clock
 
-There is **no time limit on this build**. The constraint is that a non-technical student must be able to rebuild a defined subset in 4–8 hours (`context.md` §6). That means: no decision points left implicit, every step producing a visible change on screen, and no step that blocks the steps after it.
+There is **no time limit on this build**. The constraint is that a non-technical student must be able to rebuild a defined subset in 4–8 hours (`apexhuman.md` §6). That means: no decision points left implicit, every step producing a visible change on screen, and no step that blocks the steps after it.
 
 ### Phase 1 — Foundation. Nothing else counts until this is done.
 - `app/globals.css` — imports `design/tokens.css`, styles all thirteen `.m-*` classes.
