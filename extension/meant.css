@@ -129,7 +129,7 @@ button, input, select { font: inherit; color: inherit; }
 
 .m-meta { margin: 0; font-size: 13px; line-height: 1.45; color: var(--m-ink-3); }
 [data-surface="block"] .m-meta { font-size: 20px; line-height: 1.45; color: var(--m-ink-2); }
-[data-surface="block"] .m-row-figure { font-size: 14px; color: var(--m-ink-3); }
+[data-surface="block"] .m-row-figure { font-size: 14px; color: var(--m-ink-3); text-align: left; }
 
 /* ---------- .m-field — idle popup's input, and the pairing code field ---------- */
 
@@ -181,6 +181,7 @@ button, input, select { font: inherit; color: inherit; }
 
 /* chip fields — duration and blocklist pickers */
 .m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; max-height: 132px; overflow-y: auto; }
+[data-surface="popup"] [data-scroll-list] { max-height: 132px; overflow-y: auto; }
 .m-chip {
   padding: 8px 14px;
   height: 34px;
@@ -191,6 +192,9 @@ button, input, select { font: inherit; color: inherit; }
   border: var(--m-stroke-hair) solid var(--m-edge);
   border-radius: var(--m-r-chip);
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .m-chip[aria-pressed="true"] { color: var(--m-ink); border-color: var(--m-ink); }
 .m-chip[data-mono="true"] { font-family: var(--m-figure); font-size: 12px; }
@@ -325,8 +329,8 @@ button, input, select { font: inherit; color: inherit; }
   font-family: var(--m-figure);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-  text-align: right;
 }
+.m-row > .m-row-figure { text-align: right; }
 
 /* The companion no longer docks here — extension/companion-overlay.js floats it on the
  * page itself via a Shadow DOM, self-contained, with its own copy of the same gaze/

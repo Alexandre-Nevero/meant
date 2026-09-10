@@ -713,6 +713,30 @@ test.describe('popup, running state', () => {
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
+  test('many blocked domains scroll inside a capped container instead of pushing Stop off-screen', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+
+    const plusButtons = page.getByRole('button', { name: '+', exact: true })
+    for (let i = 0; i < 10; i++) {
+      await plusButtons.nth(1).click() // the blocking row's own +
+      await page.keyboard.type(`blocked${i}.example.com`)
+      await page.keyboard.press('Enter')
+    }
+    await page.locator('input.m-field').first().fill('capped blocked list test')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const container = page.locator('[data-scroll-list]')
+    await expect(container).toBeVisible()
+    const box = (await container.boundingBox())!
+    expect(box.height).toBeLessThanOrEqual(132)
+
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeInViewport()
+
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
 })
 
 test('the outcome screen shows a colored attention band between the intention and the per-domain rows', async ({ context, extensionId, freshAccount }) => {

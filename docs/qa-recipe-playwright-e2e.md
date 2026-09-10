@@ -1186,6 +1186,53 @@ screenshotted; a human should still confirm once in a real loaded-unpacked insta
 reloading the extension in `chrome://extensions` brings the companion back on an
 already-open tab with no page refresh.
 
+### AS — Final-review fixes: block-page alignment, unbounded blocked-list height, chip
+### text overflow, 0-min display (final review pass)
+
+Four findings from a whole-branch final review, all regressions introduced by earlier
+tasks this same round:
+
+- `extension/meant.css`'s bare `.m-row-figure` rule had gained `text-align: right` for the
+  running popup's new row lists, but `extension/blocked.js` also renders a standalone
+  `.m-row-figure` `<p>` that is NOT inside a `.m-row` grid — as a flex child of `#root`
+  (`align-items: stretch`) it went full-width and right-aligned, pushing the block page's
+  "domain — N minutes left" line away from the sentence above it. Fixed by scoping the
+  rule to `.m-row > .m-row-figure` and adding an explicit `text-align: left` to the
+  existing `[data-surface="block"] .m-row-figure` rule instead of relying on inheritance.
+- The running popup's blocked-domain row list had no height cap, so enough configured
+  domains could push the Stop button below the popup's visible area (confirmed: 3
+  attention rows + 10 blocked rows reaches ~892px against Chrome's ~600px ceiling). Fixed
+  in `extension/popup.js`'s `running()` by wrapping `blockedRows` in a single container
+  carrying `data-scroll-list="true"`, matched by a new
+  `[data-surface="popup"] [data-scroll-list] { max-height: 132px; overflow-y: auto; }`
+  rule in `extension/meant.css` — the same cap `.m-chip-row` already uses for site chips.
+- `.m-chip`'s base rule had gained a fixed `height: 34px` in an earlier task; a chip label
+  long enough to wrap now spilled its text above/below the chip's outline. Fixed by adding
+  `white-space: nowrap; overflow: hidden; text-overflow: ellipsis` to the same rule.
+- The live per-domain row list computed `Math.round(s.flex / 60)`, showing "0 min" for any
+  domain under 30 real seconds of attention — most visible in a session's first 30
+  seconds, exactly when a user is likely to check the popup. Fixed with
+  `s.flex > 0 ? Math.max(1, Math.round(s.flex / 60)) : 0`, so any domain with real
+  attention shows at least "1 min".
+
+99. E2E test: `e2e/session-lifecycle.spec.ts` "the block page names the blocked domain in
+    its time-left line". Extended with a regression assertion: `.m-row-figure`'s computed
+    `text-align` is `left` on the block page. **Pass:** the computed style is `left`, not
+    `right` — this test was verified to fail against the pre-fix bare `.m-row-figure { text
+    -align: right }` rule before the scoping fix landed.
+100. E2E test: `e2e/popup.spec.ts` "many blocked domains scroll inside a capped container
+    instead of pushing Stop off-screen". Configure 10 blocked domains, Start. **Pass:** the
+    `[data-scroll-list]` container's bounding-box height is `<= 132px`, and the Stop button
+    remains in the viewport (`toBeInViewport()`) with no whole-popup scroll needed.
+
+Visual, human/screenshot check performed for this task (temp spec, screenshot, Read,
+delete): (a) the block page with one blocked domain — the "example.net — 30 minutes left"
+line now sits left-aligned directly under "That's still true.", not floating right; (b)
+the running popup with 10 blocked domains configured — the blocked-rows list scrolls
+inside its own capped container and the Stop button stays visible without scrolling the
+whole popup; (c) the idle popup's work-sites row with one long typed domain — the chip
+truncates with an ellipsis on one line instead of wrapping or overflowing its fixed height.
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

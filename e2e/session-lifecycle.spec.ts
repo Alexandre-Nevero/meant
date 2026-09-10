@@ -221,6 +221,11 @@ test.describe('session lifecycle', () => {
     // The domain now appears folded into the existing muted time-left line, not a new element.
     await expect(blockedPage.locator('.m-row-figure')).toHaveText(/^example\.net — \d+ minutes left$/)
 
+    // Regression: the running popup's row-list CSS once leaked `text-align: right` onto
+    // this bare, non-grid <p> (it isn't inside a `.m-row` grid on this surface), pushing
+    // the line away from the sentence above it. Must render left-aligned.
+    await expect(blockedPage.locator('.m-row-figure')).toHaveCSS('text-align', 'left')
+
     await page.bringToFront()
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })

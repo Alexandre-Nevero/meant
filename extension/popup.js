@@ -575,7 +575,8 @@ function running(session) {
       const bar = el('span', 'm-row-bar')
       bar.dataset.kind = s.kind
       const domain = el('p', 'm-row-domain', s.domain)
-      const figure = el('p', 'm-row-figure', `${Math.round(s.flex / 60)} min`)
+      const minutes = s.flex > 0 ? Math.max(1, Math.round(s.flex / 60)) : 0
+      const figure = el('p', 'm-row-figure', `${minutes} min`)
       row.append(bar, domain, figure)
       return row
     })
@@ -589,6 +590,11 @@ function running(session) {
     row.append(bar, label)
     return row
   })
+  const blockedRowsContainer = blockedRows.length > 0 ? el('div') : null
+  if (blockedRowsContainer) {
+    blockedRowsContainer.dataset.scrollList = 'true'
+    blockedRowsContainer.append(...blockedRows)
+  }
 
   document.fonts.ready.then(() => requestAnimationFrame(() => {
     pillWrap.dataset.loop = 'on' // CSS makes the border transparent without changing clientWidth/Height
@@ -704,7 +710,7 @@ function running(session) {
     phaseLine,
     ...attentionRows,
     ...(blockingLabel ? [blockingLabel] : []),
-    ...blockedRows,
+    ...(blockedRowsContainer ? [blockedRowsContainer] : []),
     stop,
   )
 }
