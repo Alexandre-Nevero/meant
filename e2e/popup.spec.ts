@@ -156,6 +156,27 @@ test.describe('popup, idle state', () => {
     await expect(page.getByRole('button', { name: 'no cycles', exact: true })).toBeVisible()
   })
 
+  test('the custom-reveal chips share one consistent height, not a mismatched row', async ({ context, extensionId, freshAccount }) => {
+    const page = await context.newPage()
+    await freshAccount(page)
+    await pairPopup(page, extensionId)
+    await page.getByRole('button', { name: 'custom', exact: true }).click()
+
+    const workInput = page.locator('input[data-chip-role="number"]').first()
+    const untilChip = page.getByRole('button', { name: 'until I stop', exact: true })
+    const workBox = (await workInput.boundingBox())!
+    const untilBox = (await untilChip.boundingBox())!
+    // Same explicit height across a number-input chip and a button chip — within 1px
+    // rounding, not a multi-pixel visual mismatch.
+    expect(Math.abs(workBox.height - untilBox.height)).toBeLessThanOrEqual(1)
+
+    // The digit is vertically centered inside its chip, not sitting high — check the
+    // input's own line-height renders as a real value, not the UA default (which would
+    // leave the text baseline noticeably above center at this padding).
+    const lineHeight = await workInput.evaluate((e) => getComputedStyle(e).lineHeight)
+    expect(lineHeight).not.toBe('normal')
+  })
+
   test('no cycles disables the break input and relabels work to minutes, and stays reachable as a plain fixed-length session', async ({ context, extensionId, freshAccount }) => {
     const page = await context.newPage()
     await freshAccount(page)

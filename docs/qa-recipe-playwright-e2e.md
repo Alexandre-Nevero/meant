@@ -1048,6 +1048,25 @@ field, and the running popup's editable intention (only during the grace window 
     `[data-timer-pill="true"]` also has `spellcheck="false"` (confirming the running
     branch's `sentenceNode` construction gets the attribute as well).
 
+### AP — Custom-reveal chip row alignment and centering (Task 3, current round)
+
+The custom-cycle reveal row (work/break duration inputs plus "until I stop"/"no cycles"
+buttons) combines two chip types: text inputs with `data-chip-role="number"` and regular
+button chips. Without an explicit height on `.m-chip`, the two types render with different
+line-boxes, causing visual misalignment and off-center digit text. The fix sets `height: 34px`
+on the base `.m-chip` rule (covering all chip variants since `box-sizing: border-box` is
+already global) and `line-height: 1` on `.m-chip[data-chip-role="number"]` to ensure the
+digit text sits vertically centered, not floating high on the browser's default line-height.
+
+93. E2E test: `e2e/popup.spec.ts` "the custom-reveal chips share one consistent height,
+    not a mismatched row". Open the idle popup. Click "custom". **Pass:** measure the
+    bounding box of the work input chip (`input[data-chip-role="number"]`) and the
+    "until I stop" button chip. Their heights differ by at most 1px (within browser rounding
+    tolerance, not a visible 2+ px stagger). **Pass:** the work input's computed
+    `lineHeight` is not `'normal'` (confirming the explicit `line-height: 1` rule applies,
+    so the text baseline is controlled and not using the UA default that would leave digits
+    sitting high).
+
 ## What Sonnet writes vs. what Haiku runs
 
 Sonnet (this session) writes every spec file and the shared fixtures/helpers below —

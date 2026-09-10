@@ -183,6 +183,7 @@ button, input, select { font: inherit; color: inherit; }
 .m-chip-row { display: flex; gap: 8px; flex-wrap: wrap; max-height: 132px; overflow-y: auto; }
 .m-chip {
   padding: 8px 14px;
+  height: 34px;
   font-family: var(--m-body);
   font-size: 13px;
   color: var(--m-ink-3);
@@ -208,6 +209,7 @@ button, input, select { font: inherit; color: inherit; }
   cursor: text;
   font-family: var(--m-figure);
   font-size: 12px;
+  line-height: 1;
   text-align: center;
   color: var(--m-ink);
 }
