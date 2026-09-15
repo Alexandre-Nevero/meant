@@ -1,6 +1,11 @@
 /** N8. No companion movement in the first minute. Also D34's sentence-edit window. */
 export const GRACE_MS = 60_000
-/** D30. CONFLICT only — a domain with taps on more than one side. One-sided resolves at n=1. */
+/** D30, NARROWED by ADR-0062 (2026-09-15). D30 said these govern CONFLICT only and that
+ *  one-sided evidence resolves at n=1 — a rule written for a CORRECTION of a wrong flag.
+ *  ADR-0057 deleted the flag, so no corrections exist; every label is now volunteered, and a
+ *  volunteered label means "this visit", not "this site forever". These therefore govern ALL
+ *  label evidence. Memorising at n=1 would break PRD §1.2: one tap on instagram.com at 4pm
+ *  would teach the product that Instagram is always drift. */
 export const MEMORY_MIN_EVIDENCE = 3
 export const MEMORY_MIN_AGREEMENT = 0.8
 /** SDD Q6 / V8. Daily per-user judgment cap.
