@@ -37,7 +37,7 @@ function show(...nodes) {
  *  a small trailing `.m-chip[data-chip-role="delete"]` ("×", `aria-label="Remove <label>"`)
  *  deletes it from local state and calls `onRemove(value)` — the real standing-list removal.
  *  `onChange(value)` fires after every click (toggle or delete) or add. Keeps the
- *  `<button aria-pressed>` pattern (design.md §8). */
+ *  `<button aria-pressed>` pattern (docs/design.md §8). */
 function chipGroup(options, { mono = false, multi = false, value, addable = false, removable = false, onChange, onRemove } = {}) {
   const row = el('div', 'm-chip-row')
   const selected = multi ? new Set(value ?? []) : null

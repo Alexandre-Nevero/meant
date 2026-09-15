@@ -16,8 +16,8 @@ const EXTENSION_PATH = path.join(__dirname, '..', 'extension')
 // this harness's load mechanism, and may not match how Chromium treats a real user's own
 // "Load unpacked" install across ordinary restarts (unconfirmed either way; the official
 // docs don't say). This test exercises the event that demonstrably does fire here; it does
-// not prove onStartup's behavior for a real user, which stays a human-verification item
-// (docs/qa-recipe-browser-verification.md, Part C).
+// not prove onStartup's behavior for a real user, which stays an open, human-only
+// verification item — see docs/dead-ends.md's entry on this exact gap.
 //
 // Not covered by the shared `fixtures.ts` context (it creates one throwaway profile dir per
 // test and tears it down after) — this test manages its own persistent profile dir so it
