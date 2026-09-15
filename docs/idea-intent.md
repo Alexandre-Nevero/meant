@@ -6,10 +6,15 @@
 **Cycle:** 1
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
-**Last reconciled:** 2026-08-28 — persona, loop, and AI stance amended after a product review session
+**Last reconciled:** 2026-09-11 — doc audit corrected two items D11/D14-adjacent facts had drifted from
 **Downstream:** [prd-intent.md](prd-intent.md)
 **Loop closes from:** [flow-intent.md](flow-intent.md) §6 events → [prd-intent.md](prd-intent.md) §8 metrics → §10 below
 
+> **Amendment 0.2c (2026-09-11).** D11's generated task plan was cut 2026-09-04 (D38/ADR-0048,
+> `docs/prd-intent.md` amendment 0.2c) — **A7 and its kill criterion below are void**, struck
+> through rather than silently left as if still testable. Q5 (companion placement) is answered:
+> neither `chrome.sidePanel` nor Document PiP — a content-script overlay (ADR-0026, SDD Q3).
+>
 > **Amendment 0.2 (2026-08-28).** Five decisions changed the product: the primary user moved from employed to self-employed (D10), the session gained a generated task plan (D11), attention is now judged semantically by a model rather than left to the reader (D12), a companion holds presence during the session and becomes the coach in the review (D13), and inference runs in the cloud rather than on-device (D14). Sections 1–9 and 12 are rewritten. §10 and §11 are unchanged and remain open.
 >
 > **Working name is dead.** "Intent — Focus" ships on the App Store. The product is **MEANT**. The `docs/*-intent.md` filenames are stale; renaming is deferred so cross-links and history stay intact.
@@ -34,6 +39,30 @@
 
 ## 2. The Problem
 
+> **Canonical, 2026-09-15 (ADR-0055).** Everything below is consequence or evidence.
+>
+> **Your work surface and your distraction surface are the same browser — so nothing you own can tell
+> you whether the block you just spent produced the thing it was for.**
+>
+> Not the calendar: it records that you booked the hour, never that the hour delivered. Not the timer:
+> it counts elapsed minutes, which you already knew. Not the blocker: it cannot tell Instagram-the-job
+> from Instagram-the-escape. Not your own memory: the fifteen minutes that vanished are the fifteen you
+> did not notice.
+>
+> The cost is not the lost time. It is that tomorrow gets planned on **feelings instead of evidence**.
+>
+> **Falsifiers:** **P-F1** users can already answer unaided → motivation problem, not information.
+> **P-F2** drift plus away under ~15% → the loss is elsewhere. **P-F3** the question gets answered and
+> nothing changes next day → the ledger is a diary.
+>
+> **The loss is often invisible to the person losing it — a distribution fact, not a wedge.** It is the
+> strongest *retention* argument: the first review showing half a session in `away` is when the problem
+> becomes visible. It cannot be the *acquisition* argument — someone who does not suspect a problem does
+> not search for a focus tool. **The wedge is the person who already suspects.**
+>
+> **Awareness is the goal; information is the mechanism (ADR-0052).** *Information → pattern → noticing*,
+> with a lag in the middle.
+
 **Who has it:** Self-employed, non-technical browser-native workers who have no compiler, no ticket, and no manager's deadline that proves a work block produced anything. Their unfinished work costs them money directly.
 
 **A specific instance:** The client-proposal block above. Three of the fourteen tabs were the AI chat used to draft it; four were a news site opened during a slow model response; the rest were search results from a question that stopped being relevant twenty minutes in. Nothing in her tooling can separate the three from the eleven.
@@ -51,6 +80,16 @@
 ---
 
 ## 3. Why Now
+
+> **Amended 2026-09-15 (ADR-0056). Two conditions, not three.** **(1) AI chat collapsed the work surface
+> into the distraction surface** — `chatgpt.com` is the tool *and* the rabbit hole in one hostname, and
+> our own database shows it at **24 of 62 recorded attention-minutes, 38.7%**. **(2) Inference became
+> cheap enough to judge a tab against a sentence** — one batched on-demand analysis across ~10 sessions
+> ≈ 2,700 in / 800 out tokens: **$0.0067 Haiku 4.5 · $0.0134 Sonnet 5 · $0.0335 Opus 5**, or 0.45–2.2%
+> of a $12 subscription against M9's 15% budget (verified 2026-09-11).
+>
+> **MV3 is demoted to a *why-possible*** — true since 2024; two years is not a window. **"Distraction is
+> worsening" is a *why-ever*** and is never cited as timing in any document, deck or page.
 
 Three things changed.
 
@@ -103,7 +142,9 @@ And model inference became cheap and fast enough that reading one tab against on
 | C17 | Finch: ~10M users and ~$30–40M ARR, bootstrapped, direct-to-consumer. 4.9★ on ~712k App Store ratings. | Ratings verified; **ARR unverified** (blog-sourced) | App store listings; review blog | 2026-08-28 | The companion mechanic's commercial proof is weaker. Do not quote the ARR externally. |
 | C18 | Chrome Web Store review runs from under an hour to several weeks; a new developer account with broad permissions should plan for the slow track. | Verified | developer.chrome.com — review process; 2026 review-time reports | 2026-08-28 | Distribution timing for any cohort is wrong. |
 | C19 | `activeTab` is granted by only four user gestures and *"is revoked when the user navigates away."* It therefore **cannot** read page content on a tab change. Reading text automatically requires broad host permissions. | Verified | developer.chrome.com — activeTab | 2026-08-28 | The judge could read every page with today's manifest, the two-tier design (SDD §5.2) is unnecessary, and the install funnel is simpler than assumed. |
-| C20 | `optional_host_permissions` are granted by the user at runtime via `chrome.permissions.request()`, not at install. | Verified | developer.chrome.com — declare permissions | 2026-08-28 | Broad access must be requested at install, which puts the scariest consent screen in front of a non-technical buyer before first value. |
+| C20 | `optional_host_permissions` are granted by the user at runtime via `chrome.permissions.request()`, not at install. | Verified | developer.chrome.com — declare permissions | 2026-08-28 | **Moot since ADR-0061** — no optional permission is requested anywhere in the product. |
+| **C21** | **Self-interruption is a major, under-studied component of task switching.** 889 hours of observed task-switching from 36 individuals across three information-work organizations. It is a function of organizational environment and individual differences **and of external interruptions already experienced**; open-plan raises it. **People are significantly more likely to self-interrupt in order to *return to* a central working sphere (Mean 23%) than to a peripheral or other one (17%, 19%)**, and to return to solitary work (23%) over a communication event (16%). | Verified — primary PDF read | Dabbish, Mark & González, CHI 2011, *"Why Do I Keep Interrupting Myself?"* (`ics.uci.edu/~gmark/`) | 2026-09-15 | **Not all self-interruption is drift.** A meaningful share is people returning to their real work — which independently supports `neutral` as a first-class label (ADR-0047) and warns against reading every switch as failure. |
+| **C22** | Mark's ~47-second average dwell on a screen before switching, and the ~23–25 minute return-to-task cost. | **Reported, NOT verified** — primary source not yet read (`ics.uci.edu/~gmark/chi08-mark.pdf`) | search summary | 2026-09-15 | **Do not quote until read.** A search on 2026-09-15 surfaced an inflated variant of this figure — *"2026 Carnegie Mellon, 3,800 workers, 26.8 minutes, $1.2 trillion"* — from SEO content farms. **That variant is not to be cited** (ADR-0064). |
 
 ---
 
@@ -117,7 +158,7 @@ And model inference became cheap and fast enough that reading one tab against on
 | A4 | Blocking a chosen list inside the browser is enough protection. | Low | Protection is theater and the "protected" line is a lie | Blocked attempts followed by a gap in recorded activity | Blocked-attempt count vs away time |
 | A5 | Requiring sign-in before the first session does not kill adoption. | Medium | The funnel dies before anyone sees the loop | Installs that never produce a first session | M5 |
 | A6 | The intention→outcome link reads as a different product, not a lighter Rize. | Medium | The positioning fails even if the build succeeds | First audience describes it as "Rize but simpler" | Demo feedback, verbatim |
-| **A7** | A generated plan is kept more often than it is discarded. | Medium | The plan misdirects real work — worse than no plan | Under 60% of generated task sets survive the session un-deleted | M6 |
+| ~~A7~~ | ~~A generated plan is kept more often than it is discarded.~~ | **Void — the plan (PRD-F8) was cut 2026-09-04, D38/ADR-0048; nothing to test** | — | ~~M6~~ (also cut) |
 | **A8** | The judge is right often enough to be allowed to signal. | **Low — riskiest** | A companion that misreads you with a face on it is Clippy, and users resent a face | User corrections (EV10) exceed the precision floor | M7 |
 | **A9** | A calm presence facilitates rather than inhibits complex work (C11, C12). | Low | The product makes people stay on task and do worse work — a failure they cannot articulate and will churn over | Self-reported work quality falls, or sessions end early more often with the companion on than off | Companion on/off comparison |
 | **A10** | This audience pays ~$9/month for the half that knows them. | Medium | No revenue, and the course's promise fails with it | Free-to-paid conversion under 3% after 8 weeks | M8 |
@@ -138,7 +179,7 @@ And model inference became cheap and fast enough that reading one tab against on
 | Builder uses it on real work, unprompted | 10 sessions with real intentions | 2026-09-15 | Session count |
 | The review tells someone something they did not know | 3 of 5 test users say so, unprompted | 2026-09-30 | Verbatim feedback |
 | Intention step survives contact | ≥70% of sessions have a non-empty intention | 2026-09-30 | M2 |
-| The plan is kept, not deleted | ≥60% of generated task sets survive | 2026-09-30 | M6 |
+| ~~The plan is kept, not deleted~~ | **Void — A7/M6 cut with PRD-F8 (D38)** | — | — |
 | The judge is trusted | correction rate below the precision floor | 2026-09-30 | M7 |
 
 **Kill criteria:**
@@ -166,7 +207,7 @@ And model inference became cheap and fast enough that reading one tab against on
 | Verdict | PROCEED WITH FIXES |
 | Fields that failed | None — all six §1 fields remain concrete under the new persona |
 | Contradicted claims | C5 is no longer load-bearing; browser-only is re-justified on §3, not on admin rights |
-| Carried forward as TBD | Companion placement (side panel / Document PiP / neither) → SDD. The precision floor for A8 → PRD §8. The evidence threshold for I6 → PRD §8. Free/paid boundary → PRD |
+| Carried forward as TBD | ~~Companion placement~~ (answered — see Q5). The precision floor for A8 → PRD §8. The evidence threshold for I6 → PRD §8. Free/paid boundary → PRD |
 | Blocking questions | None |
 
 **Why FIXES rather than a clean PROCEED:** A8 and A9 are both Low confidence and both sit under features that are now central. Neither blocks the build; both must have a measurement in place before the companion ships to anyone but the builder.
@@ -186,7 +227,14 @@ And model inference became cheap and fast enough that reading one tab against on
 | A chatbot you talk to while working | Talking to your focus tool is the highest-quality procrastination available. Conversation exists only in the review | Never during a session |
 | A clinical or therapeutic tool | The audience overlaps heavily with undiagnosed ADHD. The product observes and reports; it does not diagnose, treat, or advise on health | Only with clinical partnership and review |
 
-**Not for:** People whose work is mostly outside a browser — designers in native tools, developers in an IDE, anyone in a terminal. v1 would see a fraction of their day and be confidently wrong about the rest.
+**Not for:** ~~People whose work is mostly outside a browser — designers in native tools, developers in
+an IDE, anyone in a terminal.~~ **Amended 2026-09-15 (ADR-0054).** The warning is kept; the job-title
+exclusion is dropped. The risk was never the title — it is being "confidently wrong about the rest." So
+the product stops being confident about what it did not watch: **where recorded browser attention is a
+small fraction of a session's wall clock, the review states what it did not see.** The user self-qualifies
+inside one session, on evidence.
+
+**Still not for, permanently:** employers, at any tier, in any form (the rows above).
 
 ---
 
@@ -213,7 +261,7 @@ Empty until v1 ships to someone other than the builder. Expected, not a gap.
 | ~~Q2~~ | ~~Hosting / database / auth providers?~~ **Answered: Vercel, Neon, Clerk (D7).** A fourth is now allocated to AI Gateway (D14). **Clerk later replaced by Neon Auth (D21, 2026-09-01), consolidating auth onto the database vendor** | SDD §2 | Alexandre | done |
 | ~~Q3~~ | ~~Where do default blocklists come from?~~ **Answered: three hardcoded lists in v1, plus a personal list derived from observed drift (PRD-F13)** | PRD | Alexandre | done |
 | ~~Q4~~ | ~~What counts as "away"?~~ **Answered: browser unfocused > 60s (SDD §3)** | SDD §3 | Alexandre | done |
-| **Q5** | Where does the companion live — `chrome.sidePanel`, Document Picture-in-Picture, or neither? Document PiP is always-on-top and needs no host permissions, but requires a user gesture, "never outlives the opening window," and its extension support is undocumented. `<all_urls>` is excluded by SDD V4 | SDD, SITEMAP S9 | Alexandre | Before the companion is built. 30-minute spike |
+| ~~Q5~~ | ~~Where does the companion live?~~ **Answered 2026-09-01/05: neither `chrome.sidePanel` nor Document PiP — a content-script Shadow DOM overlay at `<all_urls>` (ADR-0026, SDD Q3, resolved).** | SDD, SITEMAP S9 | done | — |
 | **Q6** | What precision must the judge reach before it is allowed to signal a drift? A number, not a feeling | A8, K4, M7 | Alexandre | Before the companion signals anything |
 | **Q7** | How many sessions of evidence before the coach may state a pattern (I6)? | A9, I6 | Alexandre | Before the coach speaks |
 | **Q8** | Where is the free/paid line, exactly? Provisional: free is mechanical (blocking, review, ledger); paid is the half that knows you (plan, judge, companion, memory, coach) | A10, M8 | Alexandre | Before pricing is shown |

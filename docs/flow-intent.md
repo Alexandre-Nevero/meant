@@ -5,9 +5,14 @@
 **Version:** 0.2
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
-**Last reconciled:** 2026-08-28
+**Last reconciled:** 2026-09-11
 **Upstream:** [prd-intent.md](prd-intent.md), [sitemap-intent.md](sitemap-intent.md)
 
+> **Amendment 0.2c (2026-09-11).** PRD-F8 (the plan) was cut 2026-09-04 (ADR-0048/D38) and this
+> document never caught up: EV8/EV9/EV10/EV14 are struck through below (they never fire), E12 is
+> void, and EV15 is narrowed to the judge-correction it still describes. See `docs/prd-intent.md`
+> amendment 0.2c for the full reconciliation this mirrors.
+>
 > **Amendment 0.2 (2026-08-28).** UF1 gains the plan, the judge, and the companion. Eight events added. Four edge cases added, all of them about the new dependency failing or the new permission being declined — the paths most likely to be skipped and most certain to happen.
 
 ---
@@ -32,9 +37,8 @@ Popup: type "finish the client proposal", pick a blocklist, Start
    ├─▶ block rules installed          (EV2)
    ├─▶ companion opens, facing the work
    │
-   ├┈┈▶ plan requested, fire-and-forget          (EV8)
-   │      └┈▶ 1–5 steps appear ~3s in           (EV9)   ◀── nothing waited for this
    ▼
+   [PRD-F8, the plan, was cut 2026-09-04 (ADR-0048/D38) — EV8/EV9 never fire]
 Work happens. Nothing is asked of the user. Nothing is celebrated.
    │   active tab / URL changes ──▶ time attributed to previous domain      (EV3)
    │                            └─▶ memory hit?  verdict, no model call     (EV11)
@@ -42,7 +46,7 @@ Work happens. Nothing is asked of the user. Nothing is celebrated.
    │   verdict = drifts, above the floor, past 60s
    │                            ──▶ companion turns to face you             (EV12)
    │   you come back                                                        (EV13)
-   │   a step looks done        ──▶ companion marks it, silently            (EV14)
+   │   [no step-marking — PRD-F8 cut; EV14 never fires]
    │   you un-mark it           ──▶ correction stored as a label            (EV15)
    │   browser unfocused > 60s  ──▶ time attributed to "away"               (EV4)
    │   blocked domain opened    ──▶ block page shows the intention          (EV5)
@@ -82,7 +86,7 @@ Dashboard: 3 sessions, 2 completed
 
 First value is one session away, not one week away.
 
-**Nothing in onboarding asks for broad page access.** The judge runs on tier T-A from the first session, and the offer to read pages arrives later, from the companion, with evidence behind it (UF4). Putting "read and change all your data on all websites" in front of a non-technical buyer before they have seen a single review would kill the funnel at step 1.
+**Nothing anywhere in the product asks for page access. Updated 2026-09-15 (ADR-0061):** the tiers are gone and there is no permission prompt to place, early or late. The judge runs after the session on hostname, path, dwell, sequence and the declared sites — **it never reads page text or page titles.** The paragraph this replaces argued for deferring the prompt until after first value; the prompt no longer exists, which is strictly better than a well-timed one.
 
 **Second value, and the reason they stay, is weeks away by design:** memory. Calibration was cut from 0.1 for exactly this reason and returns at 0.2 as PRD-F11 — but it is deliberately not the first thing anyone sees, and the coach stays silent about patterns until the evidence threshold clears (I6).
 
@@ -103,11 +107,16 @@ Failure: an expired or mistyped code leaves the extension unpaired with a stated
 ### UF3 · Review a past session
 Entry from the dashboard. Identical to S4 in every respect except that the outcome may already be answered, in which case it is shown and can be changed.
 
-### UF4 · Enable deep judging
-Preconditions: a paired, signed-in user who has run at least one session on tier T-A, so the offer arrives with evidence behind it rather than as a cold demand.
-Entry: the companion, or the review, after the judge has been uncertain often enough to be worth improving.
-Success: `chrome.permissions.request()` is granted and subsequent judgments run on tier T-B.
-Failure: declined. The product continues on T-A permanently and never asks again (E10). This is a success state for the user and must not be instrumented as a funnel drop.
+### ~~UF4 · Enable deep judging~~ — **VOID 2026-09-15 (ADR-0061)**
+This flow described granting `chrome.permissions.request()` to unlock a page-text judging tier.
+**No such tier exists and no such prompt is ever shown.** The judge runs after the session on
+hostname, path, dwell, sequence, the declared work/distraction sites and the outcome answer, and
+page text is never read at all. There is nothing to enable, decline, or revoke. **E10 is void with
+it.**
+
+**Replaced by nothing, deliberately.** The scariest screen in the funnel is gone rather than
+well-timed — which also removes a decision point, a failure mode and a step from the rebuild manual
+(`apexhuman.md` rule 2, *"zero decisions on the rebuild path"*).
 
 ---
 
@@ -123,10 +132,10 @@ Failure: declined. The product continues on T-A permanently and never asks again
 | E6 | Session runs past midnight or for 8 hours | Recorded as one session; no auto-split in v1 | Simpler, and rare enough to accept |
 | E7 | A blocked site is opened before the session starts and stays open | The tab is not closed retroactively; only new navigations are blocked | Closing tabs a user opened is more hostile than v1 has earned |
 | E8 | Device token revoked or invalid | Extension returns to unpaired and stops recording; queued events are kept | Silent data loss is worse than a visible stop |
-| **E9** | AI Gateway unreachable, or over the V8 daily ceiling | No plan, no new verdicts, companion present but never turning, coach silent. Blocking, attention, review, ledger and the outcome question all work | The product must survive its own fourth service. This is the K4 escape hatch and it is tested (T10), not hoped for |
-| **E10** | User declines or revokes broad page access | Judge falls back to tier T-A (hostname + title). No error, no nag, no repeat prompt, ever | Declining is a supported permanent state, not a funnel to be re-entered. A privacy product that nags for permission is lying about itself |
+| **E9** | AI Gateway unreachable, or over the V8 daily ceiling | No new verdicts, companion present but never turning, coach silent. Blocking, attention, review, ledger and the outcome question all work | The product must survive its own fourth service. This is the K4 escape hatch and it is tested (T10), not hoped for |
+| ~~**E10**~~ | ~~User declines or revokes broad page access~~ | **VOID 2026-09-15 (ADR-0061).** No page-access permission is ever requested, so neither state can occur | The principle it protected — never nag for a declined permission — survives as a rule with nothing left to apply to |
 | **E11** | A verdict arrives after the user has already changed tabs again | Discarded, not shown | Signalling drift on a tab someone already left is the worst false positive available — it proves the thing is not watching, only guessing |
-| **E12** | Plan generation fails or returns nothing | `plan_state = failed`. Session unaffected; review shows no plan rather than an empty one | The plan is scaffolding. Its absence must never look like a defect in the session |
+| ~~E12~~ | ~~Plan generation fails or returns nothing~~ | **Void — PRD-F8 (the plan) was cut 2026-09-04 (ADR-0048/D38), never built** | — |
 
 ---
 
@@ -141,14 +150,14 @@ Failure: declined. The product continues on T-A permanently and never asks again
 | EV5 | `block_hit` | A blocked navigation is intercepted | A4, the review |
 | EV6 | `session_ended` | Stop, duration elapsed, or recovery from E2 | M1 |
 | EV7 | `outcome_answered` | Yes / Not yet pressed on the review | M3, A3, the ledger |
-| **EV8** | `plan_requested` | Just after the session row is created | M6, N7 |
-| **EV9** | `plan_ready` | Steps returned and rendered | M6, N7 |
-| **EV10** | `plan_edited` | A step is edited or removed | **M6** — the honest measure of A7 |
+| ~~EV8~~ | ~~`plan_requested`~~ | **Cut with PRD-F8 (ADR-0048/D38) — never fires** | — |
+| ~~EV9~~ | ~~`plan_ready`~~ | **Cut with PRD-F8 — never fires** | — |
+| ~~EV10~~ | ~~`plan_edited`~~ | **Cut with PRD-F8 — never fires** | — |
 | **EV11** | `judgment_recorded` | A tab is classified, by model or by memory | **M7, M9** — carries `source`, so cost and cache-hit rate are one query |
 | **EV12** | `drift_signalled` | The companion turns | M7 (denominator: judgments actually shown), N8 |
 | **EV13** | `return_detected` | Attention comes back after a signalled drift | **M10** — and the thing the coach celebrates |
-| **EV14** | `task_marked` | The companion marks a step done | M6 |
-| **EV15** | `task_corrected` | The user un-marks, or says "that was work" | **M7** — every one of these is a training label |
+| ~~EV14~~ | ~~`task_marked`~~ | **Cut with PRD-F8 — there is no step to mark** | — |
+| **EV15** | `judgment_corrected` | The user says "that was work" (the un-mark half is cut with `task_marked`; the drift-correction half is real, PRD-F9/US-10) | **M7** — every one of these is a training label |
 | **EV16** | `suggestion_offered` | The coach proposes an executable action | I5 |
 | **EV17** | `suggestion_accepted` | The button is pressed | PRD-F13 |
 

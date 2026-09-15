@@ -1,29 +1,75 @@
 # PRODUCT.md — MEANT
 
-> Derived from `docs/` (idea, prd, sitemap, flow, sdd), not from a fresh interview. Every line traces to a doc; nothing here is invented. Canonical product truth stays in `docs/prd-intent.md` — this file is a regenerated summary of it, kept for tools that read a root-level `PRODUCT.md` by convention (the `impeccable` design skill among them). When this file and the PRD disagree, the PRD is right and this file is stale; say so, then regenerate this file rather than editing around the PRD.
-> **Second audience:** this product is also the reference build for apexhuman.ai and will be filmed. That constrains design — see "Constraints" below. The course context itself lives in [apexhuman.md](apexhuman.md) and is not product truth.
-> **Regenerated from PRD amendment 0.2b (2026-09-10).** **Status:** the AI stack (plan, judge, memory, coach — PRD §6) remains entirely unbuilt. The companion below (Orbit) and its drift signal are real and shipped, but the drift signal is a mechanical stand-in keyed on domain category, not a judgment (`docs/index.md` D25) — do not read the companion's presence as evidence the judge exists.
-> **Reflects amendment 0.2 (2026-08-28).** Prior version described a product with no AI, an employed user, and no companion. All three changed.
+> **This file is derived. `docs/prd-intent.md` is canonical.** It is kept at the repo root only
+> because tools read a root-level `PRODUCT.md` by convention — the `impeccable` design skill among
+> them. Nothing here is independent truth. When this file and the PRD disagree, **the PRD is right
+> and this file is stale**; say so, then regenerate this file rather than editing around the PRD.
+>
+> **`docs/adr/` outranks this file and the PRD both (ADR-0063).** Where an ADR disagrees with
+> anything here, the ADR is right.
+>
+> **Regenerated 2026-09-15 from PRD amendment 0.3** (ADR-0052–0064). What changed: awareness is the
+> goal and information the mechanism; the user is defined by behavior with the buyer as a separate
+> axis; the companion **no longer signals drift** and instead takes a one-tap label; the judge runs
+> **after** the session in batches; **no page text or title is ever read**; full paths live on the
+> device only.
+>
+> **Previously regenerated 2026-09-11 from PRD amendment 0.2d**, which folded this file's remaining unique
+> content into the PRD (the defining case → §1.2, the loop and surfaces → §3.3, the business model
+> → §7.1) and corrected fourteen claims against shipped code and the live database. Three of those
+> corrections were errors *in this file*, listed under "Status" below so they are not reintroduced.
+>
+> **Second audience:** this product is also the reference build for apexhuman.ai and will be
+> filmed. That constrains design — see "Constraints". The course context lives in
+> [apexhuman.md](apexhuman.md) and is not product truth.
 
 **Name:** MEANT. (Working name "Intent" retired 2026-08-18: "Intent — Focus" already ships on the App Store.)
 
-**One line:** A browser extension and web app that makes you say what you intend to finish, turns it into a short plan, blocks what you chose to avoid, sits with you while you work and notices when you drift, and ends by asking whether you finished it.
+**One line:** A browser extension and web app that makes you say what you intend to finish, blocks what you chose to avoid, sits with you while you work and notices when you drift, and ends by asking whether you finished it.
 
-**Primary user:** A **self-employed**, non-technical browser-native worker. Freelancers, consultants, coaches, VAs, marketers, course creators, solo operators. Defined by behavior, not job title: anyone whose workday is browser plus AI chat. Owns her laptop and her credit card. *(Changed at 0.2 — the previous persona was employed on a managed corporate endpoint, and could neither buy the product nor be sold to without turning it into the monitoring tool this product refuses to be.)*
+**Who is served (ADR-0054):** anyone for whom **the work surface and the distraction surface are the same browser** — researchers, students, marketers, freelancers, operators, and the browser-resident half of anyone else's day. No job-title filter. The boundary is **browser share, reported at runtime**: where recorded attention is a small fraction of a session's wall clock, the review says what it did not see.
+
+**Who pays (D10, unchanged):** the **self-employed** browser-native worker. Freelancers, consultants, coaches, VAs, marketers, course creators, solo operators. Owns her laptop and her card. Everyone else is served free — tracking and blocking cost nothing per user. *(Load-bearing on the freemium shape; see PRD §2 and Q6.)*
+
+**Segments are deliberately unranked.** Two of the five columns needed to rank them — pain acuity and reachability — are empty for every candidate. Not choosing is the correct state.
+
+**The problem (ADR-0055):** Your work surface and your distraction surface are the same browser — so nothing you own can tell you whether the block you just spent produced the thing it was for. Not the calendar, which records that you booked the hour and never that it delivered. Not the timer, which counts minutes you already knew about. Not the blocker, which cannot tell Instagram-the-job from Instagram-the-escape. Not your own memory: the fifteen minutes that vanished are the fifteen you did not notice.
+
+**Awareness is the goal; information is the mechanism (ADR-0052).** *Information → pattern → noticing*, with a lag in the middle. **The review is a training loop for noticing, not a ledger.**
 
 **The pain moment:** End of a work block, asked "did you finish it?", answering "I was working on it." For a self-employed person, that gap is unbilled.
 
-**The one thing:** The end-of-session review. Declared intention and plan beside recorded attention, then one question.
+**The one thing:** The end-of-session review. Declared intention beside recorded attention, then one question.
 
 **What makes it different, in one sentence:** Every AI accountability product in 2026 has to *ask* whether you were focused. This one is inside the tab and already knows.
 
-**The case that defines the product:** A social-media freelancer's Instagram *is* her work. Instagram at 11am, when she said she would finish the client deck, is drift. Instagram at 4pm, when she is scheduling posts, is the job. Same hostname, opposite meaning, four hours apart. No blocklist resolves this. Reading the tab against the stated intention does.
+**The case that defines the product:** A social-media freelancer's Instagram *is* her work. Instagram at 11am, when she said she would finish the client deck, is drift. Instagram at 4pm, when she is scheduling posts, is the job. Same hostname, opposite meaning, four hours apart. No blocklist resolves this. Reading the tab against the stated intention does. *(PRD §1.2.)*
 
 **What the product measures:** Completed outcomes. Not hours, not checked steps, not a score. Hours appear only as evidence inside a single session's review.
 
-**Business model:** Direct consumer subscription. **Free is mechanical** — blocking, review, ledger. **Paid is the half that knows you** — plan, judge, companion, memory, coach. The paywall sits exactly where the inference cost sits.
+**Business model:** Direct consumer subscription. Free is mechanical — blocking, review, ledger. Paid is the half that knows you — judge, companion, memory, coach. The paywall sits exactly where the inference cost sits. Price against Focusmate ($8/mo annual, $12/mo monthly), not against human coaches. *(PRD §7.1, D15.)*
 
-**Platforms:** Chrome and Edge extension (macOS and Windows, identical) plus a Next.js web app on Vercel, Neon Auth sign-in, Neon Postgres, Vercel AI Gateway. *(D21 — Clerk replaced by Neon Auth.)*
+---
+
+## Status — what is actually built (2026-09-11)
+
+Read this before treating any feature below as shipped.
+
+- **No model call exists anywhere in the product.** Verified by grep across `app`, `lib`,
+  `extension`, `package.json`: zero matches for any gateway or provider SDK. The judge, memory-as-
+  classifier, and coach (PRD §6) are unbuilt.
+- **The `judgment` and `memory` tables exist** (`lib/migrations/002-drift.sql`, 2026-09-04).
+  `judgment` has never received a row from any code path. All 572 `memory` rows are `kind='list'`;
+  `domain_class` has never been written, because ADR-0039 admits only user taps and no correction
+  UI ships.
+- **The drift signal is not memory-backed** — a prior version of this file said it was.
+  `updateCompanion()` (`extension/sw.js:214`) is a static blocklist-membership test, plus a 60s
+  grace and a 3-per-25-minute budget. No dwell check, no refractory window, no per-domain evidence.
+  Nine of eleven constants in `lib/thresholds.ts` have **zero readers** in the repo.
+- **The generated task plan (PRD-F8) is cut, not unbuilt** — a product decision (D38/ADR-0048).
+- **Three external services are allocated, not four** — a prior version of this file said four,
+  carried over from before D21 consolidated auth onto Neon. Vercel (1), Neon Postgres + Auth (2),
+  Vercel AI Gateway (3, **allocated but not yet integrated**). Two slots remain.
 
 ---
 
@@ -31,10 +77,10 @@
 
 | Phase | Who it is | What happens |
 |---|---|---|
-| **Start** | — | You type what you meant to do. The session starts in under 200ms. The plan — 1 to 5 steps — arrives a few seconds later, having blocked nothing |
-| **During** | **Witness** | It faces your work. It turns to face you when you drift. It marks steps silently. It accepts one tap and never a word typed. It celebrates nothing |
-| **Review** | **Coach** | Intention, plan, attention, the drifts and the returns — then the question. This is where it speaks, and where anything good is said |
-| **Over time** | **Memory** | It learns your domains, your patterns, your estimate accuracy. It gates the judge, so it asks less every week. It stays quiet until it has enough evidence to be right |
+| **Start** | — | You type what you meant to do. The session starts in under 200ms, having blocked nothing yet |
+| **During** | **Witness** | Its ring is solid, breathing. **It never goes dashed and never signals drift** (ADR-0057). Hover reveals the intention; one tap says *"this isn't the work"* (ADR-0058). Never a word typed. It celebrates nothing |
+| **Review** | **Coach** | Intention, attention, away, blocked attempts — then the question. This is where it speaks, and where anything good is said |
+| **Over time** | **Memory** | *Specified, not built.* Today it holds only your configured lists |
 
 Same creature throughout. The register changes with the moment, never the entity.
 
@@ -47,12 +93,12 @@ Breaking one is a bug, not a preference.
 | # | Rule |
 |---|---|
 | I1 | The companion's state is never a function of the outcome answer. `Yes` and `Not yet` leave it identical |
-| I2 | No celebration during a session. Positive feedback exists only in the review |
-| I3 | The coach responds to the evidence, never to the answer |
-| I4 | Memory gates the judge. A classified domain is not re-judged |
+| I2 | No celebration during a session. Positive feedback exists only in the review. **Absolute since 2026-09-15 (ADR-0057)** — its one named exception, the return-pulse, died with the drift signal. A *receipt* for a user-initiated tap is not positive feedback |
+| I3 | The coach attaches no **valence** to the outcome answer — never praises `Yes`, never reproaches `Not yet`. *(Amended 2026-09-11, D51: it may freely reason **from** the answer. The earlier "says the same things either way" forbade using the most informative column in the schema.)* |
+| I4 | Memory gates the judge. A classified domain is not re-judged. *(Q12 resolved 2026-09-15 — the companion's one-tap label is memory's write path. Labels are per-visit; memory forms only on repetition, never at n=1. ADR-0058, ADR-0062.)* |
 | I5 | The coach may only suggest actions the product can execute |
-| I6 | No pattern is stated below the evidence threshold |
-| I7 | Page text is read for judging and never stored, logged, queued, or retained |
+| I6 | No pattern is stated below the evidence threshold. *(Amended 2026-09-11, D50: the threshold gates **inference**, never **description**. Showing someone their own rows is not a pattern claim and has no floor.)* |
+| I7 | **Amended 2026-09-15 (ADR-0059, ADR-0061).** **Page text and titles are never read at all.** Full paths live in extension local storage only, never in the database, and transit transiently at analysis time. `event.domain` stays hostname-only |
 | I8 | Checked steps never enter the ledger. Only the outcome answer counts |
 | I9 | Every feature above the mechanical loop is independently removable — judge, companion, memory, coach, in any combination |
 
@@ -63,21 +109,17 @@ Breaking one is a bug, not a preference.
 ## Constraints that shape design
 
 - No OS permissions, no admin rights, no installer.
-- `<all_urls>` appears in `host_permissions` (shipped 2026-09-07, see `docs/dead-ends.md`) —
-  this superseded the original per-domain-optional design. Reasoning: the extension's own
-  content script already runs at `<all_urls>` (the companion floats on every page), and
-  `declarativeNetRequest`'s `redirect` action requires host permission for the domain being
-  redirected — a per-domain `optional_host_permissions` flow would mean asking for a new
-  permission grant every time the user names a new distraction site to block, which is
-  worse UX than a single, upfront, honest `<all_urls>` grant for a feature (blocking
-  arbitrary sites) that fundamentally needs it. This is not a new category of trust beyond
-  what the content script already requires.
-- Hostname only, in storage. Page title and page text are read in flight for one classification and stored nowhere.
+- `<all_urls>` appears in `host_permissions` (shipped 2026-09-07). The content script already ran
+  at `<all_urls>`, and `declarativeNetRequest`'s `redirect` needs host permission for the domain it
+  redirects — a per-domain optional flow would prompt on every new blocked site. One honest upfront
+  grant is better UX for a feature that fundamentally needs it.
+- Hostname only, in storage. Page title and page text are read in flight and stored nowhere.
 - Nothing waits on a model. Not the session start, not a block, not a page load.
-- Four of five external services allocated. The fifth would buy voice, and voice is out of scope.
-- The product must remain shippable with any of its four upper features switched off — judge, companion, memory, coach (I9). Each seam is exercised, not asserted.
-- **It will be filmed being built.** Every step must produce a *visible* change on screen; empty and error states are seen first by every viewer, not last; the moments worth watching must be visual rather than logged. This is why the drift signal is a gaze and not a notification.
-- **Every external service costs a rebuilding student 10–15 minutes.** The fifth integration slot is more expensive than the budget suggests.
+- The product must remain shippable with any of its four upper features switched off (I9).
+- **It will be filmed being built.** Every step must produce a *visible* change on screen; empty and
+  error states are seen first by every viewer, not last.
+- **Every external service costs a rebuilding student 10–15 minutes.** The remaining two slots are
+  more expensive than the count suggests.
 - Nothing on the build path may require a Chrome Web Store review. Unpacked must be genuinely usable.
 
 ---
@@ -87,48 +129,39 @@ Breaking one is a bug, not a preference.
 | Surface | Mode | Seen |
 |---|---|---|
 | Extension popup (idle / running / unpaired) | Operate | Dozens of times a day |
-| Companion (S9) | Accompany | Continuously, and noticed at most three times a session |
+| Companion | Accompany | Continuously, and noticed at most three times a session |
 | Block page | Operate | A few times a day, at a moment of friction |
 | Session review | Understand | Once per session — *the product* |
 | Dashboard ledger | Understand | Daily |
 | Landing page | Persuade | Once |
 
+The frequency column is a design constraint, not a statistic: it is why the popup animates nothing and why the review is the only surface allowed a moment.
+
 ---
 
-## The companion, specifically
+## The companion, specifically (PRD §3.2 — the Orbit reversal, 2026-09-05)
 
-**Reflects the Orbit reversal (2026-09-05).** Everything below superseded the prior
-gaze/capsule spec deliberately, on direct instruction, not by drift — the previous
-version is preserved in git history (`extension/meant.css` before this date) and in
-`docs/dead-ends.md`. The "screen-shares with clients" concern that motivated the old
-"coach, not pet" framing was not re-litigated; the owner chose to accept it.
-
-- **It is a pet, not a coach.** A minimal orbital dot at the edge of the page — 28px,
-  bottom-right by default, draggable. Presence over posture.
-- **State is ring presence and style, not color.** Resting: dot only, no ring. Focus
-  (the session's steady state): a solid ring. Drift: the same ring, dashed. The ring
-  never changes hue between states — clay is the only accent color the companion ever
-  uses, at any state — so "state" reads as a shape change, not a status light.
-- **Return gets one visible acknowledgment.** A 0.6s ring-collapse pulse plays once, on
-  the transition back from drift, then the ring settles back to solid. This is a
-  deliberate, narrow exception to "nothing good happens on screen during a session" —
-  scoped to the companion's own witness settling, not an outcome celebration; the
-  prior gaze-transform design already moved visibly on every return, this reskins the
-  same acknowledgment rather than introducing a new kind of on-screen reward.
-- **Aliveness is breathing, not blinking.** A continuous, slow scale/opacity cycle on
-  the dot itself (~1.6s), sub-perceptual, always on. The prior design's rare blink is
-  not carried over.
-- **It reads at 28px**, not 80–120px — legible as a small, ambient presence, not a
-  focal element competing with the page underneath it.
-- **Note for design:** the toolkit's "a real chart, not a logo shaped like one" framing
-  for `.m-mark` no longer describes the companion, since the companion is no longer
-  built from `.m-mark`'s primitives at all (`extension/companion-overlay.js`, a
-  self-contained Shadow DOM). That tension is resolved by separation, not by a fork
-  inside one class.
+- **It is a pet, not a coach.** A minimal orbital dot at the edge of the page — 28px, bottom-right
+  by default, draggable. Presence over posture.
+- **State is ring presence and style, not color.** Resting: dot only, no ring. Focus: a solid ring.
+  Drift: the same ring, dashed. Clay is the only accent the companion ever uses, at any state — so
+  state reads as a shape change, not a status light.
+- ~~**Return gets one visible acknowledgment.**~~ **Removed 2026-09-15 (ADR-0057)** — the 0.6s
+  ring-collapse existed to acknowledge a return *from drift*, and there is no drift signal to return
+  from. I2 is absolute again. **The motion is reused** as the receipt for the one-tap label (ADR-0058).
+- **Aliveness is breathing, not blinking.** A continuous slow scale/opacity cycle (~1.6s).
+- **It reads at 28px** — ambient presence, not a focal element.
+- Built as `extension/companion-overlay.js`, a self-contained Shadow DOM. It is no longer built from
+  `.m-mark`'s primitives, so the toolkit's "a real chart, not a logo shaped like one" framing no
+  longer describes it. Resolved by separation, not by a fork inside one class.
 
 ---
 
 ## Competitive truth
+
+> **Last verified 2026-08-28 and not re-checked since.** This table carries the most perishable asset
+> in the strategy — the claim that every competitor has to *ask*. Treat each row as a dated hypothesis.
+> **It omits the general AI assistant** (ChatGPT, Claude), already resident on the user's surface.
 
 | Product | Has | Lacks |
 |---|---|---|
