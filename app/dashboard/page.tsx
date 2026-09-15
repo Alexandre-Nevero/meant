@@ -46,13 +46,21 @@ export default async function Dashboard() {
   // ADR-0060: build the arithmetic before the judge. No model, no page text, no cost — and
   // the baseline any future judge has to beat. ADR-0051 permits reasoning FROM the outcome
   // answer; it forbids valence, not use.
+  // sessionId is required, not incidental: contrastByOutcome folds to one total per
+  // (domain, session) before averaging. Without it, `sessions` counts event rows and the
+  // I6 evidence gate fires on far less evidence than it reports.
   const contrastRows = (await sql`
-    select e.domain, e.seconds, s.outcome
+    select e.domain, e.seconds, s.outcome, s.id as "sessionId"
       from event e join session s on s.id = e.session_id
      where s.user_id = ${userId}
        and e.kind = 'attention'
        and e.domain is not null
-       and s.outcome in ('yes', 'no')`) as { domain: string; seconds: number; outcome: string }[]
+       and s.outcome in ('yes', 'no')`) as {
+    domain: string
+    seconds: number
+    outcome: string
+    sessionId: string
+  }[]
   const [contrast] = contrastByOutcome(contrastRows)
 
   return (
