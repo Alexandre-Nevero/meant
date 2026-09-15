@@ -206,3 +206,13 @@ another: if the week is already at ~35h, the next card is next week's.
 - [PRD](docs/prd-intent.md) · [SDD](docs/sdd-intent.md) · [Sitemap](docs/sitemap-intent.md) · [User Flow](docs/flow-intent.md) · [Idea Brief](docs/idea-intent.md)
 - [PRODUCT.md](PRODUCT.md) · [design.md](docs/design.md) · [apexhuman.md](apexhuman.md) (course context, not product truth)
 - [CLAUDE.md](CLAUDE.md) — design invariants and verification commands
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
