@@ -23,3 +23,11 @@ export async function signUp(_prev: State, formData: FormData): Promise<State> {
   if (error) return { error: error.message || 'Could not create an account.' }
   redirect('/dashboard')
 }
+
+/** There was no way to sign out of this product. `auth.signOut()` is the documented call
+ *  (node_modules/@neondatabase/auth/llms.txt). A Server Action rather than a route handler,
+ *  so the shell can post to it with no client JavaScript. */
+export async function signOutAction(): Promise<void> {
+  await auth.signOut()
+  redirect('/')
+}

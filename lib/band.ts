@@ -26,5 +26,11 @@ export function toBand(rows: { kind: string; domain?: string | null; seconds: nu
     flex: r.seconds,
   }))
   if (away > 0) segments.push({ kind: 'away', flex: away })
-  return segments.filter((s) => s.flex > 0)
+  const measured = segments.filter((s) => s.flex > 0)
+  // Never return an empty list. A childless .m-mark matches the :empty decorative-glyph rule
+  // and the ledger stretches it to the full column with no :not(:empty) guard, so "we
+  // recorded nothing" rendered as the fullest band on the page — more confident than a
+  // session with real work in it. `remainder` is the dashed empty strip and exists for
+  // exactly this case, so this needs no new class, colour or CSS.
+  return measured.length > 0 ? measured : [{ kind: 'remainder', flex: 1 }]
 }

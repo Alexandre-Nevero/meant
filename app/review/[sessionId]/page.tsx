@@ -80,9 +80,17 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
           <Answer sessionId={sessionId} />
         </>
       ) : (
-        <p className="m-meta">
+        /* The one place in the whole product where positive feedback is permitted — I2 bans
+           it everywhere else. It rendered as .m-meta: 13px, --m-ink-3, 3.20:1, the same
+           treatment as "2 blocked attempts". The question was the largest type on the page
+           and the answer to it the smallest, which inverts the peak-end of the one surface
+           PRD §3.3 calls the product.
+           Both branches take IDENTICAL treatment. Byte-identical buttons do not hold
+           invariant 1 if the sentence after them reads warmer on one side. And the counts
+           are spelled: "3 of 5" is one step from a rate, and §3.1 bans rates. */
+        <p className="m-sentence">
           {data.outcome === 'yes'
-            ? `Good. That's ${data.finished} of ${data.answered}.`
+            ? `Good. That's ${toWords(data.finished)} of ${toWords(data.answered)}.`
             : 'Noted. It carries over.'}
         </p>
       )}

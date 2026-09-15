@@ -37,3 +37,25 @@ test('toBand excludes an extension-ID-shaped string even if it happens to contai
   assert.equal(segments.length, 1)
   assert.equal(segments[0].flex, 30)
 })
+
+test('a session that recorded nothing renders the dashed remainder, not a full band', () => {
+  // An empty segment list produces a CHILDLESS .m-mark, which matches
+  // .m-mark:empty[data-state="ended"]::after (globals.css) and paints the decorative brand
+  // glyph — then [data-surface="ledger"] .m-row .m-mark stretches it to the full column with
+  // no :not(:empty) guard. Observed on the ledger: a session with zero events drew the
+  // fullest, most complete-looking band on the page.
+  const segments = toBand([])
+  assert.equal(segments.length, 1)
+  assert.equal(segments[0].kind, 'remainder')
+})
+
+test('a session whose only rows are zero-length also renders the remainder', () => {
+  const segments = toBand([{ kind: 'attention', domain: 'a.com', seconds: 0 }])
+  assert.equal(segments[0].kind, 'remainder')
+})
+
+test('a session with real attention is unchanged', () => {
+  const segments = toBand([{ kind: 'attention', domain: 'a.com', seconds: 60 }])
+  assert.equal(segments.length, 1)
+  assert.equal(segments[0].kind, 'attention-1')
+})
