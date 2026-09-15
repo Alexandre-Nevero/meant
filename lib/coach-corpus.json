@@ -1,0 +1,57 @@
+[
+  {
+    "id": "C9",
+    "claim": "Extrinsic rewards undermine intrinsic motivation. Engagement-contingent d = -0.40, completion-contingent d = -0.36, performance-contingent d = -0.28, across 128 experiments. Verbal and informational feedback does not undermine and can enhance.",
+    "source": "Deci, Koestner & Ryan 1999, Psychological Bulletin — PDF read",
+    "label": "verified",
+    "checked": "2026-08-28",
+    "bearsOn": "why nothing good happens on screen during a session",
+    "actionable": "none directly — it is the reason for I2, not advice the coach may give"
+  },
+  {
+    "id": "C11",
+    "claim": "Social facilitation: the mere presence of an observer raises arousal, improving performance on well-learned tasks and impairing it on novel or complex ones.",
+    "source": "Zajonc 1965, drive theory — standard summaries",
+    "label": "verified",
+    "checked": "2026-08-28",
+    "bearsOn": "why the companion is calm, and why an interruption during complex work is expensive",
+    "actionable": "none directly — it is the constraint on the companion's design"
+  },
+  {
+    "id": "C12",
+    "claim": "Virtual observers reproduce the effect unreliably: of 13 studies, 3 showed facilitation, 4 inhibition, 1 both. Moderated by arousal — lower arousal, better performance.",
+    "source": "Mini-review of virtual social facilitation, Virtual Reality, 2024",
+    "label": "verified",
+    "checked": "2026-08-28",
+    "bearsOn": "A9, the riskiest assumption in the product",
+    "actionable": "none — it is why A9 must be tested against something outside our own data"
+  },
+  {
+    "id": "C13",
+    "claim": "Sub-goals reduce perceived difficulty and increase persistence, strongest at goal initiation. Same literature's caveat: sub-goal attainment 'could breed self-congratulation and encourage relaxation', interfering with the overall goal.",
+    "source": "Step by step: sub-goals as a source of motivation, 2017",
+    "label": "verified",
+    "checked": "2026-08-28",
+    "bearsOn": "why checked steps never enter the ledger",
+    "actionable": "none — it is the reason for I8"
+  },
+  {
+    "id": "C21",
+    "claim": "Self-interruption is a major, under-studied component of task switching. Across 889 hours of observed task switching from 36 individuals in three high-technology information-work organisations, self-interruption is a function of organisational environment and individual differences AND of external interruptions already experienced; open-plan environments raise it. People are significantly more likely to self-interrupt in order to RETURN to a central working sphere (mean 23%) than to a peripheral or other one (17% and 19%), and to return to solitary work (23%) over a communication event (16%).",
+    "source": "Dabbish, Mark & Gonzalez, CHI 2011, 'Why Do I Keep Interrupting Myself?: Environment, Habit and Self-Interruption' — primary PDF read at ics.uci.edu/~gmark/",
+    "label": "verified",
+    "checked": "2026-09-15",
+    "bearsOn": "attention, task switching, and what a drift event actually means",
+    "actionable": "labelling. NOT ALL SELF-INTERRUPTION IS DRIFT — a meaningful share is people returning to their real work. This is independent support for 'neutral' as a first-class label (ADR-0047) and a warning against reading every tab switch as failure."
+  },
+  {
+    "id": "C22",
+    "claim": "Average dwell on a single screen before switching is roughly 47 seconds; returning to a task after an interruption costs roughly 23-25 minutes.",
+    "source": "attributed to Gloria Mark; primary source ics.uci.edu/~gmark/chi08-mark.pdf NOT YET READ",
+    "label": "reported",
+    "checked": "2026-09-15",
+    "caveat": "DO NOT ASSERT. A search on 2026-09-15 surfaced an inflated variant of this figure — a '2026 Carnegie Mellon study of 3,800 knowledge workers' giving '26.8 minutes' and '$1.2 trillion annually' — from SEO content farms. Read the primary source before the coach may state any number here.",
+    "bearsOn": "the cost of a single drift episode, and therefore what a drift is worth reporting",
+    "actionable": null
+  }
+]
