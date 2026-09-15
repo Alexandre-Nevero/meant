@@ -41,6 +41,7 @@ let shadow = null
 let dot = null
 let dragState = null
 let returnTimer = null
+let downAt = null
 let currentSession = null
 let hoverPill = null
 let hoverTimer = null
@@ -203,6 +204,9 @@ async function positionHost() {
 
 function startDrag(e) {
   const rect = hostEl.getBoundingClientRect()
+  // downAt is the tap guard (ADR-0058): the dot is draggable, so without it every reposition
+  // would also file a "this isn't the work" label.
+  downAt = { x: e.clientX, y: e.clientY, t: Date.now() }
   dragState = { offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top }
   dot.dataset.dragging = 'true'
   dot.setPointerCapture(e.pointerId)
@@ -218,7 +222,43 @@ function onDrag(e) {
   hostEl.style.bottom = ''
 }
 
-async function endDrag() {
+/** ADR-0058 — one tap, one meaning: "this isn't the work."
+ *
+ *  Not two meanings. With no live drift flag there is nothing for "this IS the work" to
+ *  correct, and the user already declared their work sites at session start (ADR-0035).
+ *  A self-report cannot be a false positive, which is the whole reason this replaces the
+ *  signal ADR-0057 removed rather than repairing it.
+ *
+ *  The 0.6s ring-collapse it plays is ADR-0026's return-pulse, freed when the drift signal
+ *  went. Same motion, new meaning: a RECEIPT, not a celebration. I2 forbids positive
+ *  feedback during a session; it does not forbid telling the user their deliberate action
+ *  registered. Without it the tap is indistinguishable from a dead control. */
+const TAP_SLOP_PX = 4
+const TAP_MAX_MS = 500
+
+function wasTap(e) {
+  if (!downAt) return false
+  return Math.abs(e.clientX - downAt.x) <= TAP_SLOP_PX &&
+         Math.abs(e.clientY - downAt.y) <= TAP_SLOP_PX &&
+         Date.now() - downAt.t <= TAP_MAX_MS
+}
+
+function playReceipt() {
+  if (!dot) return
+  dot.dataset.returning = 'true'
+  clearTimeout(returnTimer)
+  returnTimer = setTimeout(() => { if (dot) dot.dataset.returning = 'false' }, 620)
+}
+
+async function endDrag(e) {
+  const tap = e && wasTap(e)
+  downAt = null
+  if (tap && currentSession) {
+    playReceipt()
+    // Fire-and-forget: the service worker may be asleep, and the receipt must not wait on
+    // a round trip. Nothing on screen depends on the response.
+    chrome.runtime.sendMessage({ type: 'not-the-work' }).catch(() => {})
+  }
   if (!dragState) return
   dragState = null
   dot.dataset.dragging = 'false'
@@ -304,13 +344,14 @@ function unmount() {
   clearTimeout(hoverTimer)
 }
 
-// Real data today only has two values: 'settled' | 'drifting' — "Resting" (no ring at
-// all) and a distinct "Focus" have no signal to tell them apart yet (that needs the
-// dwell/resolve work later tasks build), so both map to the same ring-on state for now.
-// The Drift -> Focus transition is the one moment worth a one-shot animation: I2 forbids
-// celebrating an outcome, not a state's own witness settling back down, which the prior
-// gaze-transform design already did wordlessly on every return — this is that same
-// acknowledgment, reskinned, not a new kind of on-screen reward.
+// ADR-0057 removed the drift signal, so a running session has exactly one visual state:
+// a solid, breathing ring. There is no 'drift' and therefore no drift->focus return, which
+// means ADR-0026's 0.6s return-pulse has nothing left to acknowledge and I2 is absolute
+// again with no named exception.
+//
+// The pulse machinery below is deliberately KEPT, unreferenced by state: ADR-0058 reuses
+// exactly this motion as the receipt for the one-tap label. Same animation, new meaning —
+// a receipt for an action the user chose to take is not positive feedback.
 function applyVisualState(next) {
   if (!dot) return
   const prev = dot.dataset.state
@@ -330,7 +371,7 @@ async function applyState(session, companionState) {
   }
   currentSession = session
   await ensureMounted()
-  applyVisualState(companionState === 'drifting' ? 'drift' : 'focus')
+  applyVisualState('focus')
   dot.title = session.intention || ''
 }
 
@@ -342,9 +383,7 @@ async function render() {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return
   if (changes.session) return render()
-  if (changes.companionState && dot) {
-    applyVisualState(changes.companionState.newValue === 'drifting' ? 'drift' : 'focus')
-  }
+  if (changes.companionState && dot) applyVisualState('focus')
 })
 
 render()
