@@ -4,6 +4,8 @@ import { getReviewData } from '@/lib/review-data'
 import { toBand } from '@/lib/band'
 import { Band } from '../../band'
 import { Answer } from './answer'
+import { toWords } from '@/lib/words'
+import { UNRECORDED_MIN_SHARE } from '@/lib/session-time'
 
 const TINTS = ['attention-1', 'attention-2', 'attention-3'] as const
 
@@ -52,6 +54,25 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
       )}
 
       {data.blockedAttempts > 0 && <p className="m-meta">{data.blockedAttempts} blocked attempts</p>}
+
+      {/* ADR-0054. The served/not-served boundary is browser share, reported at runtime — so
+          a session we only partly watched says so rather than presenting a fragment as the
+          whole. Minutes, never a percentage (§3.1 bans percentages on every surface), and
+          spelled as a word to match the dashboard. Gated by share, not by a fixed number of
+          minutes: a fixed floor would shout on a short session and stay silent on a long one. */}
+      {/* Denominator is the whole session, so it must sum EVERY duration-bearing row —
+          topAttention is only the top three and would overstate the share. */}
+      {data.unrecordedSeconds >
+        (data.unrecordedSeconds +
+          data.rows
+            .filter((r) => r.kind === 'attention' || r.kind === 'away' || r.kind === 'break')
+            .reduce((t, r) => t + r.seconds, 0)) *
+          UNRECORDED_MIN_SHARE && (
+          <p className="m-meta">
+            {toWords(minutes(data.unrecordedSeconds))} minutes of this session happened outside the
+            browser. This page cannot tell you about those.
+          </p>
+        )}
 
       {data.outcome === 'unanswered' ? (
         <>
