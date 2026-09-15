@@ -1,8 +1,19 @@
-# Foundations Implementation Plan (Week 3)
+# Foundations Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the product's numbers trustworthy and its promises keepable, before any model call exists — issues #18, #28, #25, #20, #19.
+**Goal:** Make the product's numbers trustworthy and its promises keepable, before any model call exists.
+
+**Week split, revised 2026-09-15.** Verification is batched into Week 3 — loading the extension once to check seven things beats seven separate passes — and Week 2 builds forward.
+
+| | |
+|---|---|
+| **Week 2 — build** | **Task 1** #18 · **Task 2** #28 · **Task 3** #25 · **Task 6** #40 — 18h |
+| **Week 3 — verify, then build** | #8–#13 acceptance checks, then **Task 4** #20 · **Task 5** #19 — 21h |
+
+**#18 stays in Week 2, and it is what makes the split safe.** It is building — a guard, a config block, a purge script — and without it the Week 3 verification run writes hundreds more junk rows into production, because `playwright.config.ts` still inherits whatever dev server is on :3000.
+
+**The stated risk of building before verifying.** Task 3 (#25) consumes labels written by #11, which has not been verified. That is not hypothetical: a defect in #11 was already found by reading rather than testing — the events route rejected `kind: 'label'` with a 400, and because `flush()` batches a session's events into one POST, a single tap would have permanently stalled all event syncing for that session (#39, fixed). **If Week 3 finds another, Task 3 is built on it.** The trade is deliberate: batched verification is cheaper, and the price is that a failure found later reaches further back.
 
 **Architecture:** Four of the five tasks are pure functions plus a thin wiring layer, following the module convention in `AGENTS.md`: logic that must be unit-tested lives in a module with no `@/` imports, because `node --test` cannot resolve that alias. **No model call is introduced by this plan.** Task 5 opens with a decision gate rather than code, because where a preference lives is an architecture choice and not an implementation detail.
 
@@ -569,6 +580,70 @@ Closes #20"
 
 ---
 
+### Task 6: App shell and navigation (#40)
+
+> **DESIGN GATE — this surface has no visual truth to build from.**
+>
+> `CLAUDE.md`: *"The design canvas is visual truth. The artboards outrank both files above. When they disagree, the canvas is right and the docs are stale."*
+>
+> **There are seven artboards and not one of them shows a shell or navigation** — `BlockPage`, `Companion`, `Landing`, `Ledger`, `Main`, `PopupIdle`, `PopupRunning`. Checked 2026-09-15.
+>
+> So building a shell means inventing a surface the committed visual world has never shown. `CLAUDE.md`'s own routing says a new surface goes to `/impeccable` first. **Draw the artboard, then build from it** — not the reverse, or the canvas becomes the stale thing it is supposed to outrank.
+
+**Why the card exists:** `app/layout.tsx` is `<body className="m-app">{children}</body>` and nothing else. Six routes — `/`, `/dashboard`, `/setup`, `/pair`, `/sign-in`, `/review/[id]` — reach each other through ad-hoc `<Link>`s inside page bodies. `/setup` is reachable only from a link on the dashboard, and **there is no sign-out anywhere in the product.**
+
+**Files:**
+- Create: `design/canvas/Shell.dc.html` (**first**), `app/shell.tsx`
+- Modify: `app/layout.tsx`, `docs/design.md` (§5's surface table gains the new surface)
+
+- [ ] **Step 1: Draw the artboard**
+
+`design/canvas/Shell.dc.html`, alongside the existing seven. It must answer three things and no more: where you are, where you can go, who is signed in.
+
+- [ ] **Step 2: Check it against the class contract before writing any component**
+
+The contract is **fixed at 13 classes** (`docs/design.md` §5, `docs/design-toolkit.md` §8) and a 14th is not added without an explicit check. A shell that needs new classes is a shell that has outgrown the design system, and that is a decision, not an implementation detail.
+
+Run: `grep -n "class contract" -A 30 docs/design.md`
+Expected: the shell composes existing classes, or the new class is justified in writing before it is used.
+
+- [ ] **Step 3: Build `app/shell.tsx` from the artboard and mount it in the root layout**
+
+Server component. It reads `currentUserId()` and renders nothing at all when signed out, so `/` and `/sign-in` are unaffected.
+
+- [ ] **Step 4: Respect what the shell must not flatten**
+
+PRD §3.3's frequency column is a design constraint, not a statistic. The shell wraps **Understand** surfaces (dashboard, review) and **Operate** surfaces (setup, pair). **The review is the product and the only surface allowed a moment** — the shell must not make it read as a page inside an admin panel. If the shell competes with the review, the shell is wrong.
+
+No total-hours figure, no percentage, no score anywhere in it (§3.1). **No hex values** — `var(--m-*)` only.
+
+- [ ] **Step 5: Verify by rendering, on both viewports**
+
+```bash
+node ~/.agents/skills/impeccable/scripts/detect.mjs --viewport 390x844 http://localhost:3000/dashboard
+node ~/.agents/skills/impeccable/scripts/detect.mjs http://localhost:3000/review/<id>
+```
+Expected: from any signed-in surface, reach any other without typing a URL, and sign out. Signed out, the shell is absent. A clean build is not evidence (`CLAUDE.md`).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add design/canvas/Shell.dc.html app/shell.tsx app/layout.tsx docs/design.md
+git commit -m "feat(web): app shell and navigation
+
+The root layout was <body>{children}</body>. Six routes reached each other
+through ad-hoc links inside page bodies, /setup only from the dashboard, and
+sign-out existed nowhere.
+
+The artboard is committed first and the component is built from it: no artboard
+showed a shell, and building one without drawing it would make the canvas stale
+about the very surface that frames every other.
+
+Closes #40"
+```
+
+---
+
 ## Out of scope, deliberately
 
 - **The judge (#22) and the coach (#26).** #22 is the next task after this plan and depends on #18 landing first, or it trains on Playwright rows. #26 needs real data, and a coach built on six sessions will be confidently wrong about the user in a way that is expensive to un-learn.
@@ -582,5 +657,6 @@ Closes #20"
 - [ ] Every code step shows real code
 - [ ] Task 1's acceptance is an unchanged production row count, not a passing unit test
 - [ ] Task 5 opens with a decision, not an implementation
+- [ ] Task 6 opens with a design gate, because no artboard shows the surface it builds
 - [ ] No commit message contains AI attribution
 - [ ] Every new module avoids `@/` imports so `node --test` can reach it
