@@ -20,6 +20,9 @@ const HOST_SELECTOR = '[data-meant-companion="true"]'
 // page while a session runs (confirms real <all_urls> injection, not just the one
 // page it happened to load into), persists its dragged position, and reflects state
 // via ring presence/style, never color.
+/** The shape extension/lib/visit-label.js writes into session.labels (ADR-0058, ADR-0062). */
+type VisitLabel = { domain: string; label: string; at: number }
+
 test.describe('floating companion', () => {
   test('appears on arbitrary pages while a session runs, gone when it ends', async ({ context, extensionId, freshAccount }) => {
     const setupPage = await context.newPage()
@@ -143,7 +146,14 @@ test.describe('floating companion', () => {
     await expect(dotWrap).toHaveAttribute('data-returning', 'false', { timeout: 2_000 })
 
     const [sw] = context.serviceWorkers()
-    const labels = await sw.evaluate(async () => (await chrome.storage.local.get('session')).session?.labels)
+    const labels = await sw.evaluate(
+      async (): Promise<VisitLabel[]> => {
+        // chrome.storage.local.get is typed as { [key: string]: any } but the nested value
+        // still widens to {}, so name the shape here rather than at each property access.
+        const stored = (await chrome.storage.local.get('session')) as { session?: { labels?: VisitLabel[] } }
+        return stored.session?.labels ?? []
+      },
+    )
     expect(labels).toHaveLength(1)
     expect(labels[0].label).toBe('distract')
     expect(labels[0].domain).toBe('example.com')
@@ -164,14 +174,26 @@ test.describe('floating companion', () => {
     const dot = page.locator(HOST_SELECTOR).locator('.dot')
     await expect(dot).toBeVisible()
 
+    // boundingBox() returns null for an element that is not rendered; assert rather than
+    // non-null-assert, so a missing companion fails with a useful message instead of a
+    // TypeError about reading x of null.
     const box = await dot.boundingBox()
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    expect(box, 'the companion dot has no bounding box - it did not render').not.toBeNull()
+    const { x, y, width, height } = box!
+    await page.mouse.move(x + width / 2, y + height / 2)
     await page.mouse.down()
-    await page.mouse.move(box.x - 120, box.y - 80, { steps: 10 })
+    await page.mouse.move(x - 120, y - 80, { steps: 10 })
     await page.mouse.up()
 
     const [sw] = context.serviceWorkers()
-    const labels = await sw.evaluate(async () => (await chrome.storage.local.get('session')).session?.labels)
+    const labels = await sw.evaluate(
+      async (): Promise<VisitLabel[]> => {
+        // chrome.storage.local.get is typed as { [key: string]: any } but the nested value
+        // still widens to {}, so name the shape here rather than at each property access.
+        const stored = (await chrome.storage.local.get('session')) as { session?: { labels?: VisitLabel[] } }
+        return stored.session?.labels ?? []
+      },
+    )
     expect(labels).toEqual([])
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
