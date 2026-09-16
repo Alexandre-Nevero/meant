@@ -9,9 +9,9 @@
 > **void** — the shipped companion is a 28px orbital dot (ADR-0026) that **no longer signals
 > drift at all** (ADR-0057) and instead **accepts one tap meaning "this isn't the work"**
 > (ADR-0058). Corrected in place at §3, §8 and §10, marked rather than rewritten so the
-> reasoning survives. §9's refusal of "dark mode as the default look" is **contradicted by the
-> shipped token file** and is an open owner decision (#51). **`docs/adr/` outranks this
-> document** (ADR-0063).
+> reasoning survives. §9's refusal of "dark mode as the default look" **stands, settled
+> 2026-09-16 (ADR-0065):** the shipped token file is a fallback, not a contradiction.
+> **`docs/adr/` outranks this document** (ADR-0063).
 >
 > **0.1 is superseded, and not by a small margin.** Version 0.1 §3 specified the mark as *two cumulative lines, blue and clay, from a shared origin, that never cross* — a slopegraph. What was actually built and chosen is **an outline that holds the sentence plus a segment band that carries the attention**, with **no blue anywhere**. The canvas won; a spec that loses to its own execution is stale, not authoritative. Everything below is derived from the shipped artboards. `design/tokens.css` is generated from the same source and is what code imports.
 
@@ -176,10 +176,9 @@ be reconciled by a decision, not by editing this line.
 
 ## 9. Refuse
 
-> **The first item is currently violated by the shipped token file** (noted 2026-09-16).
-> `design/tokens.css:54` applies the full dark palette from `prefers-color-scheme: dark`, and
-> nothing anywhere sets `data-theme`, so on a dark OS MEANT *is* dark and the user cannot say
-> otherwise. Open owner decision (#51); flagged here rather than resolved by deleting the line.
+> **Settled 2026-09-16 (ADR-0065).** MEANT is a cream product; the dark palette at
+> `design/tokens.css:54` is a *fallback* for a user whose OS asks for one, not a second look.
+> Shipping a correct fallback is not "dark mode as the default look" — the refusal below stands.
 
 Dark mode as the default look · a productivity score of any kind · a total-hours headline anywhere · green for `Yes` · streaks, badges, flames, rings · a Pomodoro dial · confetti · a progress ring · a second accent colour · a card with a left-border accent · emoji as iconography · a chat input on any surface during a session · any celebration while the session is running · gradients on the band · a countdown that ticks (a live clock invites waiting it out).
 
