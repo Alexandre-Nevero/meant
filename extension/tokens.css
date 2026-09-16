@@ -52,6 +52,9 @@
   --m-dur-draw:  900ms;  /* the landing mark, once, on load */
 }
 
+/* ADR-0065 — a FALLBACK, not a second look. The cream palette above is the product; this
+ * block keeps a dark-OS user correct and is never the reference. The data-theme hooks exist
+ * so an explicit toggle can be added later without touching a component; none ships today. */
 :root:not([data-theme="light"]) {
   @media (prefers-color-scheme: dark) {
     --m-ground:      #14120F;
