@@ -970,7 +970,40 @@ height must therefore be a knowable number.
 with a sentence. If only the question were pinned, answering would make the reply jump up the page at
 the exact peak-end moment the review exists for. One wrapper, two contents, one position.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Make `endedSession` wait for the session row, not for 500ms**
+
+Task 3 built the fixture; this task is the first to pass it a non-empty `events` array, and that is
+the path with an unverified race. `e2e/fixtures.ts:90` sleeps 500ms before injecting events,
+guarding against the session row not existing yet — `startSession`'s creation POST
+(`extension/sw.js:164`) is fire-and-forget. On a cold-compiling first hit that 500ms can be short,
+and the fixture then throws `event injection failed: <status>`. Poll for the row instead:
+
+```ts
+      // Was waitForTimeout(500). startSession's creation POST (extension/sw.js:164) is
+      // fire-and-forget, so the row may not exist yet — but a fixed sleep is a guess, and a
+      // cold-compiling first hit outruns it. Poll the row itself.
+      await expect
+        .poll(async () => (await page.request.get(`/api/sessions/${sessionId}/review`)).status(), {
+          timeout: 10_000,
+        })
+        .toBe(200)
+```
+
+`e2e/fixtures.ts` re-exports `expect` at its last line; add it to the import at the top:
+
+```ts
+import { test as base, expect, chromium, type BrowserContext, type Page } from '@playwright/test'
+```
+
+The redundant `waitForTimeout(300)` after the stop message can go too — `sendMessage({type:'stop'})`
+resolves only once `endSession` (`extension/sw.js:168`) has awaited the `endedAt` PATCH through
+`extension/api.js:32`, so that sleep guards nothing.
+
+Run `npx playwright test e2e/review.spec.ts` after this change and before writing anything else:
+all five existing tests must still pass. If they do not, stop — the fixture is load-bearing for
+Task 5 too.
+
+- [ ] **Step 2: Write the failing test**
 
 Append to `e2e/review.spec.ts`:
 
@@ -1018,7 +1051,7 @@ test('the review does not scroll sideways at 390px', async ({ context, endedSess
 })
 ```
 
-- [ ] **Step 2: Run it to make sure it fails**
+- [ ] **Step 3: Run it to make sure it fails**
 
 ```bash
 npx playwright test e2e/review.spec.ts -g "stages the question"
@@ -1029,7 +1062,7 @@ Expected: the first fails on `.m-review-ask` not existing. The second reveals th
 gutter at 390px — `padding: 72px 80px` leaves a 230px column. Record whichever way it lands; if it
 already passes, keep it as the regression guard for Step 4.
 
-- [ ] **Step 3: Make the shell's height a real number**
+- [ ] **Step 4: Make the shell's height a real number**
 
 `app/globals.css`. Add to the `:root` block that already redefines the font aliases (`:5-9`):
 
@@ -1050,7 +1083,7 @@ Then in the `.m-shell` rule (`:632`), replace `padding: 20px 80px 18px;` with:
 
 The two mobile overrides that set `padding-left`/`padding-right` are unaffected.
 
-- [ ] **Step 4: Port the artboard's column**
+- [ ] **Step 5: Port the artboard's column**
 
 Replace the `[data-surface="review"]` block (`:98-105`):
 
@@ -1091,7 +1124,7 @@ Replace the `[data-surface="review"]` block (`:98-105`):
 }
 ```
 
-- [ ] **Step 5: Group the rows and the ask in the page**
+- [ ] **Step 6: Group the rows and the ask in the page**
 
 `app/review/[sessionId]/page.tsx`. Replace lines 40-54 (the two row blocks) with:
 
@@ -1136,7 +1169,7 @@ place:
       </div>
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **Step 7: Run the tests to verify they pass**
 
 ```bash
 npx playwright test e2e/review.spec.ts
@@ -1147,7 +1180,7 @@ node ~/.agents/skills/impeccable/scripts/detect.mjs --json app/globals.css
 Expected: every review test passes — including Case Z at `:91`, which asserts the container is still
 ≤1000px wide.
 
-- [ ] **Step 7: Look at it, in both states and both widths**
+- [ ] **Step 8: Look at it, in both states and both widths**
 
 ```bash
 ~/.claude/skills/gstack/browse/dist/browse goto http://localhost:3100/review/<id> && \
@@ -1160,13 +1193,13 @@ same position** — flip between the two screenshots and confirm nothing jumps. 
 still reads correctly with its new fixed height: 60px against the previous ~57px is a three-pixel
 change, and it must not look like a different bar.
 
-- [ ] **Step 8: Update the one stale doc line and commit**
+- [ ] **Step 9: Update the one stale doc line and commit**
 
 `docs/design.md` §6's review row already carries the width correction. Add the gap to it in the same
 cell. Do **not** touch §5's class count — #51.3 is the owner's.
 
 ```bash
-git add app/globals.css "app/review/[sessionId]/page.tsx" docs/design.md e2e/review.spec.ts
+git add app/globals.css "app/review/[sessionId]/page.tsx" docs/design.md e2e/fixtures.ts e2e/review.spec.ts
 git commit -m "fix(review): stage the question the artboard staged
 
 design/canvas/Main.dc.html:23,47,59 gives the review a 40px column, rows grouped at
