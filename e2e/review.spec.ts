@@ -188,3 +188,45 @@ test('a failed outcome write re-enables both buttons, says so, and retries on th
   const review = await page.request.get(`/api/sessions/${sessionId}/review`)
   expect((await review.json()).outcome).toBe('yes')
 })
+
+// #45. The artboard stages the question (Main.dc.html:59, margin-top:auto); the code listed it.
+test('the review stages the question at the bottom of the fold, and keeps rows tight', async ({ context, endedSession }) => {
+  const sessionId = await endedSession({
+    intention: 'staging test',
+    events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 90, at: new Date().toISOString() }],
+  })
+
+  const page = await context.newPage()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(`/review/${sessionId}`)
+
+  const surface = page.locator('[data-surface="review"]')
+  const ask = page.locator('.m-review-ask')
+  const [surfaceBox, askBox, shellBox] = await Promise.all([
+    surface.boundingBox(), ask.boundingBox(), page.locator('.m-shell').boundingBox(),
+  ])
+
+  // The shell's height is a real number, so calc(100dvh - var(--m-shell-h)) is honest.
+  expect(shellBox!.height).toBeCloseTo(60, 0)
+  // The surface fills the fold, so margin-top:auto has somewhere to push.
+  expect(surfaceBox!.height).toBeGreaterThanOrEqual(900 - 60 - 1)
+  // And the question group sits at its bottom, not 24px under the last row.
+  const askBottom = askBox!.y + askBox!.height
+  const surfaceBottom = surfaceBox!.y + surfaceBox!.height
+  expect(surfaceBottom - askBottom).toBeLessThanOrEqual(73) // the 72px pad, plus a pixel
+
+  await expect(page.locator('.m-review-rows')).toBeVisible()
+})
+
+// The narrow breakpoint. The ledger got one in #7; the review never did.
+test('the review does not scroll sideways at 390px', async ({ context, endedSession }) => {
+  const sessionId = await endedSession({
+    intention: 'a deliberately long intention sentence for the narrow breakpoint',
+  })
+
+  const page = await context.newPage()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(`/review/${sessionId}`)
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+  expect(overflow).toBeLessThanOrEqual(0)
+})

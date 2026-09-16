@@ -200,7 +200,7 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 | `data-surface` | Where | Real width | Ticks? | Notes |
 |---|---|---|---|---|
 | `landing` | `app/page.tsx` | 1440 desktop fold | — | Marketing layout classes (`.m-landing-*`) are structural only, not part of the 13-class contract |
-| `review` | `app/review/[id]/page.tsx` | 1000px box, 840px content (**corrected 2026-09-16** — this cell said 880px; `globals.css:101` is `max-width: 1000px` with 80px side padding, the same shell as the ledger) | — | The one page with an *authored* motion moment (staggered rise, 50ms steps) |
+| `review` | `app/review/[id]/page.tsx` | 1000px box, 840px content, gap 40px (**corrected 2026-09-16** — this cell said 880px; `globals.css:101` is `max-width: 1000px` with 80px side padding, the same shell as the ledger; the column runs at `gap: 40px`, not the flat 24px it shipped with — rows sit in their own `.m-review-rows` group at `gap: 0`, and the question+answers stage in `.m-review-ask` with `margin-top: auto`, #45) | — | The one page with an *authored* motion moment (staggered rise, 50ms steps) |
 | `ledger` | `app/dashboard/page.tsx` | 1000px column | — | Each row's band is real per-session data via `lib/band.ts`, not decoration |
 | `pair` | `app/pair/page.tsx` | centered, 320px card | **No** — single scheduled `setTimeout` flips to "expired," not a countdown | |
 | `popup` | `extension/popup.html` | fixed 360px | **No**, anywhere, ever | Opened dozens of times a day — see §7 |

@@ -1,4 +1,4 @@
-import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test'
+import { test as base, expect, chromium, type BrowserContext, type Page } from '@playwright/test'
 import path from 'node:path'
 import os from 'node:os'
 import fs from 'node:fs'
@@ -85,9 +85,14 @@ export const test = base.extend<Fixtures>({
       const sessionId: string = await page.evaluate(
         () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
       )
-      // The Start click is fire-and-forget from sw.js startSession(); sessionId is in storage
-      // immediately, but the server row may not exist yet. Same wait the open-coded copies use.
-      await page.waitForTimeout(500)
+      // Was waitForTimeout(500). startSession's creation POST (extension/sw.js:164) is
+      // fire-and-forget, so the row may not exist yet — but a fixed sleep is a guess, and a
+      // cold-compiling first hit outruns it. Poll the row itself.
+      await expect
+        .poll(async () => (await page.request.get(`/api/sessions/${sessionId}/review`)).status(), {
+          timeout: 10_000,
+        })
+        .toBe(200)
       if (events.length > 0) {
         // The same API sw.js's own flush() uses — deterministic, no dependency on real timing.
         const res = await context.request.post('/api/events', {
@@ -97,7 +102,6 @@ export const test = base.extend<Fixtures>({
         if (res.status() !== 200) throw new Error(`event injection failed: ${res.status()}`)
       }
       await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
-      await page.waitForTimeout(300)
       return sessionId
     })
   },

@@ -37,21 +37,23 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
 
       <Band segments={toBand(data.rows as Parameters<typeof toBand>[0])} state={data.endedAt ? 'ended' : 'running'} />
 
-      {data.topAttention.map((row, i) => (
-        <div className="m-row" key={row.domain}>
-          <span className="m-row-bar" data-kind={TINTS[i]} />
-          <span className="m-row-domain">{row.domain}</span>
-          <span className="m-row-figure">{minutes(row.seconds)} min</span>
-        </div>
-      ))}
+      <div className="m-review-rows">
+        {data.topAttention.map((row, i) => (
+          <div className="m-row" key={row.domain}>
+            <span className="m-row-bar" data-kind={TINTS[i]} />
+            <span className="m-row-domain">{row.domain}</span>
+            <span className="m-row-figure">{minutes(row.seconds)} min</span>
+          </div>
+        ))}
 
-      {data.awaySeconds > 0 && (
-        <div className="m-row" title="Time not measured — your screen was locked or idle, or you left the browser.">
-          <span className="m-row-bar" data-kind="away" />
-          <span className="m-row-domain">away</span>
-          <span className="m-row-figure">{minutes(data.awaySeconds)} min</span>
-        </div>
-      )}
+        {data.awaySeconds > 0 && (
+          <div className="m-row" title="Time not measured — your screen was locked or idle, or you left the browser.">
+            <span className="m-row-bar" data-kind="away" />
+            <span className="m-row-domain">away</span>
+            <span className="m-row-figure">{minutes(data.awaySeconds)} min</span>
+          </div>
+        )}
+      </div>
 
       {data.blockedAttempts > 0 && <p className="m-meta">{data.blockedAttempts} blocked attempts</p>}
 
@@ -74,26 +76,28 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
           </p>
         )}
 
-      {data.outcome === 'unanswered' ? (
-        <>
-          <p className="m-rate">Did you?</p>
-          <Answer sessionId={sessionId} />
-        </>
-      ) : (
-        /* The one place in the whole product where positive feedback is permitted — I2 bans
-           it everywhere else. It rendered as .m-meta: 13px, --m-ink-3, 3.20:1, the same
-           treatment as "2 blocked attempts". The question was the largest type on the page
-           and the answer to it the smallest, which inverts the peak-end of the one surface
-           PRD §3.3 calls the product.
-           Both branches take IDENTICAL treatment. Byte-identical buttons do not hold
-           invariant 1 if the sentence after them reads warmer on one side. And the counts
-           are spelled: "3 of 5" is one step from a rate, and §3.1 bans rates. */
-        <p className="m-sentence">
-          {data.outcome === 'yes'
-            ? `Good. That's ${toWords(data.finished)} of ${toWords(data.answered)}.`
-            : 'Noted. It carries over.'}
-        </p>
-      )}
+      <div className="m-review-ask">
+        {data.outcome === 'unanswered' ? (
+          <>
+            <p className="m-rate">Did you?</p>
+            <Answer sessionId={sessionId} />
+          </>
+        ) : (
+          /* The one place in the whole product where positive feedback is permitted — I2 bans
+             it everywhere else. It rendered as .m-meta: 13px, --m-ink-3, 3.20:1, the same
+             treatment as "2 blocked attempts". The question was the largest type on the page
+             and the answer to it the smallest, which inverts the peak-end of the one surface
+             PRD §3.3 calls the product.
+             Both branches take IDENTICAL treatment. Byte-identical buttons do not hold
+             invariant 1 if the sentence after them reads warmer on one side. And the counts
+             are spelled: "3 of 5" is one step from a rate, and §3.1 bans rates. */
+          <p className="m-sentence">
+            {data.outcome === 'yes'
+              ? `Good. That's ${toWords(data.finished)} of ${toWords(data.answered)}.`
+              : 'Noted. It carries over.'}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
