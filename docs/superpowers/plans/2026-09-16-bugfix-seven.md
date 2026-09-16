@@ -824,7 +824,13 @@ test('a failed outcome write re-enables both buttons, says so, and retries on th
   await expect(page.locator('[data-surface="review"] button')).toHaveCount(2)
 
   await page.unroute('**/api/sessions/*/outcome')
-  await page.getByRole('button', { name: 'Yes' }).click()
+  // The client clears `failed` synchronously before the retry's fetch resolves, so the alert
+  // disappears from the DOM well before the PATCH lands server-side — waiting on the response
+  // itself (not a guessed delay) is what actually orders this check after the write completes.
+  await Promise.all([
+    page.waitForResponse('**/api/sessions/*/outcome'),
+    page.getByRole('button', { name: 'Yes' }).click(),
+  ])
   await expect(reviewSurface.getByRole('alert')).toHaveCount(0)
 
   const review = await page.request.get(`/api/sessions/${sessionId}/review`)
