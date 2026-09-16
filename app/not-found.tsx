@@ -5,10 +5,10 @@ import Link from 'next/link'
  *  the product at the exact moment they are already confused. */
 export default function NotFound() {
   return (
-    <div data-surface="not-found">
+    <main data-surface="not-found">
       <p className="m-mark" data-state="empty" />
       <p className="m-sentence">That isn&rsquo;t here.</p>
       <Link className="m-meta" href="/dashboard">Your sessions</Link>
-    </div>
+    </main>
   )
 }

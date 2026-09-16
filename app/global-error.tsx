@@ -11,11 +11,15 @@ export default function GlobalError({ reset }: { error: Error; reset: () => void
   return (
     <html lang="en">
       <body className="m-app">
-        <div data-surface="not-found">
+        <main data-surface="not-found">
           <p className="m-mark" data-state="empty" />
           <p className="m-sentence">Something broke.</p>
+          {/* Do not render error.message — it can carry a connection string. Mirrors
+              app/error.tsx's reassurance line: the root layout failing is scarier than a
+              route failing, not a reason to say less. */}
+          <p className="m-meta" role="alert">Nothing you have recorded was changed.</p>
           <button className="m-btn" data-variant="quiet" onClick={reset}>Try again</button>
-        </div>
+        </main>
       </body>
     </html>
   )

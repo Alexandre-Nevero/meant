@@ -18,12 +18,19 @@ test('every auth input has a real label, and the two forms are distinguishable',
   await expect(signUp.getByLabel('Name')).toBeVisible()
 })
 
-test('the public surfaces have a main landmark', async ({ context }) => {
+test('the public surfaces have a main landmark', async ({ context, freshAccount }) => {
   const page = await context.newPage()
   for (const path of ['/', '/sign-in']) {
     await page.goto(path)
     await expect(page.getByRole('main')).toHaveCount(1)
   }
+
+  // review/[sessionId]'s notFound() (app/not-found.tsx) is a root boundary, not under any
+  // route layout's <main> — and it's reachable only once signed in: signed out,
+  // page.tsx:20 redirects to '/' before ever calling notFound().
+  await freshAccount(page)
+  await page.goto('/review/00000000-0000-4000-8000-000000000000')
+  await expect(page.getByRole('main')).toHaveCount(1)
 })
 
 test('a shared link previews as more than one word', async ({ context }) => {
