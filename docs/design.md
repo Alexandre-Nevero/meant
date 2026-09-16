@@ -167,10 +167,12 @@ ledger-row swatch, a plan-step marker, *and* a band segment, differentiated only
 > **The contract and the code disagree, and this is an open owner decision (issue #51), not a
 > licence.** Counted 2026-09-16, `app/globals.css` and `extension/meant.css` define **15** classes
 > from the product vocabulary — the 13 below plus `.m-chip` and `.m-chip-row`, which the popup's
-> duration and blocklist pickers have shipped for weeks — and three further families that were
+> duration and blocklist pickers have shipped for weeks — and four further families that were
 > always argued as *structural, not vocabulary*: `.m-landing-*` (marketing layout), `.m-rise` (the
-> review's one authored motion), and `.m-shell-*` (the app shell, added on `awareness-turn` under
-> the `.m-landing-*` precedent). Either the contract is 13 and `.m-chip`/`.m-chip-row` are a
+> review's one authored motion), `.m-shell-*` (the app shell, added on `awareness-turn` under
+> the `.m-landing-*` precedent), and `.m-review-rows` / `.m-review-ask` (the review's row and
+> question groups, added on `bugfix-seven` under the same precedent). Either the contract is 13
+> and `.m-chip`/`.m-chip-row` are a
 > standing violation, or the contract is "13 semantic classes plus named structural families" and
 > should say so. **Do not resolve it by editing the number here**; it is the same decision in
 > `docs/design-toolkit.md` §8, and it belongs to the owner.
@@ -201,12 +203,13 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 | `data-surface` | Where | Real width | Ticks? | Notes |
 |---|---|---|---|---|
 | `landing` | `app/page.tsx` | 1440 desktop fold | — | Marketing layout classes (`.m-landing-*`) are structural only, not part of the 13-class contract |
-| `review` | `app/review/[id]/page.tsx` | 1000px box, 840px content, gap 40px (**corrected 2026-09-16** — this cell said 880px; `globals.css:101` is `max-width: 1000px` with 80px side padding, the same shell as the ledger; the column runs at `gap: 40px`, not the flat 24px it shipped with — rows sit in their own `.m-review-rows` group at `gap: 0`, and the question+answers stage in `.m-review-ask` with `margin-top: auto`, #45) | — | The one page with an *authored* motion moment (staggered rise, 50ms steps) |
+| `review` | `app/review/[id]/page.tsx` | 1000px box, 840px content, gap 40px (**corrected 2026-09-16** — this cell said 880px; `globals.css:110` is `max-width: 1000px` with 80px side padding, the same shell as the ledger; the column runs at `gap: 40px`, not the flat 24px it shipped with — rows sit in their own `.m-review-rows` group at `gap: 0`, and the question+answers stage in `.m-review-ask` with `margin-top: auto`, #45) | — | The one page with an *authored* motion moment (staggered rise, 50ms steps) |
 | `ledger` | `app/dashboard/page.tsx` | 1000px column | — | Each row's band is real per-session data via `lib/band.ts`, not decoration |
 | `pair` | `app/pair/page.tsx` | centered, 320px card | **No** — single scheduled `setTimeout` flips to "expired," not a countdown | |
 | `popup` | `extension/popup.html` | fixed 360px | **No**, anywhere, ever | Opened dozens of times a day — see §7 |
 | `block` | `extension/blocked.html` | full page | **No** | Static "N minutes left," read once |
 | `setup` | `app/setup/page.tsx` | 1000px column | — | Declare work and distraction sites (ADR-0035). **Not in the sitemap until 2026-09-16**, and carrying the most damaging open bug in the product (#42: a failed fetch renders as "you have no sites," and saving then replaces the stored list) |
+| `not-found` | `app/error.tsx`, `app/not-found.tsx`, `app/global-error.tsx` | 1000px column | No | Root boundaries under `app/layout.tsx`, not any route layout — no shell mounts. Reuses the ledger's own column so it does not jump when it replaces one |
 | — (chrome) | `app/shell.tsx`, mounted by four route layouts | full width, hairline rule | — | **Added 2026-09-15, and the exception in this table.** The app shell is the one surface with **no artboard** — `design/canvas/` holds seven and none of them shows navigation. The build plan for #40 required drawing `Shell.dc.html` *first*; it was not drawn. It composes `.m-mark` and `.m-meta` plus four `.m-shell-*` structural classes, renders nothing signed-out, and shows no counts or figures. See §10 |
 | `companion` | `extension/companion-overlay.js` (Shadow DOM, injected at `<all_urls>`) | 28px, floats over the page | **No.** One state: a solid, breathing ring | **Corrected 2026-09-16 (ADR-0057, ADR-0058); retimed 2026-09-17 (#50).** This row read "ring flips ≤3×/25min" — there are no flips. The only motion the product initiates is the breathe; the ring-collapse now fires **only as the receipt for a tap**, at 160ms feedback speed, not the 0.6s it had when it meant a return from drift. Reduced motion gets its own receipt — the ring goes opaque and thickens for 600ms instead of animating — rather than losing the tap's only confirmation. Retired the side panel and `.m-mark`'s primitives entirely — see §4 |
 
