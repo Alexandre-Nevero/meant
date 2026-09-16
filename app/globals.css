@@ -154,7 +154,10 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* review's single combined band, once, above the per-domain rows */
-[data-surface="review"] > .m-mark:not(:empty) {
+/* Descendant, not direct child: the band is wrapped in a .m-rise div (#48), and this rule
+   is what gives it its full width. :not(:empty) already discriminates — the only other
+   .m-mark on this surface is the empty brand glyph at the top of the page. */
+[data-surface="review"] .m-mark:not(:empty) {
   width: 100%;
   height: 32px;
   border: none;
