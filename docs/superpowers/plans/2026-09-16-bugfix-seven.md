@@ -1639,7 +1639,10 @@ function applyVisualState(next) {
 ```bash
 npx playwright test e2e/companion.spec.ts
 npm test
-grep -n "pulse-drift\|return-pulse\|0.6s" extension/companion-overlay.js   # must print nothing
+# The only surviving matches must be inside the receipt comment Step 4 mandates, which
+# explains the old name and duration on purpose. Grep for the CODE, not the prose:
+grep -nE "animation: (pulse-drift|return-pulse)|@keyframes (pulse-drift|return-pulse)|620" \
+  extension/companion-overlay.js   # must print nothing
 ```
 
 Expected: every companion spec passes, the 149 unit tests still pass, the grep silent. If a companion
