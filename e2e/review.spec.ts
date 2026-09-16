@@ -157,3 +157,34 @@ test('the review page never shows an extension-ID-shaped domain in its per-domai
   await expect(reviewPage.getByText('chatgpt.com')).toBeVisible()
   await expect(reviewPage.getByText('emnalgngpciahekjdcgpbgnhmkpjhlhi')).toHaveCount(0)
 })
+
+// #47. The most important write in the product, and it was unchecked.
+test('a failed outcome write re-enables both buttons, says so, and retries on the same two', async ({ context, endedSession }) => {
+  const sessionId = await endedSession({ intention: 'outcome failure test' })
+
+  const page = await context.newPage()
+  await page.route('**/api/sessions/*/outcome', (route) => route.fulfill({ status: 500, body: '{}' }))
+  await page.goto(`/review/${sessionId}`)
+
+  const reviewSurface = page.locator('[data-surface="review"]')
+  await page.getByRole('button', { name: 'Yes' }).click()
+  await expect(reviewSurface.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Yes' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Not yet' })).toBeEnabled()
+  // I1: the retry affordance is the two buttons themselves, never a third control.
+  // Scoped to the surface — the app shell contributes its own <button> for Sign out.
+  await expect(page.locator('[data-surface="review"] button')).toHaveCount(2)
+
+  await page.unroute('**/api/sessions/*/outcome')
+  // The client clears `failed` synchronously before the retry's fetch resolves, so the alert
+  // disappears from the DOM well before the PATCH lands server-side — waiting on the response
+  // itself (not a guessed delay) is what actually orders this check after the write completes.
+  await Promise.all([
+    page.waitForResponse('**/api/sessions/*/outcome'),
+    page.getByRole('button', { name: 'Yes' }).click(),
+  ])
+  await expect(reviewSurface.getByRole('alert')).toHaveCount(0)
+
+  const review = await page.request.get(`/api/sessions/${sessionId}/review`)
+  expect((await review.json()).outcome).toBe('yes')
+})

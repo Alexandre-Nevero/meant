@@ -9,6 +9,7 @@ type Fixtures = {
   context: BrowserContext
   extensionId: string
   freshAccount: (page: Page) => Promise<{ email: string; password: string }>
+  endedSession: (opts: { intention: string; events?: unknown[] }) => Promise<string>
 }
 
 export const test = base.extend<Fixtures>({
@@ -62,6 +63,42 @@ export const test = base.extend<Fixtures>({
       await signupForm.getByRole('button', { name: 'Create an account' }).click()
       await page.waitForURL('**/dashboard')
       return { email, password }
+    })
+  },
+
+  endedSession: async ({ context, extensionId, freshAccount }, use) => {
+    await use(async ({ intention, events = [] }) => {
+      const page = await context.newPage()
+      await freshAccount(page)
+      const mint = await page.request.post('/api/pair')
+      const { code } = await mint.json()
+      const claim = await page.request.post('/api/pair/claim', { data: { code } })
+      const { token, deviceId } = await claim.json()
+      await page.goto(`chrome-extension://${extensionId}/popup.html`)
+      await page.evaluate(
+        ({ token, deviceId }) => new Promise<void>((r) => chrome.storage.local.set({ token, deviceId }, () => r())),
+        { token, deviceId },
+      )
+      await page.reload()
+      await page.locator('input.m-field').first().fill(intention)
+      await page.getByRole('button', { name: 'Start' }).click()
+      const sessionId: string = await page.evaluate(
+        () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
+      )
+      // The Start click is fire-and-forget from sw.js startSession(); sessionId is in storage
+      // immediately, but the server row may not exist yet. Same wait the open-coded copies use.
+      await page.waitForTimeout(500)
+      if (events.length > 0) {
+        // The same API sw.js's own flush() uses — deterministic, no dependency on real timing.
+        const res = await context.request.post('/api/events', {
+          headers: { authorization: `Bearer ${token}` },
+          data: { sessionId, events },
+        })
+        if (res.status() !== 200) throw new Error(`event injection failed: ${res.status()}`)
+      }
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+      await page.waitForTimeout(300)
+      return sessionId
     })
   },
 })
