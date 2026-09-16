@@ -23,7 +23,7 @@ const EXTENSION_PATH = path.join(__dirname, '..', 'extension')
 // test and tears it down after) — this test manages its own persistent profile dir so it
 // can close the browser and relaunch against the same one, a real Chromium startup rather
 // than a simulated one.
-test('a session survives a browser close, and ends itself (without popping a tab) on the next launch', async () => {
+test('a session survives a browser close, and ends itself (without popping a tab) on the next launch', async ({ baseURL }) => {
   test.setTimeout(60_000)
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meant-pw-recovery-'))
   const launchArgs = {
@@ -37,6 +37,15 @@ test('a session survives a browser close, and ends itself (without popping a tab
     let [sw1] = context1.serviceWorkers()
     if (!sw1) sw1 = await context1.waitForEvent('serviceworker')
     const extensionId = sw1.url().split('/')[2]
+
+    // This test owns its context, so fixtures.ts's extensionId fixture — which seeds apiBase —
+    // never runs for it. Without this the extension falls back to extension/api.js:1's
+    // http://localhost:3000 and posts the session to whatever dev server is on that port,
+    // which reads .env.local. The profile dir persists, so context2 inherits this.
+    await sw1.evaluate(
+      (base) => new Promise<void>((r) => chrome.storage.local.set({ apiBase: base }, () => r())),
+      baseURL!,
+    )
 
     const page = await context1.newPage()
     const email = `e2e-recovery-${Date.now()}@example.com`

@@ -138,7 +138,11 @@ test.describe('floating companion', () => {
     const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
     await expect(dotWrap).toBeVisible()
 
-    await page.locator(HOST_SELECTOR).locator('.dot').click()
+    // .dot-wrap, not .dot. The inner core carries `animation: breathe 1.6s infinite`, and
+    // Playwright's actionability check waits for an element to stop moving — an infinite
+    // animation never stabilises, so clicking .dot could only ever time out. .dot-wrap is
+    // also the element that actually carries the pointer handlers (companion-overlay.js:298).
+    await dotWrap.click()
 
     // The receipt: ADR-0026's freed ring-collapse, reused. A receipt, not a celebration —
     // I2 forbids positive feedback, not telling the user their deliberate action registered.

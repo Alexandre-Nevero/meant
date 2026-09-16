@@ -27,9 +27,21 @@ export const test = base.extend<Fixtures>({
     fs.rmSync(userDataDir, { recursive: true, force: true })
   },
 
-  extensionId: async ({ context }, use) => {
+  extensionId: async ({ context, baseURL }, use) => {
     let [sw] = context.serviceWorkers()
     if (!sw) sw = await context.waitForEvent('serviceworker')
+
+    // extension/api.js:1 defaults apiBase to http://localhost:3000 — the port this suite used
+    // before #18 gave it its own server on 3100. Left unset, every write the EXTENSION makes
+    // (sessions, events, pairing claims) goes to whatever is listening on :3000, which on a
+    // developer's machine is `next dev` reading .env.local: production. #18's webServer.env
+    // guards the page's traffic and the database; it never covered the extension, which talks
+    // to an origin of its own. Seeded from the service worker so it lands before any spec runs.
+    await sw.evaluate(
+      (base) => new Promise<void>((r) => chrome.storage.local.set({ apiBase: base }, () => r())),
+      baseURL!,
+    )
+
     await use(sw.url().split('/')[2])
   },
 
