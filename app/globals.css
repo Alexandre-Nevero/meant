@@ -665,12 +665,15 @@ a { color: inherit; text-decoration: none; }
   [data-surface="landing"] .m-landing-ledger .m-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 }
 
-/* ---------- motion: entry ---------- */
-
+/* ---------- motion: entry ----------
+ * The one authored moment in the product (docs/design-toolkit.md §6). The step comes from
+ * --m-stagger, which tokens.css already drops to 0ms under prefers-reduced-motion — so the
+ * index below needs no branch of its own. */
 .m-rise {
   opacity: 1;
   transform: none;
   transition: opacity var(--m-dur-rise) var(--m-ease), transform var(--m-dur-rise) var(--m-ease);
+  transition-delay: calc(var(--m-rise-i, 0) * var(--m-stagger));
 }
 @starting-style { .m-rise { opacity: 0; transform: translateY(8px); } }
 

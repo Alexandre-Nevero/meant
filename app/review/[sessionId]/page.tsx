@@ -23,21 +23,35 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
   const data = await getReviewData(sessionId, userId)
   if (!data) notFound()
 
+  // The review's authored entrance (#48). A running counter rather than hard-coded indices
+  // because three of the children are conditional — a short-circuited `&&` simply never calls
+  // rise(), which is exactly right: the sequence closes up rather than leaving a hole.
+  let riseIndex = 0
+  // String(), not the bare number: React only skips its automatic `px` suffix for properties it
+  // knows, and a custom property is not one of them. `calc(1px * 50ms)` is invalid and fails
+  // silently — the whole stagger would flatten to zero with nothing in the console.
+  const rise = (extra = '') => ({
+    className: extra ? `${extra} m-rise` : 'm-rise',
+    style: { '--m-rise-i': String(riseIndex++) } as React.CSSProperties,
+  })
+
   return (
     <div data-surface="review">
-      <p className="m-mark" data-state="ended" />
+      <p {...rise('m-mark')} data-state="ended" />
       {data.intention ? (
         <>
-          <p className="m-meta">You meant to</p>
-          <p className="m-sentence">{data.intention}</p>
+          <p {...rise('m-meta')}>You meant to</p>
+          <p {...rise('m-sentence')}>{data.intention}</p>
         </>
       ) : (
-        <p className="m-meta">You didn&apos;t say what you meant to do.</p>
+        <p {...rise('m-meta')}>You didn&apos;t say what you meant to do.</p>
       )}
 
-      <Band segments={toBand(data.rows as Parameters<typeof toBand>[0])} state={data.endedAt ? 'ended' : 'running'} />
+      <div {...rise()}>
+        <Band segments={toBand(data.rows as Parameters<typeof toBand>[0])} state={data.endedAt ? 'ended' : 'running'} />
+      </div>
 
-      <div className="m-review-rows">
+      <div {...rise('m-review-rows')}>
         {data.topAttention.map((row, i) => (
           <div className="m-row" key={row.domain}>
             <span className="m-row-bar" data-kind={TINTS[i]} />
@@ -55,7 +69,7 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
         )}
       </div>
 
-      {data.blockedAttempts > 0 && <p className="m-meta">{data.blockedAttempts} blocked attempts</p>}
+      {data.blockedAttempts > 0 && <p {...rise('m-meta')}>{data.blockedAttempts} blocked attempts</p>}
 
       {/* ADR-0054. The served/not-served boundary is browser share, reported at runtime — so
           a session we only partly watched says so rather than presenting a fragment as the
@@ -70,13 +84,13 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
             .filter((r) => r.kind === 'attention' || r.kind === 'away' || r.kind === 'break')
             .reduce((t, r) => t + r.seconds, 0)) *
           UNRECORDED_MIN_SHARE && (
-          <p className="m-meta">
+          <p {...rise('m-meta')}>
             {toWords(minutes(data.unrecordedSeconds))} minutes of this session happened outside the
             browser. This page cannot tell you about those.
           </p>
         )}
 
-      <div className="m-review-ask">
+      <div {...rise('m-review-ask')}>
         {data.outcome === 'unanswered' ? (
           <>
             <p className="m-rate">Did you?</p>
