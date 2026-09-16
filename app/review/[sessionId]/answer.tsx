@@ -44,8 +44,13 @@ export function Answer({ sessionId }: { sessionId: string }) {
           bottom-anchored .m-review-ask (globals.css, margin-top: auto), so mounting it only on
           failure grew the group and pushed both buttons up ~39px at the exact instant the user
           is told to press one again — and a live region that already exists when its text
-          arrives is announced far more reliably than one inserted together with its text. */}
-      <p className="m-meta" role="alert" aria-live="polite">
+          arrives is announced far more reliably than one inserted together with its text.
+
+          role="alert" carries an implicit aria-live="assertive", so it is the whole live region
+          on its own. An explicit aria-live alongside it contradicts that implicit value and
+          leaves the urgency undefined across screen readers. Every other alert in the product
+          is role="alert" and nothing else; this one matches. */}
+      <p className="m-meta" role="alert">
         {failed ? 'That didn’t save. Answer again.' : ''}
       </p>
     </>

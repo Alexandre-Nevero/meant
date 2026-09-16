@@ -10,7 +10,7 @@
   /* The shell has no artboard (docs/design.md §6 — design/canvas/ holds seven and none of
      them shows navigation), so this number lives here rather than in tokens.css, which
      carries only values lifted from the artboards. Declared as a height rather than derived
-     from padding so calc() against it is exact — the landing header does the same at :470. */
+     from padding so calc() against it is exact — the landing header does the same at :476. */
   --m-shell-h: 60px;
 }
 
