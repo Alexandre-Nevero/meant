@@ -104,6 +104,23 @@ a { color: inherit; text-decoration: none; }
   gap: 24px;
 }
 
+/* The failure surfaces. Centred and short on purpose — there is nothing to read here, only
+ * somewhere to go. Reuses the ledger's own column so it does not jump when it replaces one. */
+[data-surface="not-found"] {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 72px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+[data-surface="not-found"] .m-btn { width: auto; padding: 16px 32px; }
+
+@media (max-width: 700px) {
+  [data-surface="not-found"] { padding: 40px 24px; }
+}
+
 /* review's single combined band, once, above the per-domain rows */
 [data-surface="review"] > .m-mark:not(:empty) {
   width: 100%;
@@ -174,6 +191,19 @@ a { color: inherit; text-decoration: none; }
   font-size: 13px;
   line-height: 1.45;
   color: var(--m-ink-3);
+}
+
+/* ---------- errors ----------------------------------------------------------------------
+ * One treatment, hooked on the ARIA role rather than a new class, so the thing that makes it
+ * visible and the thing that makes it audible cannot drift apart — and the 13-class contract
+ * is untouched.
+ *
+ * Colour cannot carry this. Clay is banned as a text colour at 3.74:1 (docs/design.md §10),
+ * and the defect being fixed (#46) is precisely that a failed sign-in rendered as --m-ink-3,
+ * the same grey as the word "or". So: full ink, one weight up, and announced. */
+[role="alert"] {
+  color: var(--m-ink);
+  font-weight: 500;
 }
 
 /* ---------- .m-field — the outline that holds the sentence ---------- */

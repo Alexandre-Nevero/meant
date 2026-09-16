@@ -23,7 +23,7 @@ export function AuthForm() {
         <button className="m-btn" data-variant="primary" disabled={signingIn}>
           Sign in
         </button>
-        {signInState?.error && <p className="m-meta">{signInState.error}</p>}
+        {signInState?.error && <p className="m-meta" role="alert">{signInState.error}</p>}
       </form>
 
       <p className="m-meta">or</p>
@@ -34,7 +34,7 @@ export function AuthForm() {
         <button className="m-btn" data-variant="quiet" disabled={signingUp}>
           Create an account
         </button>
-        {signUpState?.error && <p className="m-meta">{signUpState.error}</p>}
+        {signUpState?.error && <p className="m-meta" role="alert">{signUpState.error}</p>}
       </form>
     </>
   )
