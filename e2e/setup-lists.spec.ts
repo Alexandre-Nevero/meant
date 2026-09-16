@@ -48,3 +48,57 @@ test('setup lists persist across reload, authenticated', async ({ context, fresh
   expect(body.workSites.sort()).toEqual(['docs.google.com', 'github.com'].sort())
   expect(body.distractSites.sort()).toEqual(['x.com', 'youtube.com'].sort())
 })
+
+// #42, P1. A failed read rendered as "you have configured no sites", and the page stayed
+// editable from that fabricated state — so one added site replaced the real list wholesale.
+test('a failed read never fabricates an empty list, and cannot be saved over', async ({ context, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+
+  // Seed a real list through the API, so there is something to destroy.
+  const seeded = await page.request.put('/api/lists', {
+    data: { workSites: ['docs.google.com', 'github.com'], distractSites: ['x.com'] },
+  })
+  expect(seeded.ok()).toBeTruthy()
+
+  await page.route('**/api/lists', (route) =>
+    route.request().method() === 'GET' ? route.fulfill({ status: 500, body: '{}' }) : route.continue(),
+  )
+  await page.goto('/setup')
+
+  await expect(page.locator('[data-surface="setup"]').getByRole('alert')).toBeVisible()
+  // The load-bearing assertion: nothing editable exists, so nothing can be saved over.
+  await expect(page.getByPlaceholder('add a site and press enter')).toHaveCount(0)
+
+  await page.unroute('**/api/lists')
+  await page.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.getByText('docs.google.com')).toBeVisible()
+  await expect(page.getByText('github.com')).toBeVisible()
+
+  // And the stored list survived the whole episode.
+  const after = await page.request.get('/api/lists')
+  expect((await after.json()).workSites.sort()).toEqual(['docs.google.com', 'github.com'])
+})
+
+// #42, second half. A silent write failure is worse than a visible one.
+test('a failed save is announced and rolled back, not shown as saved', async ({ context, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await page.goto('/setup')
+
+  const work = page.locator('section', { hasText: 'Where do you work?' })
+  await work.getByPlaceholder('add a site and press enter').fill('github.com')
+  await work.getByPlaceholder('add a site and press enter').press('Enter')
+  await expect(work.getByText('github.com')).toBeVisible()
+
+  await page.route('**/api/lists', (route) =>
+    route.request().method() === 'PUT' ? route.fulfill({ status: 500, body: '{}' }) : route.continue(),
+  )
+  await work.getByPlaceholder('add a site and press enter').fill('gitlab.com')
+  await work.getByPlaceholder('add a site and press enter').press('Enter')
+
+  await expect(page.locator('[data-surface="setup"]').getByRole('alert')).toBeVisible()
+  // Rolled back: the interface must not claim a site is saved when it is not.
+  await expect(work.getByText('gitlab.com')).toHaveCount(0)
+  await expect(work.getByText('github.com')).toBeVisible()
+})
