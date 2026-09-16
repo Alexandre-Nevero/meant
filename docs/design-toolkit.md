@@ -4,6 +4,15 @@
 **Visual truth:** the design canvas, "MEANT Band System" · **Token file:** [`design/tokens.css`](../design/tokens.css)
 **Product truth:** [PRODUCT.md](../PRODUCT.md), [apexhuman.md](../apexhuman.md)
 
+> **Amendment 0.2a (2026-09-16).** §3 described a companion that has not existed since
+> 2026-09-05 and a signal that was deleted on 2026-09-15. The gaze/posture table below is
+> **void** — the shipped companion is a 28px orbital dot (ADR-0026) that **no longer signals
+> drift at all** (ADR-0057) and instead **accepts one tap meaning "this isn't the work"**
+> (ADR-0058). Corrected in place at §3, §8 and §10, marked rather than rewritten so the
+> reasoning survives. §9's refusal of "dark mode as the default look" is **contradicted by the
+> shipped token file** and is an open owner decision (#51). **`docs/adr/` outranks this
+> document** (ADR-0063).
+>
 > **0.1 is superseded, and not by a small margin.** Version 0.1 §3 specified the mark as *two cumulative lines, blue and clay, from a shared origin, that never cross* — a slopegraph. What was actually built and chosen is **an outline that holds the sentence plus a segment band that carries the attention**, with **no blue anywhere**. The canvas won; a spec that loses to its own execution is stale, not authoritative. Everything below is derived from the shipped artboards. `design/tokens.css` is generated from the same source and is what code imports.
 
 ---
@@ -42,25 +51,32 @@ Two elements, and every surface is a different arrangement of them.
 
 ## 3. The companion — the one fork taken
 
-**A chart cannot have gaze.** The companion keeps the primitives (capsule outline, clay fill) and stops being a chart. Everywhere else the mark still is one. This is deliberate and it is the only place it happens.
+> **VOID below the rule, 2026-09-16.** Everything in the three-row table and the two paragraphs
+> after it describes the **gaze/capsule** companion, replaced by the Orbit dot on 2026-09-05
+> (ADR-0026) and never built. The *Drifting* column is void twice over: ADR-0057 removed live
+> drift signalling from the product entirely. Kept, struck, because the fork it records — why the
+> companion stopped being a chart — is still the reason the companion is not made of `.m-mark`.
+> **What ships is in `docs/design.md` §4 and PRD §3.2.**
 
-| | Settled | Drifting |
-|---|---|---|
-| Aperture | Narrow bar, low in the capsule, where the band sits everywhere else | Risen, opened taller, centred |
-| Stroke | `--m-stroke` (1.5px) | `--m-stroke-loud` (2px) |
-| Reads as | Looking at the work, alongside you | Turned to look at you |
+**~~A chart cannot have gaze.~~** The companion keeps the primitives (capsule outline, clay fill) and stops being a chart. Everywhere else the mark still is one. This is deliberate and it is the only place it happens. *(The half that survived: it is a separate surface, `extension/companion-overlay.js`, built from nothing the rest of the system uses.)*
 
-**Aliveness is breathing and a rare blink** — a slow scale/opacity cycle at ~4.2s and a blink at ~6.7s. Sub-perceptual. It must never read as animation.
+| ~~Settled~~ | ~~Drifting~~ — **void, ADR-0057** |
+|---|---|
+| ~~Aperture: narrow bar, low in the capsule~~ | ~~Risen, opened taller, centred~~ |
+| ~~Stroke `--m-stroke` (1.5px)~~ | ~~`--m-stroke-loud` (2px)~~ |
+| ~~Reads as: looking at the work~~ | ~~Turned to look at you~~ |
 
-**State is gaze and posture, never an action.** Facing your work is a *posture*, not an *event* — which is how there is a positive state with no reward inside it.
+**What replaced it.** One state while a session runs: a **solid ring, breathing** (~1.6s continuous scale/opacity on the dot — the ~4.2s breathe and ~6.7s blink above were the gaze design's). Sub-perceptual. It must never read as animation.
+
+**State is presence, and the only event is the user's.** The companion signals nothing and decides nothing on screen. It reveals the intention on hover, and **one tap says "this isn't the work"** (ADR-0058), acknowledged by a 0.6s ring-collapse — the motion ADR-0026 wrote for a return from drift, reused for a receipt. Feedback for an action the user chose is not a reward for behaviour the product graded, which is how there is still a positive state with no reward inside it.
 
 **Hard rules.**
 - It never varies with the outcome answer. `Yes` and `Not yet` leave it identical (I1) — otherwise it becomes a reason to lie.
 - Nothing good happens on screen during a session (I2). The return, the finished step, the honest answer: all of it waits for the review.
-- Motion budget: **three noticeable movements per 25 minutes, none in the first 60 seconds.** Breathing and blinking do not count. Arousal is the risk, not attention — an observer makes complex work worse, and complex work is the only kind this audience does.
+- ~~Motion budget: **three noticeable movements per 25 minutes, none in the first 60 seconds.**~~ **Void as a live rule, 2026-09-16 (ADR-0057)** — it bounded a signal that no longer fires. The reasoning stands and is now enforced structurally instead: arousal is the risk, not attention, so **the product initiates no motion at all.** Only a user action may move the companion.
 - Coach, not pet. This user screen-shares with clients.
-- It must read at 80–120px, and the gaze must read at that size.
-- One tap on it says what it reads and where that goes. It is the consent surface, not the anaesthetic.
+- ~~It must read at 80–120px, and the gaze must read at that size.~~ **Void (ADR-0026)** — it ships at 28px and has no gaze. It must read as *presence* at that size, which is a different test.
+- ~~One tap on it says what it reads and where that goes.~~ **Corrected 2026-09-16 (ADR-0058):** the tap is now the user's **input** — *"this isn't the work"* — not a disclosure control. It was never built as disclosure; hover reveals the intention instead. **The consent surface is therefore missing, not moved**, and the product now reads on-device paths (ADR-0059), which needs disclosing more than hostnames did. See `docs/design.md` §10.
 
 ---
 
@@ -76,7 +92,7 @@ Every value lives in `design/tokens.css`. Never hardcode a hex in a component.
 | `--m-clay` / `-2` / `-3` | `#C75B39` / `#D68A6E` / `#E2B29E` | Attention, ordered by time |
 | `--m-away` | hatch | Unmeasured |
 
-**Clay appears only in bands, swatches, and the companion's aperture.** The primary button is ink on ground. There is no second accent, and there is no blue.
+**Clay appears only in bands, swatches, and the companion's ring** ("aperture" was the gaze design's; corrected 2026-09-16). The primary button is ink on ground. There is no second accent, and there is no blue.
 
 ---
 
@@ -143,13 +159,27 @@ app extension` returning nothing is the proof; this section previously listed
 invariant.
 
 `data-state` is `idle | running | drifting | ended | empty`. **Corrected 2026-09-11:**
-`drifting` is wired — `extension/sw.js`'s mechanical drift signal sets it (`docs/index.md`
+`drifting` was wired — `extension/sw.js`'s mechanical drift signal set it (`docs/index.md`
 D25, `docs/adr/ADR-0025`); this section previously said it was "set nowhere in the code,"
-true only through 2026-09-01.
+true only through 2026-09-01. **Corrected again 2026-09-16 (ADR-0057): nothing sets `drifting`
+any more.** The signal that wrote it is gone, and the companion is a separate Shadow DOM surface
+that never used `.m-mark` in the first place. The value stays in the enum as a deliberate hole —
+removing it from the contract is a decision nobody has recorded — but a surface rendering
+`data-state="drifting"` today is rendering a state the product cannot enter.
+
+**Counted against the code, 2026-09-16: the file defines 15, not 13.** `.m-chip` and `.m-chip-row`
+ship in the popup and are not in the list above, and `.m-landing-*`, `.m-rise` and `.m-shell-*`
+exist as structural families outside it. See `docs/design.md` §5 — the number and the code have to
+be reconciled by a decision, not by editing this line.
 
 ---
 
 ## 9. Refuse
+
+> **The first item is currently violated by the shipped token file** (noted 2026-09-16).
+> `design/tokens.css:54` applies the full dark palette from `prefers-color-scheme: dark`, and
+> nothing anywhere sets `data-theme`, so on a dark OS MEANT *is* dark and the user cannot say
+> otherwise. Open owner decision (#51); flagged here rather than resolved by deleting the line.
 
 Dark mode as the default look · a productivity score of any kind · a total-hours headline anywhere · green for `Yes` · streaks, badges, flames, rings · a Pomodoro dial · confetti · a progress ring · a second accent colour · a card with a left-border accent · emoji as iconography · a chat input on any surface during a session · any celebration while the session is running · gradients on the band · a countdown that ticks (a live clock invites waiting it out).
 
@@ -162,8 +192,8 @@ Dark mode as the default look · a productivity score of any kind · a total-hou
 - [ ] No total-hours figure, no percentage, no score, on any surface
 - [ ] The popup animates nothing
 - [ ] The companion's appearance does not vary with the outcome answer
-- [ ] A 25-minute screen recording shows ≤3 noticeable companion movements, none in the first 60s
+- [ ] ~~A 25-minute screen recording shows ≤3 noticeable companion movements, none in the first 60s~~ **Replaced 2026-09-16 (ADR-0057):** a 25-minute screen recording shows **no companion movement the user did not cause** — the breathe excepted
 - [ ] Away renders as a hatch everywhere it appears
 - [ ] Every animated element has a `prefers-reduced-motion` branch
 - [ ] Both themes painted explicitly; `body` has an explicit token background
-- [ ] Runs at 360px (popup), 1440px (landing), and a ~320px side panel
+- [ ] Runs at 360px (popup), 1440px (landing), 390px (the narrow web breakpoint the ledger and shell ship). ~~a ~320px side panel~~ — **void (ADR-0026)**, there is no side panel

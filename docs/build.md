@@ -25,6 +25,20 @@
 
 ## 2. Iron rules
 
+> **This document is frozen history (see `docs/index.md` §1.1) and two of its six iron rules are
+> no longer true. Flagged 2026-09-16 rather than rewritten, because the record of what shipped in
+> the four-hour sitting is the point of the file.**
+>
+> - **INV-2 is amended.** Paths are now recorded — **in extension local storage only, never in a
+>   payload or a column** (ADR-0059). The half that still binds: nothing beyond a hostname reaches
+>   the database, and `lib/migrations/002-drift.sql:24` makes a migration that adds a path or title
+>   column release-blocking.
+> - **INV-5 is void.** `<all_urls>` ships in `host_permissions`, unconditionally, since 2026-09-07
+>   (ADR-0027). The content script already needed it and `declarativeNetRequest`'s redirect needs
+>   host permission for every domain it blocks.
+>
+> The other four hold. **Do not follow this section as current rules — follow `docs/adr/`.**
+
 Six invariants. An agent that "improves" any of these has introduced a bug, not a refactor.
 
 | # | Rule | Why | Violated by |

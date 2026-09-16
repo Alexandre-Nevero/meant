@@ -5,13 +5,21 @@
 **Version:** 0.2
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
-**Last reconciled:** 2026-09-11
+**Last reconciled:** 2026-09-16 (amendment 0.3 — ADR-0057/0058/0060)
 **Upstream:** [prd-intent.md](prd-intent.md), [sitemap-intent.md](sitemap-intent.md)
 
 > **Amendment 0.2c (2026-09-11).** PRD-F8 (the plan) was cut 2026-09-04 (ADR-0048/D38) and this
 > document never caught up: EV8/EV9/EV10/EV14 are struck through below (they never fire), E12 is
 > void, and EV15 is narrowed to the judge-correction it still describes. See `docs/prd-intent.md`
 > amendment 0.2c for the full reconciliation this mirrors.
+>
+> **Amendment 0.3 (2026-09-16).** UF1's diagram, five events, two cross-flow rules and two open
+> questions still described a companion that signals drift and a judge that runs per tab. Both are
+> gone — **ADR-0057** (the live drift signal is removed) and **ADR-0060** (the judge runs after the
+> session, batched, on demand). **EV12 and EV13 are void**, EV15 becomes `visit_labelled` (**ADR-0058**:
+> one tap, *"this isn't the work"*), Q2 and Q3 are void, and **M7 no longer has a definition** — Q4
+> is opened for it. The permission paragraphs were already corrected on 2026-09-15 (ADR-0061).
+> **`docs/adr/` outranks this document** (ADR-0063).
 >
 > **Amendment 0.2 (2026-08-28).** UF1 gains the plan, the judge, and the companion. Eight events added. Four edge cases added, all of them about the new dependency failing or the new permission being declined — the paths most likely to be skipped and most certain to happen.
 
@@ -35,19 +43,19 @@ Popup: type "finish the client proposal", pick a blocklist, Start
    │
    ├─▶ session row created            (EV1)      ◀── returns in <200ms
    ├─▶ block rules installed          (EV2)
-   ├─▶ companion opens, facing the work
+   ├─▶ companion opens — a solid, breathing ring (ADR-0057; "facing the work" was the gaze design)
    │
    ▼
    [PRD-F8, the plan, was cut 2026-09-04 (ADR-0048/D38) — EV8/EV9 never fire]
 Work happens. Nothing is asked of the user. Nothing is celebrated.
    │   active tab / URL changes ──▶ time attributed to previous domain      (EV3)
-   │                            └─▶ memory hit?  verdict, no model call     (EV11)
-   │                                memory miss? judge, then cache it       (EV11)
-   │   verdict = drifts, above the floor, past 60s
-   │                            ──▶ companion turns to face you             (EV12)
-   │   you come back                                                        (EV13)
+   │                            └─▶ host + path recorded on the device      (ADR-0059)
+   │   [rewritten 2026-09-16 — ADR-0057, ADR-0060. Nothing is judged during the session,
+   │    and nothing is signalled. The three lines that were here described a live per-tab
+   │    judge (EV11) and the companion turning (EV12/EV13); neither happens now]
+   │   you tap the companion    ──▶ "this isn't the work", per-visit label  (EV15)
+   │                            ──▶ 0.6s ring-collapse receipt, nothing else
    │   [no step-marking — PRD-F8 cut; EV14 never fires]
-   │   you un-mark it           ──▶ correction stored as a label            (EV15)
    │   browser unfocused > 60s  ──▶ time attributed to "away"               (EV4)
    │   blocked domain opened    ──▶ block page shows the intention          (EV5)
    │
@@ -132,9 +140,9 @@ well-timed — which also removes a decision point, a failure mode and a step fr
 | E6 | Session runs past midnight or for 8 hours | Recorded as one session; no auto-split in v1 | Simpler, and rare enough to accept |
 | E7 | A blocked site is opened before the session starts and stays open | The tab is not closed retroactively; only new navigations are blocked | Closing tabs a user opened is more hostile than v1 has earned |
 | E8 | Device token revoked or invalid | Extension returns to unpaired and stops recording; queued events are kept | Silent data loss is worse than a visible stop |
-| **E9** | AI Gateway unreachable, or over the V8 daily ceiling | No new verdicts, companion present but never turning, coach silent. Blocking, attention, review, ledger and the outcome question all work | The product must survive its own fourth service. This is the K4 escape hatch and it is tested (T10), not hoped for |
+| **E9** | AI Gateway unreachable, or over the V8 daily ceiling | No new verdicts, coach silent. Blocking, attention, review, ledger and the outcome question all work. **Corrected 2026-09-16:** "companion present but never turning" describes every session now, not a degraded one — and since the judge runs only when the user asks (ADR-0060), an outage is a failed analysis the user can retry, not a silently worse session | The product must survive its own fourth service. This is the K4 escape hatch and it is tested (T10), not hoped for |
 | ~~**E10**~~ | ~~User declines or revokes broad page access~~ | **VOID 2026-09-15 (ADR-0061).** No page-access permission is ever requested, so neither state can occur | The principle it protected — never nag for a declined permission — survives as a rule with nothing left to apply to |
-| **E11** | A verdict arrives after the user has already changed tabs again | Discarded, not shown | Signalling drift on a tab someone already left is the worst false positive available — it proves the thing is not watching, only guessing |
+| ~~**E11**~~ | ~~A verdict arrives after the user has already changed tabs again~~ | **Void 2026-09-16 (ADR-0060)** — verdicts are not produced during a session, so none can arrive late | The reasoning outlived the case and became the decision: a verdict shown about a tab the user already left proves the thing is guessing, not watching. ADR-0057 generalised that to every live verdict |
 | ~~E12~~ | ~~Plan generation fails or returns nothing~~ | **Void — PRD-F8 (the plan) was cut 2026-09-04 (ADR-0048/D38), never built** | — |
 
 ---
@@ -153,26 +161,26 @@ well-timed — which also removes a decision point, a failure mode and a step fr
 | ~~EV8~~ | ~~`plan_requested`~~ | **Cut with PRD-F8 (ADR-0048/D38) — never fires** | — |
 | ~~EV9~~ | ~~`plan_ready`~~ | **Cut with PRD-F8 — never fires** | — |
 | ~~EV10~~ | ~~`plan_edited`~~ | **Cut with PRD-F8 — never fires** | — |
-| **EV11** | `judgment_recorded` | A tab is classified, by model or by memory | **M7, M9** — carries `source`, so cost and cache-hit rate are one query |
-| **EV12** | `drift_signalled` | The companion turns | M7 (denominator: judgments actually shown), N8 |
-| **EV13** | `return_detected` | Attention comes back after a signalled drift | **M10** — and the thing the coach celebrates |
+| **EV11** | `judgment_recorded` | A visit is classified — **after the session, in a batch the user asked for** (ADR-0060), or from memory | **M7, M9** — carries `source`, so cost and cache-hit rate are one query. **Corrected 2026-09-16:** this fired per tab change; it now fires per analysis |
+| ~~EV12~~ | ~~`drift_signalled`~~ | **Void 2026-09-16 (ADR-0057) — the companion never signals, so this can never fire.** M7's denominator changes with it: there are no "judgments actually shown" | — |
+| ~~EV13~~ | ~~`return_detected`~~ | **Void with EV12** — a return is only defined relative to a signalled drift. Drift and return still appear in the review, computed from recorded attention, but nothing marks them live | M10 needs a new definition |
 | ~~EV14~~ | ~~`task_marked`~~ | **Cut with PRD-F8 — there is no step to mark** | — |
-| **EV15** | `judgment_corrected` | The user says "that was work" (the un-mark half is cut with `task_marked`; the drift-correction half is real, PRD-F9/US-10) | **M7** — every one of these is a training label |
+| **EV15** | `visit_labelled` | **Renamed and rewritten 2026-09-16 (ADR-0058).** The user taps the companion: *"this isn't the work"*. ~~`judgment_corrected` — the user says "that was work"~~ is void, because there is no flag left to correct | **M7's replacement.** A self-report cannot be a false positive, so this is ground truth rather than a correction — and it is the only write path memory has today (ADR-0062: per visit, never a classification at n=1) |
 | **EV16** | `suggestion_offered` | The coach proposes an executable action | I5 |
 | **EV17** | `suggestion_accepted` | The button is pressed | PRD-F13 |
 
-Seventeen events. Every metric in PRD §8 is derivable from these; nothing here exists for curiosity. EV11 and EV15 together are the whole of M7, which is the metric that decides whether the judge is allowed to keep speaking (K4).
+Seventeen events, **five of them now void** (EV8–EV10 with the cut plan, EV12–EV13 with the drift signal, EV14 with step-marking). Every metric in PRD §8 is derivable from what is left; nothing here exists for curiosity. **Corrected 2026-09-16:** EV11 and EV15 were "the whole of M7" when M7 measured a live signal's precision. With no signal, M7 needs restating before it can gate anything (K4) — the judge is measured offline against stored sessions now, not against what the user was shown.
 
 ---
 
 ## 7. Cross-Flow Rules
 
 - Only one session may be open at a time per account. Starting a second closes the first (EV6, flagged).
-- The product interrupts the user exactly once per session — the review tab. There are no other notifications in v1. **The companion turning is not an interruption and must never become one: no sound, no words, no colour change, no focus steal.**
+- The product interrupts the user exactly once per session — the review tab. There are no other notifications in v1. **Stronger since 2026-09-15 (ADR-0057): the companion does not interrupt at all, because it no longer initiates anything.** The old rule tried to hold "the companion turning is not an interruption" by discipline — no sound, no words, no colour change, no focus steal. The signal is gone, so the rule is now structural.
 - Block rules are owned by the session. There is no path in the code by which a rule outlives the session that installed it; a bug here is release-blocking.
 - **Nothing waits on a model.** Start does not wait for the plan; a block does not wait for a verdict; a stale verdict is discarded (E11).
-- **Nothing good happens on screen during a session** (I2). Every positive event — a completed step, a return from drift — is recorded and shown only in the review.
-- **The companion's motion budget is three noticeable movements per 25 minutes, none in the first 60 seconds** (N8). Breathing and blinking are not movements.
+- **Nothing good happens on screen during a session** (I2), **with no exception left** (ADR-0057). Every positive event is recorded and shown only in the review. The single motion permitted is the **receipt** for a tap the user chose to make (ADR-0058).
+- ~~**The companion's motion budget is three noticeable movements per 25 minutes, none in the first 60 seconds** (N8).~~ **Void as a live rule 2026-09-16** — it bounded a signal that no longer fires. Replaced by: **the product initiates no motion at all**; only a user action may move the companion. Breathing is not a movement.
 
 ---
 
@@ -181,8 +189,9 @@ Seventeen events. Every metric in PRD §8 is derivable from these; nothing here 
 | # | Question | Blocks | Owner |
 |---|---|---|---|
 | Q1 | Is 60 seconds the right away threshold, or is it 30? | EV4 | Alexandre — decide from the first week's own data |
-| **Q2** | Does the companion turn back after a return (EV13), and is that itself a movement against the budget? Turning back is the natural counterpart to turning away, and it is also the closest thing to celebration that could survive I2 | EV12, EV13, N8, I2 | **Provisionally answered: turns back, free.** `sw.js#updateCompanion` returns to `settled` the moment the next domain isn't drift, uncounted against the 3-per-25-min budget — the budget bounds arousal, and settling lowers it. Explicitly provisional: if a 25-minute recording shows the return turn reading as fussy, drop it for a silent timer instead (design plan, Phase 3) |
-| **Q3** | Is a drift that the user resolves in under ~10 seconds worth signalling at all, or is the signal itself the interruption? | EV12, A9 | Alexandre — from the first week's own data |
+| ~~Q2~~ | ~~Does the companion turn back after a return (EV13), and is that itself a movement against the budget?~~ **VOID 2026-09-16 (ADR-0057)** — there is no turning away, so there is no turning back. The provisional answer ("turns back, free") described `sw.js#updateCompanion`, which is now dead code | — | done |
+| ~~Q3~~ | ~~Is a drift that the user resolves in under ~10 seconds worth signalling at all, or is the signal itself the interruption?~~ **VOID 2026-09-16 — answered by removal, not by data.** ADR-0057 concluded the signal is the interruption in every case where the product might be wrong, and there was no way to report a false positive. Nothing is signalled at any duration | — | done |
+| **Q4** | **What does M7 measure now?** Opened 2026-09-16. It was the judge's precision *as shown to the user*; nothing is shown. Candidate: agreement between a batched verdict and the user's own taps (EV15), measured offline | EV11, EV15, K4 | Alexandre |
 
 ---
 

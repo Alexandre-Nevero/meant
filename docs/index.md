@@ -2,7 +2,7 @@
 
 **Project:** MEANT (`meant`)
 **Owner:** Alexandre Andrei Nevero
-**Last updated:** 2026-09-11 (design.md moved into docs/)
+**Last updated:** 2026-09-16 (design, toolkit, sitemap, flow, AGENTS reconciled against ADR-0052–0064)
 **Suite:** FMD Lite 1.1.0 (doc suite shape) — decision log and `AGENTS.md` adopted the newer
 private FMD factory's conventions (`docs/adr/`, ADR format) on 2026-09-10; the `*-intent.md`
 doc set itself was not migrated to that factory's template names, to avoid breaking the ~30
@@ -14,11 +14,16 @@ files that link them by current filename
 
 | Doc | File | Version | Status | Cycle | Updated |
 |---|---|---|---|---|---|
-| Idea Brief | [idea-intent.md](idea-intent.md) | 0.2c | Draft | 1 | 2026-09-11 |
-| PRD | [prd-intent.md](prd-intent.md) | 0.2c | Draft | 1 | 2026-09-11 |
-| Sitemap | [sitemap-intent.md](sitemap-intent.md) | 0.2c | Draft | 1 | 2026-09-11 |
-| User Flow | [flow-intent.md](flow-intent.md) | 0.2c | Draft | 1 | 2026-09-11 |
-| SDD | [sdd-intent.md](sdd-intent.md) | 0.2c | Draft | 1 | 2026-09-11 |
+| Idea Brief | [idea-intent.md](idea-intent.md) | 0.3 | Draft | 1 | 2026-09-16 |
+| PRD | [prd-intent.md](prd-intent.md) | 0.3a | Draft | 1 | 2026-09-16 |
+| Sitemap | [sitemap-intent.md](sitemap-intent.md) | 0.3 | Draft | 1 | 2026-09-16 |
+| User Flow | [flow-intent.md](flow-intent.md) | 0.3 | Draft | 1 | 2026-09-16 |
+| SDD | [sdd-intent.md](sdd-intent.md) | 0.3a | Draft | 1 | 2026-09-16 |
+
+**The version column was wrong on 2026-09-15 and is corrected here.** Amendment 0.3 landed in the
+PRD, SDD, IDEA, sitemap and flow that day; this table still read 0.2c/2026-09-11, so the registry
+said "reconciled" about documents that were not. The 0.3a suffixes mark the 2026-09-16 second pass,
+which applied those same decisions where the first pass had missed them.
 
 ### 1.1 Spawned documents
 
@@ -75,9 +80,9 @@ files that link them by current filename
 | `../apexhuman.md` | **Course and delivery context (new 2026-08-28).** Who the reference product is for, the two Apex Human delivery shapes, the honest 4–8 hour student budget, and the three-tier rule that assigns every part of the build. **It replaces the "four hours, one builder" constraint that `build-intent.md` has been silently exporting to every other document** |
 | `PRODUCT.md` | Product context for design tooling, derived from these docs |
 | `docs/design-toolkit.md` | The committed visual world as a specification. **Restored 2026-09-01 (D22)** — `design/tokens.css` and `design/canvas/` exist, the class contract is implemented. Superseded by `docs/design.md` as the read-first index over this file, `tokens.css`, and the canvas |
-| `docs/design.md` | **Read-first index (2026-09-01+, moved into `docs/` 2026-09-11 — was at repo root) over `design/canvas/`, `design/tokens.css`, and `docs/design-toolkit.md`** — the accessibility contrast checks and the class-contract quick reference live only here |
+| `docs/design.md` | **Read-first index (2026-09-01+, moved into `docs/` 2026-09-11 — was at repo root) over `design/canvas/`, `design/tokens.css`, and `docs/design-toolkit.md`** — the accessibility contrast checks and the class-contract quick reference live only here. **Reconciled 2026-09-16 against ADR-0052–0064**, which the 2026-09-15 pass had skipped: §4, §6, §7 and §8 were describing a companion that signals drift |
 | `docs/adr/` | **Decision changelog (2026-09-10).** Append-only, one file per decision; supersedes §6 below as the point of entry for new decisions — see `docs/adr/README.md` |
-| `design/canvas/` | **The seven artboards, and visual truth.** They outrank `design-toolkit.md` and `tokens.css` when they disagree |
+| `design/canvas/` | **The seven artboards, and visual truth.** They outrank `design-toolkit.md` and `tokens.css` when they disagree. **Gap recorded 2026-09-16: the app shell has no artboard.** Seven exist and none shows navigation, so on that one surface a `.tsx` file outranks the canvas by default rather than by decision (sitemap Q4) |
 | `docs/superpowers/handoffs/2026-09-16-awareness-turn.md` | **Session handoff.** Where the branch stands, the one unresolved thread (an unexplained sign-out on a branch that added a new auth call site), the traps that waste a fresh reader's time, and the decisions waiting on the owner. A pointer document — it references the ADRs, plans and issues rather than restating them |
 | `docs/superpowers/plans/2026-09-15-ui-refinement.md` | **UI refinement plan (#43–#49).** Synthesized from a two-assessment `impeccable` critique — design review and mechanical evidence, run as isolated sub-agents. Seven tasks, every one a deletion, a guard, or restoring something an artboard already specifies. **Records that the detector's `[]` was not evidence of quality** — it was sanity-checked against a file full of anti-patterns and still returned `[]`, because most rules skip non-full-page `.tsx`. Also names three findings that are the owner's decisions, and two that are already-reasoned positions and must not be "fixed" |
 | `docs/superpowers/plans/2026-09-15-foundations.md` | **The near-term plan. Week 2 builds (#18, #28, #25, #40); Week 3 verifies #8-#13 then builds (#20, #19).** Stops the e2e suite writing to production, makes M9/K6 computable before the first model call, accumulates memory from the companion's labels, and builds PRD-F15's two erasure levels. Task 5 opens with a decision gate: `companionEnabled` lives in `chrome.storage.local` and a web page cannot write there |
@@ -96,7 +101,9 @@ files that link them by current filename
 | idea-intent.md | 2026-09-11 | 0.2c voided A7/its kill criterion (plan cut) and answered Q5 (companion placement). C7 and C17's ARR figure remain unverified. C5 is retained but explicitly no longer load-bearing |
 | prd-intent.md | **2026-09-15** | **Amendment 0.3 absorbed ADR-0052–0064.** Q4, Q7 and Q9 are now **void** (not answered — the companion no longer signals and the judge reads no page text), and **Q12 is resolved**. **Q5** (evidence threshold before a pattern may be stated) is the one that still blocks a shipping decision, and it now gates the dashboard contrast line |
 | sdd-intent.md | 2026-09-11 | 0.2c corrected V4, §8.2's abuse case, answered Q3, fixed SDD-C7/C8. **§3.1's schema is a known, flagged FAIL — it describes the judge's target shape, not the richer mechanical schema that actually shipped (D26-D41).** Needs its own pass against `lib/migrations/*.sql` |
-| sitemap-intent.md / flow-intent.md | 2026-09-11 | 0.2c corrected S9 (companion) and struck the cut plan's events (EV8-EV10, EV14, E12) |
+| sitemap-intent.md | **2026-09-16** | **Amendment 0.3.** S9 rewritten (the tap means the *opposite* of what the doc said), **S10 `/setup` and S11 `/sign-in` added** — both shipped weeks earlier and absent from an inventory that called itself complete — plus the app shell as chrome. §4's route table now marks built vs specified: six routes in it did not exist, five that exist were not in it. **Q4 opened: does the shell need an artboard?** |
+| flow-intent.md | **2026-09-16** | **Amendment 0.3.** EV12/EV13 **void** (nothing is signalled), EV15 becomes `visit_labelled` (ADR-0058), Q2/Q3 void, E11 void. **M7 has no definition left** — it measured a live signal's precision and there is no live signal; Q4 opened for its replacement |
+| **docs/design.md · docs/design-toolkit.md** | **2026-09-16** | **Not reconciled by the 2026-09-15 pass at all** — both still specified the companion's drift states, and the toolkit still specified the *gaze* design retired in September. Corrected in place. **Two open owner decisions surfaced and deliberately not resolved: is MEANT light or dark (#51 — the dark palette ships from the OS and `data-theme` has no writer), and is the class contract 13 or 15 (#51)** |
 | **Code** | **not reconciled** | **The 2026-09-11 audit found the reverse problem too: real shipped code (D26-D42's mechanical judgment/memory system) that the docs didn't know about at all. The gap runs both ways now — docs describing unbuilt things, and code the docs never mentioned. Whatever governance let a whole plan's Task 20 (write the decisions down) go unexecuted for a week is the actual root cause and hasn't been fixed, only this one instance of its damage** |
 | build-intent.md / build.md | 2026-08-18 | Intentionally frozen as history (§1.1) |
 
@@ -123,7 +130,7 @@ files that link them by current filename
 | D5 | Calibration and rewards cut from v1 | 2026-08-18 | IDEA §4 — **superseded at 0.2.** Calibration returns as memory (PRD-F11); reward returns only within I2 |
 | D6 | Extension authenticates by one-time pairing code, not OAuth | 2026-08-18 | SDD §4.2 |
 | D7 | Stack: Vercel + Neon Postgres + Clerk | 2026-08-18 | SDD §4.3 — **amended by D21** |
-| D8 | Hostname only — never full URLs or page titles | 2026-08-18 | SDD V5 — **partially superseded by D17.** Hostname-only still governs *storage*; titles and text may now be read in flight and stored nowhere |
+| D8 | Hostname only — never full URLs or page titles | 2026-08-18 | SDD V5 — **partially superseded by D17, then re-tightened by D59/D61 (2026-09-15).** Hostname-only still governs *server-side storage*. Titles and text are **never read at all** (ADR-0061); full paths live **on the device only** (ADR-0059) |
 | D9 | Block page is a redirect rule, so host permissions are declared per blocklist domain | 2026-08-18 | SDD V4 (amended), build.md §7.4 |
 | **D10** | **Primary user moves from employed corporate administrator to self-employed non-technical browser worker.** The old persona had no purchasing authority, and the only party with budget was the employer — whom IDEA §9 forbids serving, permanently. The product had designed itself into having no legal buyer | 2026-08-28 | IDEA §1, PRD §2 |
 | **D11** | **The session gains a generated plan of 1–5 steps,** produced after the session starts so nothing waits on it. Gives the judge something concrete to judge against, and sub-goals help most at initiation (C13, C14) | 2026-08-28 | PRD-F8 |
@@ -131,7 +138,7 @@ files that link them by current filename
 | **D13** | **One creature, two registers: witness during the session, coach in the review.** Splitting them would cost the continuity that makes memory feel like a relationship and the authority that makes advice land. I3 resolves the contradiction — the coach answers to the evidence, never to the answer | 2026-08-28 | PRD-F10, F12 |
 | **D14** | **Inference runs in the cloud via Vercel AI Gateway; on-device Gemini Nano is deferred as a v2 upgrade.** Two code paths is the thing that stops a build shipping, judgment quality matters more than judgment location, and the hardware floor (22GB disk, 16GB RAM) excludes a real share of this persona's laptops | 2026-08-28 | SDD §4.3, §6; C8 |
 | **D15** | **Direct consumer subscription. Free is mechanical (block, review, ledger); paid is the half that knows you.** The paywall sits exactly where the inference cost sits, which is the only pricing model that survives M9 | 2026-08-28 | PRD §7, PRD Q6 |
-| **D16** | **The judge reads in two tiers.** `activeTab` cannot read page content on a tab change (C19), so T-A judges on hostname plus title with today's manifest, and T-B adds a text extract behind `optional_host_permissions` requested at runtime. `<all_urls>` never appears at install | 2026-08-28 | SDD §5.2, V4 |
+| ~~**D16**~~ | **SUPERSEDED 2026-09-15 by D61/ADR-0061 — the two tiers are gone and no page text or title is ever read.** ~~**The judge reads in two tiers.**~~ `activeTab` cannot read page content on a tab change (C19), so T-A judges on hostname plus title with today's manifest, and T-B adds a text extract behind `optional_host_permissions` requested at runtime. `<all_urls>` never appears at install | 2026-08-28 | SDD §5.2, V4 |
 | **D17** | **V5 is amended from "never send" to "never store."** The old rule cannot survive cloud judging; deleting it would have removed the product's only structural defence against becoming surveillance. The replacement is narrower in what it permits and stronger in what it guarantees | 2026-08-28 | SDD §5.1 |
 | **D19** | **The teaching tiers are an architectural rule, not a lesson plan (I9).** A beginner rebuilds a subset and pastes the rest, so judge, companion, memory and coach must each detach without taking the product down. If the pieces do not come apart, the manual cannot exist | 2026-08-28 | PRD I9, PRD §9 |
 | **D20** | **Two gaps stop being excusable now the clock is gone:** the judge's eval set (PRD-F14, without which M7 and K4 are unmeasurable) and data deletion (PRD-F15, an obligation memory created for itself) | 2026-08-28 | PRD §3, `../apexhuman.md` §8 |
