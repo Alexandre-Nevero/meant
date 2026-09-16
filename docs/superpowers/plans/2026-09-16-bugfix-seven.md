@@ -1722,7 +1722,10 @@ test('every auth input has a real label, and the two forms are distinguishable',
   const page = await context.newPage()
   await page.goto('/sign-in')
 
-  expect(await page.locator('input').count()).toBe(5)
+  // :not([type="hidden"]) is load-bearing. React 19 injects $ACTION_* hidden inputs into every
+  // form bound to a server action (react-dom's server renderer emits them for progressive
+  // enhancement), so a raw `input` count is 5 visible plus 4 hidden per form and never equals 5.
+  expect(await page.locator('input:not([type="hidden"])').count()).toBe(5)
   expect(await page.locator('label').count()).toBe(5)
 
   const signIn = page.getByRole('form', { name: 'Sign in' })
