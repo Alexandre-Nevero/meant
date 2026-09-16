@@ -222,6 +222,11 @@ test('the review stages the question at the bottom of the fold, and keeps rows t
 test('the review does not scroll sideways at 390px', async ({ context, endedSession }) => {
   const sessionId = await endedSession({
     intention: 'a deliberately long intention sentence for the narrow breakpoint',
+    // Without a row, .m-review-rows is empty and no .m-row grid is ever laid out — the
+    // overflow assertion below would then turn on the width of one word, not on the
+    // @media (max-width: 700px) rule this test exists to pin. Same one-row shape the
+    // staging test above uses.
+    events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 90, at: new Date().toISOString() }],
   })
 
   const page = await context.newPage()
@@ -229,4 +234,10 @@ test('the review does not scroll sideways at 390px', async ({ context, endedSess
   await page.goto(`/review/${sessionId}`)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
   expect(overflow).toBeLessThanOrEqual(0)
+
+  const surface = page.locator('[data-surface="review"]')
+  await expect(surface.locator('.m-row')).toHaveCount(1)
+  // Names the rule directly: without the @media (max-width: 700px) block, the surface's
+  // padding stays 80px and this would read '80px', not '24px'.
+  expect(await surface.evaluate((el) => getComputedStyle(el).paddingLeft)).toBe('24px')
 })

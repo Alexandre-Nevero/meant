@@ -102,6 +102,9 @@ export const test = base.extend<Fixtures>({
         if (res.status() !== 200) throw new Error(`event injection failed: ${res.status()}`)
       }
       await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+      // Every call site opens its own page to look at the result — nothing reads this one
+      // again. Left open, it leaked one page (and one real auth user's session) per call.
+      await page.close()
       return sessionId
     })
   },
