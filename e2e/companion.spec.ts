@@ -20,6 +20,9 @@ const HOST_SELECTOR = '[data-meant-companion="true"]'
 // page while a session runs (confirms real <all_urls> injection, not just the one
 // page it happened to load into), persists its dragged position, and reflects state
 // via ring presence/style, never color.
+/** The shape extension/lib/visit-label.js writes into session.labels (ADR-0058, ADR-0062). */
+type VisitLabel = { domain: string; label: string; at: number }
+
 test.describe('floating companion', () => {
   test('appears on arbitrary pages while a session runs, gone when it ends', async ({ context, extensionId, freshAccount }) => {
     const setupPage = await context.newPage()
@@ -111,119 +114,108 @@ test.describe('floating companion', () => {
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
-  test('state is told by ring presence/style, and a return gets one pulse', async ({ context, extensionId, freshAccount }) => {
+  // ADR-0057 removed the live drift signal. Three tests were deleted here on 2026-09-15:
+  //   - 'state is told by ring presence/style, and a return gets one pulse'
+  //   - 'drifting to a known-distraction domain ... actually flips the ring to drift'
+  //   - 'a known-distraction domain the user DID block this session never reads as drift'
+  // All three asserted a dashed ring and a drift->focus return pulse. Neither exists now:
+  // the ring is solid for the whole session and I2 is absolute again, with no named
+  // exception. The test below asserts the ABSENCE, which is what we now depend on.
+  //
+  // The 0.6s return-pulse machinery is still in companion-overlay.js, unreferenced by
+  // state: ADR-0058 reuses that exact motion as the receipt for the one-tap label.
+
+  test('tapping the companion records a per-visit label and plays one receipt', async ({ context, extensionId, freshAccount }) => {
+    // ADR-0058. The companion stopped telling the user things and became how the user tells
+    // it things. A self-report cannot be a false positive, which is the whole reason this
+    // replaces the drift signal rather than repairing it.
     const setupPage = await context.newPage()
     await freshAccount(setupPage)
     await pairAndStart(setupPage, extensionId)
 
     const page = await context.newPage()
     await page.goto('https://example.com')
-    // Playwright pierces open shadow roots transparently — no special syntax needed.
     const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
+    await expect(dotWrap).toBeVisible()
 
-    await expect(dotWrap).toHaveAttribute('data-state', 'focus')
+    await page.locator(HOST_SELECTOR).locator('.dot').click()
 
-    await setupPage.evaluate(() => chrome.storage.local.set({ companionState: 'drifting' }))
-    await expect(dotWrap).toHaveAttribute('data-state', 'drift', { timeout: 2_000 })
-
-    await setupPage.evaluate(() => chrome.storage.local.set({ companionState: 'settled' }))
+    // The receipt: ADR-0026's freed ring-collapse, reused. A receipt, not a celebration —
+    // I2 forbids positive feedback, not telling the user their deliberate action registered.
     await expect(dotWrap).toHaveAttribute('data-returning', 'true', { timeout: 2_000 })
-    await expect(dotWrap).toHaveAttribute('data-state', 'focus')
     await expect(dotWrap).toHaveAttribute('data-returning', 'false', { timeout: 2_000 })
 
+    const [sw] = context.serviceWorkers()
+    const labels = await sw.evaluate(
+      async (): Promise<VisitLabel[]> => {
+        // chrome.storage.local.get is typed as { [key: string]: any } but the nested value
+        // still widens to {}, so name the shape here rather than at each property access.
+        const stored = (await chrome.storage.local.get('session')) as { session?: { labels?: VisitLabel[] } }
+        return stored.session?.labels ?? []
+      },
+    )
+    expect(labels).toHaveLength(1)
+    expect(labels[0].label).toBe('distract')
+    expect(labels[0].domain).toBe('example.com')
+
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+    await page.close()
   })
 
-  test('drifting to a known-distraction domain not on this session\'s own blocklist actually flips the ring to drift', async ({ context, extensionId, freshAccount }) => {
+  test('dragging the companion does not file a label', async ({ context, extensionId, freshAccount }) => {
+    // The dot is draggable, so without the 4px/500ms tap guard every reposition would also
+    // report "this isn't the work".
     const setupPage = await context.newPage()
     await freshAccount(setupPage)
-    // Deliberately don't block youtube.com this session — isKnownDistraction() should still
-    // flag it (it's in BLOCKLISTS' 'video' category), and it's not in this session's own
-    // blockedDomains, so it should read as drift.
     await pairAndStart(setupPage, extensionId)
-
-    // Push startedAt back past DRIFT_GRACE_MS (60s) without a real wait.
-    await setupPage.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        chrome.storage.local.get('session', ({ session }: any) => {
-          session.startedAt = new Date(Date.now() - 90_000).toISOString()
-          chrome.storage.local.set({ session }, () => resolve())
-        })
-      })
-    })
 
     const page = await context.newPage()
     await page.goto('https://example.com')
-    const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
-    await expect(dotWrap).toHaveAttribute('data-state', 'focus')
+    const dot = page.locator(HOST_SELECTOR).locator('.dot')
+    await expect(dot).toBeVisible()
 
-    // A real navigation to a known-distraction domain, not a manual companionState write —
-    // this is what actually exercises updateCompanion's own call site via
-    // chrome.tabs.onUpdated. Routed locally instead of hitting the real youtube.com:
-    // a genuine request to it resets under this suite's repeated automated traffic
-    // (confirmed: consistent net::ERR_CONNECTION_RESET), and when a top-level
-    // navigation genuinely fails, Chrome replaces the document with its own error
-    // interstitial — destroying the companion content script this test asserts on,
-    // not just leaving the previous page in place. Fulfilling the request locally
-    // makes the navigation (and the URL change chrome.tabs.onUpdated sees) succeed
-    // deterministically, with no real network dependency at all.
-    await page.route('https://youtube.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }))
-    await page.goto('https://youtube.com')
-    await expect(dotWrap).toHaveAttribute('data-state', 'drift', { timeout: 3_000 })
+    // boundingBox() returns null for an element that is not rendered; assert rather than
+    // non-null-assert, so a missing companion fails with a useful message instead of a
+    // TypeError about reading x of null.
+    const box = await dot.boundingBox()
+    expect(box, 'the companion dot has no bounding box - it did not render').not.toBeNull()
+    const { x, y, width, height } = box!
+    await page.mouse.move(x + width / 2, y + height / 2)
+    await page.mouse.down()
+    await page.mouse.move(x - 120, y - 80, { steps: 10 })
+    await page.mouse.up()
+
+    const [sw] = context.serviceWorkers()
+    const labels = await sw.evaluate(
+      async (): Promise<VisitLabel[]> => {
+        // chrome.storage.local.get is typed as { [key: string]: any } but the nested value
+        // still widens to {}, so name the shape here rather than at each property access.
+        const stored = (await chrome.storage.local.get('session')) as { session?: { labels?: VisitLabel[] } }
+        return stored.session?.labels ?? []
+      },
+    )
+    expect(labels).toEqual([])
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+    await page.close()
   })
 
-  test('a known-distraction domain the user DID block this session never reads as drift', async ({ context, extensionId, freshAccount }) => {
+  test('the companion never enters a drift state, even on a known-distraction domain', async ({ context, extensionId, freshAccount }) => {
+    // youtube.com is in the built-in video list, so this is the exact case that used to
+    // flip the ring to drift when it was not on this session's own blocklist.
     const setupPage = await context.newPage()
     await freshAccount(setupPage)
-    // NOT using this suite's real "add a blocked domain + Start" UI flow here: doing so
-    // installs a real declarativeNetRequest redirect rule (Case D), and a DNR redirect
-    // intercepts the navigation before the tab's URL ever updates to the real domain —
-    // confirmed by instrumenting chrome.tabs.onUpdated directly: for a DNR-redirected
-    // domain, the listener's changeInfo.url goes straight from the previous page to the
-    // blocked.html redirect URL, never showing 'https://youtube.com/' at all. So a real
-    // end-to-end block would make `nextDomain` inside updateCompanion always resolve to
-    // null (blocked.html is chrome-extension://, filtered by Task 1's safeHostname) —
-    // never actually reaching the session.blockedDomains membership check this test
-    // exists to cover. Setting session.blockedDomains directly isolates exactly the field
-    // the fix touches, the same storage-manipulation technique this suite already uses
-    // for startedAt (see the sibling drift test above), while still driving the ring via
-    // a real navigation → chrome.tabs.onUpdated → transition() → updateCompanion() call
-    // chain, not a manual companionState write.
     await pairAndStart(setupPage, extensionId)
-    await setupPage.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        chrome.storage.local.get('session', ({ session }: any) => {
-          session.startedAt = new Date(Date.now() - 90_000).toISOString() // past DRIFT_GRACE_MS (60s)
-          session.blockedDomains = ['youtube.com']
-          chrome.storage.local.set({ session }, () => resolve())
-        })
-      })
-    })
 
     const page = await context.newPage()
-    await page.goto('https://example.com')
+    await page.goto('https://www.youtube.com/')
+    await page.waitForTimeout(600)
+
     const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
     await expect(dotWrap).toHaveAttribute('data-state', 'focus')
 
-    // A real navigation (no DNR rule actually installed for it here) — this is what
-    // exercises updateCompanion's session.blockedDomains check on a domain that IS a
-    // known distraction category member (BLOCKLISTS' 'video' category) but that this
-    // session's own blockedDomains says is already handled, not drift. Routed locally
-    // for the same reason as the sibling drift test above: a real request to
-    // youtube.com resets under this suite's repeated automated traffic, and Chrome
-    // replaces the document (destroying the companion) rather than leaving the
-    // previous page in place — routing removes the real-network dependency entirely.
-    await page.route('https://youtube.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }))
-    await page.goto('https://youtube.com')
-    // This is a negative assertion (drift must NOT fire) — a bare expect() would pass
-    // instantly on the pre-navigation 'focus' value without giving updateCompanion's
-    // async storage write a chance to run, so give it real time before checking.
-    await page.waitForTimeout(500)
-    await expect(dotWrap).toHaveAttribute('data-state', 'focus') // still focus, not drift
-
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+    await page.close()
   })
 
   test('the dot core is a fixed contrast-safe color, not one that flips with system dark mode', async ({ context, extensionId, freshAccount }) => {

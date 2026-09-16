@@ -1,0 +1,8 @@
+# ADR-0048 — PRD-F8 (the AI-generated task plan) is cut, not deferred
+
+- **Date:** 2026-09-04
+- **Status:** Accepted
+- **Context:** PRD-F8 was a Must-have: 1-5 steps generated from the intention after session start, meant to (1) give a sense of progress and (2) give the judge something concrete to judge against. Both reasons turned out not to require it.
+- **Decision:** Cut entirely, not deferred. Reasoning, in order: (1) the live per-domain band and the cycle read give a sense of progress with no model call, no table, and no checklist — better than steps for the stated purpose. (2) I8 already keeps checked steps out of the ledger because sub-goal completion "could breed self-congratulation" — the PRD itself is wary of steps-as-progress. (3) Using step-completion to give the judge something to judge against would require inferring which step the user is on from their tabs — circular, and a new source of wrong calls inside the exact feature meant to reduce them. The judge instead judges the **sentence** directly.
+- **Consequences:** Takes `US-07`, `PRD-F10`'s task-marking behavior, `EV8`-`EV10`, `M6`, and the `task` table down with it (confirmed 2026-09-11: no `task` table exists in `lib/migrations/`). This decision sat unrecorded in a plan file for a week — `docs/prd-intent.md`, `docs/flow-intent.md`, and `PRODUCT.md` all still described the plan as live until a 2026-09-11 doc audit corrected them (see PRD amendment 0.2c). Steps may return later purely as extra prompt context for a real judge, but must never gate it.
+- **Source:** `docs/superpowers/plans/2026-09-04-drift-and-cycles.md` ("D38")

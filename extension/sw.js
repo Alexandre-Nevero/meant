@@ -1,6 +1,8 @@
 import { post } from './api.js'
 import { BLOCKLISTS } from './blocklists.js'
 import { advance, emptySlice, idleMode, IDLE_DETECTION_S } from './lib/attribution.js'
+import { appendVisit, purgeExpired } from './lib/path-log.js'
+import { labelCurrentVisit, labelsToEvents } from './lib/visit-label.js'
 
 const TICK = 'meant-tick'
 const RULE_ID_BASE = 1000
@@ -104,11 +106,15 @@ function safeHostname(url) {
   }
 }
 
-async function activeDomain() {
+/** The active tab's bare hostname AND its full URL. The URL never leaves the device
+ *  (ADR-0059) — it is handed to transition() only so the on-device path log can record
+ *  which part of a site this was. `event.domain` still receives the hostname alone. */
+async function activeTarget() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-  if (!tab?.url) return null
-  return safeHostname(tab.url)
+  if (!tab?.url) return { domain: null, url: null }
+  return { domain: safeHostname(tab.url), url: tab.url }
 }
+
 
 export async function startSession({ intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle }) {
   const existing = await getSession()
@@ -125,6 +131,7 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
       blockedDomains, blocklists, workSites, cycle,
       slice: emptySlice(now), dwellSince: now, visitSeq: 0,
       ruleIds: [], signals: [], corrected: [], judged: {},
+      labels: [],                                   // ADR-0058: the companion's one-tap labels
       tally: { attention: {}, away: 0, break: 0 },
     },
     companionState: 'settled',
@@ -133,8 +140,10 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
   // Seed the slice with whatever tab is ALREADY focused right now — without this, an
   // already-active tab gets zero attention time until some other event (tab switch,
   // URL update, window focus change, or a 30s alarm tick) happens to fire next, which
-  // may never happen if the user just stays on the same tab.
-  await transition({ mode: 'attention', domain: await activeDomain() })
+  // may never happen if the user just stays on the same tab. The url goes too (ADR-0059),
+  // or the very first page of every session would be the one page with no path recorded.
+  const seed = await activeTarget()
+  await transition({ mode: 'attention', domain: seed.domain, url: seed.url })
   try {
     const { ruleIds, domains } = await installRules(blockedDomains)
     const s = await getSession()
@@ -199,55 +208,17 @@ async function enqueue(session, event) {
   await chrome.storage.local.set({ queue })
 }
 
-const DRIFT_GRACE_MS = 60_000
-const DRIFT_WINDOW_MS = 25 * 60_000
-const DRIFT_BUDGET = 3
-
-function isKnownDistraction(domain) {
-  return domain != null && Object.values(BLOCKLISTS).some((list) => list.includes(domain))
-}
-
-// The companion, without a model: a visit to a domain from any of the known distraction
-// categories (design/blocklists.js) that isn't even one the user chose to block this
-// session is drift they'd recognize as drift. No page content, no permission, no
-// inference — this is the honest non-AI signal the judge seam (I9) will later replace.
-async function updateCompanion(session, nextDomain) {
-  const { companionEnabled } = await chrome.storage.local.get('companionEnabled')
-  if (companionEnabled === false) return
-
-  const now = Date.now()
-  const withinGrace = now - new Date(session.startedAt).getTime() < DRIFT_GRACE_MS
-  // session.blockedDomains is already a flat array of resolved domain strings (set by
-  // startSession) — check membership directly, not via a category-name resolver.
-  const drifting = !withinGrace && isKnownDistraction(nextDomain) && !(session.blockedDomains ?? []).includes(nextDomain)
-
-  const { companionState } = await chrome.storage.local.get('companionState')
-
-  if (!drifting) {
-    if (companionState === 'drifting') await chrome.storage.local.set({ companionState: 'settled' })
-    return
-  }
-  if (companionState === 'drifting') return // already signalled; don't re-cost the budget
-
-  let { driftCount = 0, driftWindowStart = now } = session
-  if (now - driftWindowStart > DRIFT_WINDOW_MS) {
-    driftCount = 0
-    driftWindowStart = now
-  }
-  if (driftCount >= DRIFT_BUDGET) return // over budget this window — companion stays settled
-
-  const stored = await getSession()
-  if (stored) {
-    await chrome.storage.local.set({
-      session: { ...stored, driftCount: driftCount + 1, driftWindowStart },
-      companionState: 'drifting',
-    })
-  }
-}
-
-async function transition({ mode, domain, at = Date.now() }) {
+async function transition({ mode, domain, url = null, at = Date.now() }) {
   const session = await getSession()
   if (!session) return
+
+  // ADR-0059: the path goes to chrome.storage.local and nowhere else. Deliberately BEFORE
+  // the early returns below so a visit is recorded even on a tick that produces no event.
+  if (mode === 'attention' && url) {
+    const { pathLog } = await chrome.storage.local.get('pathLog')
+    const next = appendVisit(pathLog, { url, at, sessionId: session.sessionId })
+    if (next !== pathLog) await chrome.storage.local.set({ pathLog: next })
+  }
   const prior = session.slice ?? emptySlice(new Date(session.startedAt).getTime())
   const { events, state } = advance(prior, { at, mode, domain })
   // Known limitation: this read-modify-write is a lost-update race if two transition() calls
@@ -267,7 +238,6 @@ async function transition({ mode, domain, at = Date.now() }) {
   const dwellSince = state.domain && state.domain === prior.domain ? (session.dwellSince ?? at) : at
   const next = { ...session, slice: state, dwellSince, tally }
   await chrome.storage.local.set({ session: next })
-  await updateCompanion(next, state.domain)
   return next
 }
 
@@ -277,16 +247,18 @@ chrome.idle.onStateChanged.addListener(async (state) => {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
   const mode = idleMode(state, Boolean(tab?.audible))
   if (mode === null) return                       // D27: idle but still playing. Step 3b re-checks.
-  await transition({ mode, domain: mode === 'attention' ? await activeDomain() : null })
+  const target = mode === 'attention' ? await activeTarget() : { domain: null, url: null }
+  await transition({ mode, domain: target.domain, url: target.url })
 })
 
 chrome.tabs.onActivated.addListener(async () => {
-  await transition({ mode: 'attention', domain: await activeDomain() })
+  const { domain, url } = await activeTarget()
+  await transition({ mode: 'attention', domain, url })
 })
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!changeInfo.url || !tab.active) return
-  await transition({ mode: 'attention', domain: safeHostname(changeInfo.url) })
+  await transition({ mode: 'attention', domain: safeHostname(changeInfo.url), url: changeInfo.url })
 })
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
@@ -296,7 +268,8 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     await transition({ mode: 'away', domain: null })
     return
   }
-  await transition({ mode: 'attention', domain: await activeDomain() })
+  const { domain, url } = await activeTarget()
+  await transition({ mode: 'attention', domain, url })
 })
 
 export async function flush() {
@@ -338,6 +311,15 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
   await flush()
 
+  // ADR-0059's TTL. The only thing bounding the on-device path log for a user who never
+  // runs an analysis, which is every free-tier user by design. Write only when something
+  // actually expired, so the common case costs one read and no write.
+  const { pathLog } = await chrome.storage.local.get('pathLog')
+  if (Array.isArray(pathLog) && pathLog.length > 0) {
+    const kept = purgeExpired(pathLog, Date.now())
+    if (kept.length !== pathLog.length) await chrome.storage.local.set({ pathLog: kept })
+  }
+
   // D27's escape hatch needs a re-check, because chrome.idle will not fire again while the
   // system stays idle. Bounded by the alarm period, which satisfies N1 (< 30s loss per gap).
   const idle = await chrome.idle.queryState(IDLE_DETECTION_S)
@@ -355,12 +337,35 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 })
 
+/** ADR-0058. The companion's one tap: "this isn't the work."
+ *
+ *  A self-report cannot be a false positive, which is why this replaces the live drift
+ *  signal ADR-0057 removed rather than fixing it. The label lands on the CURRENT VISIT
+ *  (ADR-0062 — pencil, not stone); memory forms only when it recurs past
+ *  MEMORY_MIN_EVIDENCE / MEMORY_MIN_AGREEMENT, never at n=1. */
+async function recordNotTheWork() {
+  const session = await getSession()
+  if (!session) return { ok: false, reason: 'no-session' }
+
+  const domain = (await activeTarget()).domain
+  const next = labelCurrentVisit(session, domain, Date.now())
+  // Unchanged means the tap was a no-op — no domain, or a duplicate inside the tap window.
+  // Don't write, and don't enqueue an event the server would have to de-duplicate.
+  if (next === session) return { ok: true, recorded: false }
+
+  await chrome.storage.local.set({ session: next })
+  const [event] = labelsToEvents(next.labels.slice(-1))
+  await enqueue(next, event)
+  return { ok: true, recorded: true, domain }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   ;(async () => {
     if (message?.type === 'start') {
       const blockedDomains = message.blockedDomains ?? message.blocklist ?? []
       sendResponse(await startSession({ ...message, blockedDomains }))
     } else if (message?.type === 'stop') sendResponse(await endSession('stopped'))
+    else if (message?.type === 'not-the-work') sendResponse(await recordNotTheWork())
     else sendResponse({ ok: false })
   })()
   return true
@@ -393,6 +398,14 @@ chrome.runtime.onInstalled.addListener(flush)
 // walks every open http(s) tab and re-injects the same content script chrome would have run
 // declaratively, recovering it without the user doing anything.
 async function reinjectCompanion() {
+  // I9's companion seam. This check used to live in updateCompanion(), which ADR-0057
+  // deleted — and it was that function's ONLY reader, so without moving it here the
+  // companion would have lost its off-switch entirely. The switch belongs at the
+  // injection point anyway: turning the companion off should mean not mounting it,
+  // not mounting a companion that declines to react.
+  const { companionEnabled } = await chrome.storage.local.get('companionEnabled')
+  if (companionEnabled === false) return
+
   const tabs = await chrome.tabs.query({})
   for (const tab of tabs) {
     if (!tab.id || !tab.url) continue

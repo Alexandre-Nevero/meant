@@ -5,9 +5,15 @@
 **Version:** 0.2
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
-**Last reconciled:** 2026-08-28
+**Last reconciled:** 2026-09-11
 **Upstream:** [prd-intent.md](prd-intent.md)
 
+> **Amendment 0.2c (2026-09-11).** S9's row described the retired gaze design and the cut
+> task plan (PRD-F8, D38/ADR-0048) — corrected below to the shipped Orbit companion (ADR-0026),
+> which renders as a content-script overlay, not a docked or floating browser surface (SDD Q3,
+> resolved). S4/S6's "gains the plan" note below is historical — the plan those amendments
+> added was cut three weeks later.
+>
 > **Amendment 0.2 (2026-08-28).** One new surface (S9, the companion), two amended (S4 gains the plan and the coach; S6 gains the plan), and a disclosure surface that did not exist because the product did not previously read anything.
 
 ---
@@ -37,7 +43,7 @@ They meet at exactly two points: the pairing code, and the review tab the extens
 | S6 | Popup — session running | Extension | Current intention, the plan once it arrives, elapsed time, Stop | PRD-F1, F8 |
 | S7 | Popup — unpaired | Extension | Field for the pairing code and a link to S2 | PRD-F6 |
 | S8 | Block page | Extension | "You said you would: {intention}" plus time remaining | PRD-F2 |
-| **S9** | **Companion** | **Extension** | **Presence during a session. Faces the work; turns on drift. Shows the plan with its silent marks. One tap un-marks a task or says "that was work." Tapping the companion itself reveals what it reads and where it goes (V5.7)** | **PRD-F8, F9, F10** |
+| **S9** | **Companion** | **Extension** | **Presence during a session — a 28px orbital dot, content-script overlay at `<all_urls>` (not docked, not PiP). Solid ring while settled, dashed while drifting. No plan, no steps to mark (PRD-F8 cut) — one tap says "that was work." Tapping the companion itself reveals what it reads and where it goes (V5.7)** | **PRD-F9, F10** |
 
 **Amended in 0.2:**
 - **S4** now shows the plan and which steps moved, the drift-and-return count, the coach's observations, and suggestions that each carry a button. It is also the only surface where the user may type to the coach.

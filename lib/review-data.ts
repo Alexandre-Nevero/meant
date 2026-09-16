@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db'
 import { EXTENSION_ID_SHAPE } from '@/lib/band'
+import { computeUnrecorded } from '@/lib/session-time'
 
 export type ReviewRow = { kind: string; domain: string | null; seconds: number; hits: number }
 export type ReviewData = {
@@ -12,6 +13,8 @@ export type ReviewData = {
   blockedAttempts: number
   finished: number
   answered: number
+  /** Wall clock minus attention, away and break. ADR-0054: say what we did not see. */
+  unrecordedSeconds: number
 }
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -57,5 +60,6 @@ export async function getReviewData(sessionId: string, userId: string): Promise<
     blockedAttempts,
     finished: counts.finished,
     answered: counts.answered,
+    unrecordedSeconds: computeUnrecorded(session.started_at, session.ended_at, rows),
   }
 }

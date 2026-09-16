@@ -33,6 +33,14 @@ node ~/.agents/skills/impeccable/scripts/detect.mjs --viewport 390x844 <url>
 ~/.claude/skills/gstack/browse/dist/browse goto <url> && ... screenshot
 ```
 
+## Decisions — `docs/adr/` is the most up-to-date information here
+
+**ADR-0063.** Where an ADR and any other document disagree — PRD, SDD, IDEA, `PRODUCT.md`,
+`apexhuman.md`, this file — **the ADR is right and the other document is stale.** Say so, then
+reconcile; never silently pick one. Every change of decision is written as an ADR, one file per
+decision, append-only. **A decision not in `docs/adr/` has not been made.** An ADR records a
+decision already taken, never one that is proposed.
+
 ## Skill routing
 
 - Visual world, new surface, or a redesign → `/impeccable`

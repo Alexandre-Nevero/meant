@@ -403,6 +403,16 @@ a { color: inherit; text-decoration: none; }
   border-top: none;
   border-bottom: var(--m-stroke-hair) solid var(--m-rule);
 }
+/* .m-landing-header had NO rule at all, so the brand and the nav actions stacked instead
+ * of sitting at opposite ends — the class was referenced in app/page.tsx and defined
+ * nowhere. Fixing it here rather than in a separate pass, because the shell below reuses
+ * exactly this composition and the two must not drift. */
+[data-surface="landing"] .m-landing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
 [data-surface="landing"] .m-landing-brand { display: flex; align-items: center; gap: 12px; }
 [data-surface="landing"] .m-landing-wordmark {
   margin: 0;
@@ -603,4 +613,94 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .m-rise { transition: none; }
   .m-btn, .m-answer { transition: none; }
+}
+
+/* ---------- .m-shell — the app shell -------------------------------------------------
+ * Structural layout classes, on the same footing as .m-landing-* (docs/design.md §6:
+ * "Marketing layout classes are structural only, not part of the 13-class contract").
+ * The shell composes the contract's own primitives — .m-mark for the brand, .m-meta for
+ * every link — and adds no new visual language.
+ *
+ * It is deliberately quiet. PRD §3.3 makes the review the product and the only surface
+ * allowed a moment; a shell that competes with it is the wrong shell. So: a hairline rule
+ * rather than a filled bar, prose-scale links rather than buttons, and no figures at all.
+ * Every value is a token, so it inverts correctly under a dark OS. */
+.m-shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  /* Shares the content column exactly — [data-surface="ledger"] is max-width:1000px with
+   * 80px of horizontal padding, and a shell that does not line up with the thing beneath it
+   * reads as a browser chrome bar rather than part of the page. Without this the last nav
+   * item ran off the right edge of the viewport. */
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px 80px 18px;
+  border-bottom: var(--m-stroke-hair) solid var(--m-rule);
+}
+
+.m-shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+.m-shell .m-mark { width: 28px; height: 13px; }
+.m-shell-wordmark {
+  font-family: var(--m-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--m-ink);
+}
+
+.m-shell-nav { display: flex; align-items: center; gap: 20px; }
+/* The nav links are .m-meta, which is --m-ink-3 at 13px — fine for a label, too quiet for
+ * the only way to move around the product. Lift them to --m-ink-2 here, which clears AA
+ * on both grounds, and let the current surface sit at full --m-ink. */
+.m-shell-nav .m-meta { color: var(--m-ink-2); text-decoration: none; }
+.m-shell-nav .m-meta:hover { color: var(--m-ink); }
+
+/* The sign-out control is a real <button> inside a form (a Server Action, so it works with
+ * no client JavaScript) — reset the UA's button chrome rather than dress a link up as one. */
+.m-shell-signout {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--m-ink-3);
+  cursor: pointer;
+}
+.m-shell-signout:hover { color: var(--m-ink); }
+
+@media (max-width: 700px) {
+  /* The 80px gutter is most of the viewport on a phone. The ledger beneath does not yet
+   * step down — that is its own defect, not fixed here — but the shell must not be the
+   * thing that forces a horizontal scroll. */
+  .m-shell { padding-left: 24px; padding-right: 24px; }
+}
+@media (max-width: 520px) {
+  /* Pairing is a desktop act — the extension cannot be installed from a phone — so this is
+   * the link to drop first when the row gets tight, exactly as the landing drops its own. */
+  .m-shell-nav a[href="/pair"] { display: none; }
+  .m-shell-nav { gap: 16px; }
+}
+
+/* The ledger had no mobile step at all. At 390px its 80px gutters leave a 230px column,
+ * while the row grid demands 180px + 96px + two 28px gaps — so the intention column
+ * collapsed to ZERO and the row overflowed the viewport by 22px. The daily surface scrolled
+ * sideways and the session's own sentence, the thing the row exists to show, had no width.
+ *
+ * Stacked, following the precedent the landing ledger already set at this breakpoint. The
+ * band keeps full width because it is the row's only graphic; the outcome sits under it. */
+@media (max-width: 700px) {
+  [data-surface="ledger"] { padding: 40px 24px; }
+  [data-surface="ledger"] .m-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  [data-surface="ledger"] .m-row .m-sentence { font-size: 18px; }
+  [data-surface="ledger"] .m-row .m-row-figure { text-align: left; }
 }

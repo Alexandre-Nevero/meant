@@ -139,9 +139,9 @@ Copy-paste is a legitimate teaching move when the lesson is elsewhere. Pretendin
 
 | Tier | Contents | Why here |
 |---|---|---|
-| **T1 — they build** | Intention → session → **review → the outcome question**. The judge: one route, one prompt, one verdict. The companion's gaze states. The ledger | The review is the product (`IDEA §1.6`). The judge is the AI lesson and the thing they will show people. The gaze is 30 minutes and it is the moment the build becomes *theirs* |
+| **T1 — they build** | Intention → session → **review → the outcome question**. The judge: **one route, one prompt, one batched verdict, run after the session**. **The companion's one-tap label.** The ledger | The review is the product (`IDEA §1.6`). The judge is the AI lesson and the thing they will show people. The tap is ~30 minutes and it is the moment the build becomes *theirs* — **corrected 2026-09-15**: this row previously read *"the companion's gaze states"*, a design replaced by the Orbit dot in September (ADR-0026) and whose drift signalling was removed entirely (ADR-0057); and it described a live per-tab judge, superseded by ADR-0060 |
 | **T2 — they paste** | Service worker lifecycle and attention attribution · pairing token flow · block-rule install/remove | Each is a real engineering idea worth understanding and a bad use of a beginner's only three hours. The manual explains the 30-second death; it does not ask them to discover it |
-| **T3 — provided** | `schema.sql` · design tokens · the companion's artwork and animation · blocklists · the judge's system prompt as a starting file | No lesson. Handing these over costs nothing and buys back an hour |
+| **T3 — provided** | `schema.sql` · design tokens · the companion's artwork and animation · blocklists · the judge's system prompt as a starting file · **the coach's preset corpus file (ADR-0064)** | No lesson. Handing these over costs nothing and buys back an hour |
 
 **The test for T1:** if a student could not proudly explain a piece to a potential customer, it does not belong in T1. That single test is what keeps the manual from becoming a typing exercise.
 

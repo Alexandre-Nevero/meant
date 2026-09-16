@@ -1,21 +1,13 @@
-// Each constant names the open question it provisionally answers. Changing one is a product
-// decision, not a refactor.
-
-/** flow Q3 / D26. Foreground time before a domain is judged or signalled.
- *  PROVISIONAL — Task 15's eval reports what would change at 10s / 20s / 45s. */
-export const DWELL_MS = 20_000
 /** N8. No companion movement in the first minute. Also D34's sentence-edit window. */
 export const GRACE_MS = 60_000
-/** New. Minimum spacing between two turns, so three signals cannot bunch into one minute. */
-export const REFRACTORY_MS = 5 * 60_000
-/** N8. */
-export const SIGNAL_BUDGET = 3
-export const SIGNAL_WINDOW_MS = 25 * 60_000
-/** D30. CONFLICT only — a domain with taps on more than one side. One-sided resolves at n=1. */
+/** D30, NARROWED by ADR-0062 (2026-09-15). D30 said these govern CONFLICT only and that
+ *  one-sided evidence resolves at n=1 — a rule written for a CORRECTION of a wrong flag.
+ *  ADR-0057 deleted the flag, so no corrections exist; every label is now volunteered, and a
+ *  volunteered label means "this visit", not "this site forever". These therefore govern ALL
+ *  label evidence. Memorising at n=1 would break PRD §1.2: one tap on instagram.com at 4pm
+ *  would teach the product that Instagram is always drift. */
 export const MEMORY_MIN_EVIDENCE = 3
 export const MEMORY_MIN_AGREEMENT = 0.8
-/** PRD Q4. PROVISIONAL — Task 15 replaces this with a measured figure. */
-export const CONFIDENCE_FLOOR = 0.7
 /** SDD Q6 / V8. Daily per-user judgment cap.
  *  google/gemini-3.5-flash-lite at $0.30/Mtok in, $2.50/Mtok out (verified 2026-09-03).
  *  T-A input ~500 tok, output ~20 tok = $0.0002/judgment. 150/day = $0.90/month = 7.5% of a

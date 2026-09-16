@@ -139,9 +139,14 @@ Given the uncertainty, didn't bet on either event: `recoverStaleSession()` is no
 registered on both `onInstalled` and `onStartup`, so a live session can't leak
 regardless of which one Chromium actually fires for a given user. Whether `onStartup`
 ever fires for a real, UI-loaded unpacked extension remains unverified — Playwright
-can't simulate that specific load path, so it joins `docs/qa-recipe-browser-verification.md`
-Part C as human-only, not because it's hard to script but because the test harness's
-own loading mechanism is a different code path than a real user's install.
+can't simulate that specific load path, so it stays human-only, not because it's hard
+to script but because the test harness's own loading mechanism is a different code path
+than a real user's install. **Still open as of 2026-09-11** (the manual QA recipe that
+used to track this — `docs/qa-recipe-browser-verification.md` — was removed as stale
+narrative; recording the open item directly here instead, so it isn't lost). Two other
+items from that recipe are also still open and human-only: `chrome.idle` away-detection
+across a real ~70s screen lock, and whether `chrome.permissions.request({origins})` from
+the popup resolves or hangs (the Task 7 permission spike).
 
 ### Declarative Net Request redirect rule required host permission for target domain (2026-09-07, Task 1 fix)
 

@@ -6,7 +6,7 @@ any canonical source; it indexes and cross-checks them, and adds one thing none 
 cover: accessibility, verified against this codebase rather than asserted.
 
 **What this file is not:** a second spec. Every color, radius, and duration below is quoted
-from [`design/tokens.css`](design/tokens.css), not reinvented. Where this file and a
+from [`design/tokens.css`](../design/tokens.css), not reinvented. Where this file and a
 canonical source could ever disagree, the source wins — see the hierarchy below.
 
 ---
@@ -16,20 +16,16 @@ canonical source could ever disagree, the source wins — see the hierarchy belo
 Highest to lowest. Never resolve a conflict by picking whichever is more convenient — say
 which one you followed and why (`docs/dead-ends.md` has running examples).
 
-1. **[`design/canvas/*.dc.html`](design/canvas)** — the seven artboards. Visual truth.
+1. **[`design/canvas/*.dc.html`](../design/canvas)** — the seven artboards. Visual truth.
    Outranks every document, including this one.
-2. **[`design/tokens.css`](design/tokens.css)** — every color, radius, stroke, duration,
+2. **[`design/tokens.css`](../design/tokens.css)** — every color, radius, stroke, duration,
    lifted from the artboards.
-3. **[`docs/design-toolkit.md`](docs/design-toolkit.md)** — the written spec: the mark, the
+3. **[`docs/design-toolkit.md`](design-toolkit.md)** — the written spec: the mark, the
    companion, verbal identity, the class contract, what to refuse, how it's judged.
 4. **This file** — an index over the three above, plus verified accessibility guidance
    sourced from `ui-ux-pro-max` and cross-checked against the actual, built CSS.
-5. **[`CLAUDE.md`](CLAUDE.md)** — the six invariants that are design decisions, restated
+5. **[`CLAUDE.md`](../CLAUDE.md)** — the six invariants that are design decisions, restated
    below in §7 because they're the ones most worth not forgetting mid-task.
-
-`docs/metaprompt-design.md` and `docs/metaprompt-build*.md` describe the superseded 0.1
-build (no AI, corporate persona, four-hour clock) and are excluded from this hierarchy —
-don't design from them.
 
 ---
 

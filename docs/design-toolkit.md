@@ -126,15 +126,26 @@ Second person, present tense, lowercase for the user's own words. The product ne
 
 ## 8. Class vocabulary
 
-Fixed contract with the build lane (`docs/metaprompt-build.md` §Coordination). Never rename unilaterally.
+Fixed at 13 classes. Never rename or add a 14th unilaterally — see `docs/design.md` §5 for the
+enforced version of this contract, which this section restates.
 
 ```
 .m-app  .m-mark[data-state]  .m-sentence  .m-meta  .m-field  .m-btn[data-variant]
-.m-answer[data-answer]  .m-row  .m-row-domain  .m-row-bar[data-kind]  .m-row-figure
+.m-answer  .m-row  .m-row-domain  .m-row-bar[data-kind]  .m-row-figure
 .m-rate  .m-empty
 ```
 
-`data-state` is `idle | running | drifting | ended | empty`. **`drifting` has been declared since 0.1 and is set nowhere in the code.** It is the companion's state, and wiring it is the smallest possible version of shipping the companion.
+**Corrected 2026-09-11:** `.m-answer` carries no `[data-answer]` selector, anywhere, on
+purpose — Invariant 2 (`Yes`/`Not yet` byte-identical) is enforced by the CSS file's
+structure, not by a selector that could vary per answer. `grep -rn "m-answer\[data-answer"
+app extension` returning nothing is the proof; this section previously listed
+`.m-answer[data-answer]` as if it were part of the contract, which contradicted that
+invariant.
+
+`data-state` is `idle | running | drifting | ended | empty`. **Corrected 2026-09-11:**
+`drifting` is wired — `extension/sw.js`'s mechanical drift signal sets it (`docs/index.md`
+D25, `docs/adr/ADR-0025`); this section previously said it was "set nowhere in the code,"
+true only through 2026-09-01.
 
 ---
 

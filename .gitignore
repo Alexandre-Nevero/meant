@@ -3,6 +3,8 @@ Thumbs.db
 *.log
 .vercel
 .env*
+# Templates carry no secrets and must be committed, or nobody can set this up.
+!*.example
 node_modules/
 .next/
 .env*.local
