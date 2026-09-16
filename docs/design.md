@@ -137,9 +137,10 @@ and it reveals the session's intention on hover (`showHoverPill()`).
 **Rewritten 2026-09-16 (ADR-0057, ADR-0058) — the companion stopped being an output.** It has
 **one visual state while a session runs: a solid, breathing ring.** There is no drift state, no
 dashed ring, and no return-pulse triggered by anything the product decides, because the product
-no longer decides anything at the user on screen. The 0.6s ring-collapse survives in the CSS with
-a new owner: it is the **receipt for a user-initiated tap**, and `companion-overlay.js:347-359`
-says so in place. Reading the design consequence plainly:
+no longer decides anything at the user on screen. The ring-collapse survives in the CSS with
+a new owner and a new duration: it is the **receipt for a user-initiated tap**, retimed to 160ms
+feedback speed (600ms, static, under reduced motion) in `companion-overlay.js:269-274` (#50).
+Reading the design consequence plainly:
 
 - **The companion is an input device.** One tap, one meaning — *"this isn't the work."* Hover
   shows the intention; tap records a per-visit label (ADR-0062). Nothing is pushed at the user.
@@ -207,7 +208,7 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 | `block` | `extension/blocked.html` | full page | **No** | Static "N minutes left," read once |
 | `setup` | `app/setup/page.tsx` | 1000px column | — | Declare work and distraction sites (ADR-0035). **Not in the sitemap until 2026-09-16**, and carrying the most damaging open bug in the product (#42: a failed fetch renders as "you have no sites," and saving then replaces the stored list) |
 | — (chrome) | `app/shell.tsx`, mounted by four route layouts | full width, hairline rule | — | **Added 2026-09-15, and the exception in this table.** The app shell is the one surface with **no artboard** — `design/canvas/` holds seven and none of them shows navigation. The build plan for #40 required drawing `Shell.dc.html` *first*; it was not drawn. It composes `.m-mark` and `.m-meta` plus four `.m-shell-*` structural classes, renders nothing signed-out, and shows no counts or figures. See §10 |
-| `companion` | `extension/companion-overlay.js` (Shadow DOM, injected at `<all_urls>`) | 28px, floats over the page | **No.** One state: a solid, breathing ring | **Corrected 2026-09-16 (ADR-0057, ADR-0058).** This row read "ring flips ≤3×/25min" — there are no flips. The only motion the product initiates is the breathe; the 0.6s ring-collapse now fires **only as the receipt for a tap**. Retired the side panel and `.m-mark`'s primitives entirely — see §4 |
+| `companion` | `extension/companion-overlay.js` (Shadow DOM, injected at `<all_urls>`) | 28px, floats over the page | **No.** One state: a solid, breathing ring | **Corrected 2026-09-16 (ADR-0057, ADR-0058); retimed 2026-09-17 (#50).** This row read "ring flips ≤3×/25min" — there are no flips. The only motion the product initiates is the breathe; the ring-collapse now fires **only as the receipt for a tap**, at 160ms feedback speed, not the 0.6s it had when it meant a return from drift. Reduced motion gets its own receipt — the ring goes opaque and thickens for 600ms instead of animating — rather than losing the tap's only confirmation. Retired the side panel and `.m-mark`'s primitives entirely — see §4 |
 
 ---
 

@@ -23,7 +23,8 @@ it is for and why it must be rebuildable, `docs/` for canonical truth.
   **No exception since ADR-0057** — the return-pulse died with the drift signal.
 - The companion never varies with the outcome answer, and **never signals drift** (ADR-0057).
   It moves only when the user causes it to: one tap means *"this isn't the work"* (ADR-0058),
-  acknowledged by a 0.6s ring-collapse. A receipt is not celebration.
+  acknowledged by a 160ms ring-collapse (600ms, static, under reduced motion). A receipt is not
+  celebration.
 - Away is a hatch, never a solid grey.
 
 ## Verifying UI

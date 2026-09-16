@@ -165,10 +165,12 @@ The frequency column is a design constraint, not a statistic: it is why the popu
   session runs. Clay is the only accent the companion ever uses, at any state, so state reads as a
   shape change, not a status light.
 - **It is an input (ADR-0058).** Hover reveals the intention; one tap says *"this isn't the work"*
-  and writes a per-visit label (ADR-0062). The 0.6s ring-collapse acknowledges the tap.
-- ~~**Return gets one visible acknowledgment.**~~ **Removed 2026-09-15 (ADR-0057)** — the 0.6s
+  and writes a per-visit label (ADR-0062). A 160ms ring-collapse acknowledges the tap; under
+  reduced motion the ring instead goes opaque and thickens, discretely, for 600ms.
+- ~~**Return gets one visible acknowledgment.**~~ **Removed 2026-09-15 (ADR-0057)** — the
   ring-collapse existed to acknowledge a return *from drift*, and there is no drift signal to return
-  from. I2 is absolute again. **The motion is reused** as the receipt for the one-tap label (ADR-0058).
+  from. I2 is absolute again. **The motion is reused** as the receipt for the one-tap label (ADR-0058),
+  retimed to 160ms feedback speed (#50).
 - **Aliveness is breathing, not blinking.** A continuous slow scale/opacity cycle (~1.6s).
 - **It reads at 28px** — ambient presence, not a focal element.
 - Built as `extension/companion-overlay.js`, a self-contained Shadow DOM. It is no longer built from
