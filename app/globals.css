@@ -255,8 +255,12 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: var(--m-tracking);
   color: var(--m-ink);
 }
-.m-field::placeholder { color: var(--m-ink-3); font-family: var(--m-body); font-size: 15px; }
+.m-field::placeholder { color: var(--m-ink-2); font-family: var(--m-body); font-size: 15px; }
 .m-field:focus-visible { outline: var(--m-stroke) solid var(--m-clay); outline-offset: 2px; }
+
+/* Scoped with :has so a real <label> gets its layout without a 14th class name. */
+label:has(> .m-field) { display: flex; flex-direction: column; gap: 6px; }
+label:has(> .m-field) > .m-meta { color: var(--m-ink-2); }
 
 [data-surface="block"] .m-field {
   border-width: var(--m-stroke-loud);

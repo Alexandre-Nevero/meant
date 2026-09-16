@@ -9,13 +9,13 @@ export default async function SignIn() {
   if (userId) redirect('/dashboard')
 
   return (
-    <div data-surface="pair">
+    <main data-surface="pair">
       <p className="m-mark" data-state="ended" />
       <p className="m-meta">Sign in or create an account to continue.</p>
       <div className="m-landing-auth">
         <AuthForm />
       </div>
       <p className="m-meta">Chrome and Edge. No installer, no admin rights.</p>
-    </div>
+    </main>
   )
 }

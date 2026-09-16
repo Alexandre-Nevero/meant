@@ -54,7 +54,7 @@ export default async function Home() {
   const signedInLabel = 'Go to your dashboard'
 
   return (
-    <div data-surface="landing">
+    <main data-surface="landing">
       <header className="m-landing-header">
         <div className="m-landing-brand">
           <p className="m-mark" data-state="ended" />
@@ -142,6 +142,6 @@ export default async function Home() {
           <p className="m-meta">Your sessions stay in your account. There is no team view.</p>
         </div>
       </section>
-    </div>
+    </main>
   )
 }

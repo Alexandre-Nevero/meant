@@ -56,10 +56,10 @@ export const test = base.extend<Fixtures>({
       // The signup form is the second <form> on the page (Fields() is shared by both;
       // signup adds a leading Name field) — scope by the "Create an account" button
       // text rather than a brittle nth-of-type guess.
-      const signupForm = page.locator('form', { has: page.getByRole('button', { name: 'Create an account' }) })
-      await signupForm.getByPlaceholder('Name').fill('E2E Test')
-      await signupForm.getByPlaceholder('Email').fill(email)
-      await signupForm.getByPlaceholder('Password').fill(password)
+      const signupForm = page.getByRole('form', { name: 'Create an account' })
+      await signupForm.getByLabel('Name').fill('E2E Test')
+      await signupForm.getByLabel('Email').fill(email)
+      await signupForm.getByLabel('Password').fill(password)
       await signupForm.getByRole('button', { name: 'Create an account' }).click()
       await page.waitForURL('**/dashboard')
       return { email, password }

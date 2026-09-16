@@ -19,9 +19,9 @@ test('a failed sign-in is announced, and does not read as a hint', async ({ cont
   const page = await context.newPage()
   await page.goto('/sign-in')
 
-  const form = page.locator('form', { has: page.getByRole('button', { name: 'Sign in' }) })
-  await form.getByPlaceholder('Email').fill('nobody@example.com')
-  await form.getByPlaceholder('Password').fill('not-the-password')
+  const form = page.getByRole('form', { name: 'Sign in' })
+  await form.getByLabel('Email').fill('nobody@example.com')
+  await form.getByLabel('Password').fill('not-the-password')
   await form.getByRole('button', { name: 'Sign in' }).click()
 
   // Scoped to the form: Next's App Router always mounts its own role="alert" route

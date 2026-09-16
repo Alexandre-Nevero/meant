@@ -3,11 +3,24 @@
 import { useActionState } from 'react'
 import { signIn, signUp } from './auth-actions'
 
+/** #49. Five inputs, no labels, and two of them shared the placeholder "Email" — which is not
+ *  a label, is announced inconsistently, and disappears exactly when the user is typing and
+ *  needs it. The placeholders are gone rather than duplicated: at 3.20:1 they were under the
+ *  contrast floor anyway. */
+function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label>
+      <span className="m-meta">{label}</span>
+      <input className="m-field" {...props} />
+    </label>
+  )
+}
+
 function Fields() {
   return (
     <>
-      <input className="m-field" name="email" type="email" placeholder="Email" required />
-      <input className="m-field" name="password" type="password" placeholder="Password" required minLength={8} />
+      <Field label="Email" name="email" type="email" required />
+      <Field label="Password" name="password" type="password" required minLength={8} />
     </>
   )
 }
@@ -18,7 +31,9 @@ export function AuthForm() {
 
   return (
     <>
-      <form action={signInAction}>
+      {/* Both forms carry the same two field labels, so the accessible name of the FORM is what
+          tells them apart for anyone not reading the buttons. */}
+      <form action={signInAction} aria-label="Sign in">
         <Fields />
         <button className="m-btn" data-variant="primary" disabled={signingIn}>
           Sign in
@@ -28,8 +43,8 @@ export function AuthForm() {
 
       <p className="m-meta">or</p>
 
-      <form action={signUpAction}>
-        <input className="m-field" name="name" type="text" placeholder="Name" required />
+      <form action={signUpAction} aria-label="Create an account">
+        <Field label="Name" name="name" type="text" required />
         <Fields />
         <button className="m-btn" data-variant="quiet" disabled={signingUp}>
           Create an account
