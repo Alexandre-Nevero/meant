@@ -280,7 +280,11 @@ test('a failed sign-in is announced, and does not read as a hint', async ({ cont
   await form.getByPlaceholder('Password').fill('not-the-password')
   await form.getByRole('button', { name: 'Sign in' }).click()
 
-  const alert = page.getByRole('alert')
+  // Scoped to the form: Next's App Router always mounts its own role="alert" route
+  // announcer (node_modules/next/dist/client/components/app-router-announcer.js) for
+  // screen-reader navigation announcements, unrelated to this one and matched by an
+  // unscoped page.getByRole('alert').
+  const alert = form.getByRole('alert')
   await expect(alert).toBeVisible()
 
   // The defect was that it rendered identically to the word "or" two lines below it.
@@ -472,6 +476,13 @@ Closes #46"
 
 ## Task 2: Stop the setup page destroying a user's site lists (#42)
 
+> **`getByRole('alert')` must always be scoped to a surface.** Next.js 16's App Router mounts its
+> own route announcer on every page — `node_modules/next/dist/client/components/app-router-announcer.js`
+> sets `announcer.role = 'alert'` and `ariaLive = 'assertive'`. An unscoped `page.getByRole('alert')`
+> therefore matches it too: `toBeVisible()` hits a strict-mode violation, and `toHaveCount(0)` can
+> never pass. Confirmed in Task 1. Scope every alert assertion to `[data-surface="..."]` or to a form.
+
+
 **P1, data loss, unrecoverable — there is no history and no soft delete.**
 
 **Files:**
@@ -515,7 +526,7 @@ test('a failed read never fabricates an empty list, and cannot be saved over', a
   )
   await page.goto('/setup')
 
-  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.locator('[data-surface="setup"]').getByRole('alert')).toBeVisible()
   // The load-bearing assertion: nothing editable exists, so nothing can be saved over.
   await expect(page.getByPlaceholder('add a site and press enter')).toHaveCount(0)
 
@@ -546,7 +557,7 @@ test('a failed save is announced and rolled back, not shown as saved', async ({ 
   await work.getByPlaceholder('add a site and press enter').fill('gitlab.com')
   await work.getByPlaceholder('add a site and press enter').press('Enter')
 
-  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.locator('[data-surface="setup"]').getByRole('alert')).toBeVisible()
   // Rolled back: the interface must not claim a site is saved when it is not.
   await expect(work.getByText('gitlab.com')).toHaveCount(0)
   await expect(work.getByText('github.com')).toBeVisible()
@@ -803,8 +814,9 @@ test('a failed outcome write re-enables both buttons, says so, and retries on th
   await page.route('**/api/sessions/*/outcome', (route) => route.fulfill({ status: 500, body: '{}' }))
   await page.goto(`/review/${sessionId}`)
 
+  const reviewSurface = page.locator('[data-surface="review"]')
   await page.getByRole('button', { name: 'Yes' }).click()
-  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(reviewSurface.getByRole('alert')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Yes' })).toBeEnabled()
   await expect(page.getByRole('button', { name: 'Not yet' })).toBeEnabled()
   // I1: the retry affordance is the two buttons themselves, never a third control.
@@ -813,7 +825,7 @@ test('a failed outcome write re-enables both buttons, says so, and retries on th
 
   await page.unroute('**/api/sessions/*/outcome')
   await page.getByRole('button', { name: 'Yes' }).click()
-  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(reviewSurface.getByRole('alert')).toHaveCount(0)
 
   const review = await page.request.get(`/api/sessions/${sessionId}/review`)
   expect((await review.json()).outcome).toBe('yes')
