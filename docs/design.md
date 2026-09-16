@@ -361,6 +361,9 @@ they don't quietly disappear:
   to Chrome"* in the hero. What ships has **no CTA in the hero at all** — the primary button is
   *"Sign in"*, in the header and again above the footer, and *"Add to Chrome"* is a secondary nav
   link. A visitor is asked to create an account before they have the extension the account is for.
-- **MEANT has no answer to "is it light or dark"** (§3.1, issue #51). The dark palette ships and
-  applies itself from the OS; `data-theme` has no writer; the toolkit still refuses dark as a
-  default look. Three sources, three different answers, and the user's OS currently decides.
+- **MEANT has an answer now** (§3.1, issue #51 part 1). **Settled 2026-09-16 (ADR-0065):** this
+  line previously said MEANT "has no answer to 'is it light or dark.'" It does now — a cream
+  product, with the dark palette a fallback, not a second look. The dark palette still ships and
+  applies itself from the OS, and `data-theme` still has no writer — both remain true, and are why
+  a fallback shipped rather than a toggle. #51 parts 2 and 3 (the landing hero, the class contract)
+  stay open.
