@@ -38,8 +38,16 @@ export function Answer({ sessionId }: { sessionId: string }) {
         </button>
       </div>
       {/* The retry is the same two buttons — a third control here would break the symmetry
-          I1 protects. The message never names which answer was pressed, for the same reason. */}
-      {failed && <p className="m-meta" role="alert">That didn&rsquo;t save. Answer again.</p>}
+          I1 protects. The message never names which answer was pressed, for the same reason.
+
+          Always mounted, never conditional. Two reasons: this paragraph is a child of the
+          bottom-anchored .m-review-ask (globals.css, margin-top: auto), so mounting it only on
+          failure grew the group and pushed both buttons up ~39px at the exact instant the user
+          is told to press one again — and a live region that already exists when its text
+          arrives is announced far more reliably than one inserted together with its text. */}
+      <p className="m-meta" role="alert" aria-live="polite">
+        {failed ? 'That didn’t save. Answer again.' : ''}
+      </p>
     </>
   )
 }

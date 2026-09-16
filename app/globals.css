@@ -130,6 +130,12 @@ a { color: inherit; text-decoration: none; }
  * review exists for. */
 .m-review-ask { display: flex; flex-direction: column; gap: 20px; margin-top: auto; }
 
+/* answer.tsx's [role="alert"] is unconditionally mounted, empty until a failed write fills
+ * it — reserve the line it will need so the empty and filled states are the same height.
+ * Without this, mounting the text (not the element) would still grow the group by a line and
+ * shift .m-review-ask's siblings, since the paragraph is a flex child at gap: 20px above. */
+.m-review-ask [role="alert"] { min-height: 1lh; }
+
 /* The review had no narrow step at all — 80px gutters leave a 230px column at 390px, the
  * same defect the ledger had before #7. Same remedy, same breakpoint. */
 @media (max-width: 700px) {
