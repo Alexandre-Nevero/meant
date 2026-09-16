@@ -1853,14 +1853,21 @@ placeholders.
       await signupForm.getByRole('button', { name: 'Create an account' }).click()
 ```
 
-Then confirm nothing else depended on them:
+**Four files depend on these placeholders, not one.** Counted 2026-09-17:
 
 ```bash
 grep -rn "getByPlaceholder('Email'\|getByPlaceholder('Password'\|getByPlaceholder('Name'" e2e
 ```
 
-Expected: nothing. `e2e/error-surfaces.spec.ts` from Task 1 uses `getByPlaceholder` on the sign-in
-form — **update it to `getByLabel` in this step**, scoped by `getByRole('form', { name: 'Sign in' })`.
+| File | What it needs |
+|---|---|
+| `e2e/fixtures.ts` | the three fills above, scoped by `getByRole('form', { name: 'Create an account' })` |
+| `e2e/error-surfaces.spec.ts` | two fills on the sign-in form — scope by `getByRole('form', { name: 'Sign in' })` |
+| `e2e/session-recovery.spec.ts` | three fills. **It owns its context and imports raw `@playwright/test`**, so it does not share the fixture — fix it in place |
+| `e2e/landing.spec.ts` | **read this one carefully.** It asserts `getByPlaceholder('Email')).toHaveCount(0)` on `/` (no inline auth form there) and `.first()).toBeVisible()` on `/sign-in`. Delete the placeholders and the second assertion breaks outright while the first passes **vacuously** — it would assert the absence of something that no longer exists anywhere, and stop testing what it was written to test. Convert both to `getByLabel` |
+
+Re-run the grep after editing: it must print nothing. Then run the **full** suite, because
+`fixtures.ts` is used by every spec in it.
 
 - [ ] **Step 6: Add the landmarks**
 
