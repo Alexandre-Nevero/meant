@@ -1,3 +1,7 @@
+-- RELEASE ORDERING, and `npm run migrate` is manual: APPLY THIS BEFORE DEPLOYING THE APP THAT
+-- READS IT. Deploy first and every POST /api/sessions throws on the missing column — no session
+-- is recorded at all — and /dashboard 500s on its part-of-day query. (ADR-0067)
+--
 -- The hour, 0-23, local to the user at the instant the session started. Supplied by the
 -- extension from the same clock reading that produces started_at (extension/sw.js:124).
 --

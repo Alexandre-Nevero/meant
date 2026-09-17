@@ -1,0 +1,22 @@
+# ADR-0067 — The session row stores the hour, not the timezone
+
+- **Date:** 2026-09-17
+- **Status:** Accepted
+- **Context:** The dashboard's second free sentence names the part of the day the user's sessions start in (ADR-0060, the arithmetic before the judge). Answering it needs to know what time it was *for the user*, and **there is no timezone anywhere in the product** — not on `user`, not on `device`, not in any payload the extension sends.
+
+  `session.started_at` is `timestamptz`, so the instant is exact and the local hour is not recoverable from it. A bare `extract(hour from started_at)` on the server buckets in **UTC**, which is the server's geography, not the person's: a user in Lisbon and a user in Los Angeles who both work at nine in the morning land in different buckets, and one of them is told a confident regularity about themselves that is an artefact of where the database runs. That is exactly the failure **ADR-0053** exists to prevent — a claim whose weight comes from the artifact rather than the evidence.
+
+  The obvious column is `user_timezone text` — `'Europe/Lisbon'` — and `started_at at time zone user_timezone` answers the question in SQL. It also puts a location in the schema.
+- **Decision:** **Store the hour, 0–23, on the session row: `session.started_at_local_hour` (`lib/migrations/005-local-hour.sql`).** It is captured by the extension from the **same clock reading that produces `startedAt`** (`extension/sw.js`), so the two cannot disagree across a midnight rollover, and it travels in the same start payload.
+
+  It is **client-supplied and therefore untrusted**, exactly like `body.id`. `normalizeStartPayload` (`lib/session-payload.ts`) validates it and writes **null** for anything that is not an integer 0–23 — out of range, non-integer, wrong type, or absent. Null means *unknown*, and `contrastByPartOfDay` excludes unknown rows rather than bucketing or guessing at them. `Number.isInteger(0)` is true and midnight is a legal hour, so the check is a range test and can never be a truthiness test.
+
+  `lib/time-of-day.ts` takes `startedAtLocalHour`, never a timestamp, so the timezone question cannot be answered by accident inside it.
+- **Consequences:**
+  - **A timezone name is location data; an integer is not.** That is the whole reason the hour was chosen over the obvious `user_timezone` column. This schema stores hostnames and never full URLs (**ADR-0008**), the judge never reads page text or titles (**ADR-0061**), and full paths stay on the device (**ADR-0059**). Acquiring a location column to answer a question an integer answers would be the same mistake in a new place.
+  - **Per-session capture is correct where a user-level column is not.** A user who travels, or who crosses a DST boundary, has sessions whose local hour genuinely differs; a column on `user` would restate every past session in the timezone the user last had. The hour is a fact about the session, and it is stored on the session.
+  - **The fact is client-supplied, and that is already the decided architecture.** ADR-0061 has the judge reading time of day from the extension's own local storage. Nothing here moves trust; it writes down a value the client was already the only source of.
+  - **Every row written before `005` has a null hour and is excluded.** The time-of-day sentence therefore stays silent until eight *answered* sessions exist that were started after this ships, however long a history the user already has. Under ADR-0066's one-slot rule that disadvantages this claim twice, which is recorded there.
+  - **RELEASE ORDERING — `npm run migrate` is manual.** `005-local-hour.sql` must be applied **before** the app that depends on it is deployed. Deploy first and every `POST /api/sessions` throws on the missing column (so no session is recorded at all) and `/dashboard` 500s on the missing column in its part-of-day query. The same line is at the top of the migration file, where a deployer will meet it.
+  - The column is nullable with no default and no backfill. There is nothing to backfill: the hour of a 2026-08 session is not knowable now, and inventing one would be the UTC bucket this decision refuses.
+- **Source:** owner decision 2026-09-17 (option B, the timezone blocker on `docs/superpowers/plans/2026-09-17-dashboard-arithmetic.md`); written up under ADR-0063 after the whole-branch review found the decision lived only in the plan

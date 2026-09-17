@@ -173,7 +173,8 @@ ledger-row swatch, a plan-step marker, *and* a band segment, differentiated only
 > the `.m-landing-*` precedent), `.m-review-rows` / `.m-review-ask` (the review's row and
 > question groups, added on `bugfix-seven` under the same precedent), and `.m-ledger-actions` /
 > `.m-ledger-pattern` (the dashboard's shortcut group and its one inference sentence, added on
-> `dashboard-arithmetic` under the same precedent — ADR-0066). Either the contract is 13
+> `dashboard-arithmetic` under the same precedent — ADR-0066; only `.m-ledger-actions` has CSS
+> rules, `.m-ledger-pattern` is a marker on `.m-meta` and nothing styles it). Either the contract is 13
 > and `.m-chip`/`.m-chip-row` are a
 > standing violation, or the contract is "13 semantic classes plus named structural families" and
 > should say so. **Do not resolve it by editing the number here**; it is the same decision in

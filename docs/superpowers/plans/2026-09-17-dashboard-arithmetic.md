@@ -173,6 +173,26 @@ produce (it creates a fresh account per call). **A seeding fixture is added in T
 rows into `meant_test` directly, so that the absence assertion is falsifiable and the one-slot
 rule is testable. Task 3 Step 7 needs that same state anyway.
 
+## Amendment 2026-09-17 — the backlog gets its own query (owner), and the claim selection is fixed
+
+**Task 3 Step 3's "the backlog reuses the `sessions` rows already fetched — do not add a query for
+it" is overruled.** Those rows are the 50 most recent by `started_at desc` and the answerable
+window is 14 days: a user averaging four sessions a day pushes a twelve-day-old unanswered session
+past row 50, out of the shortcut *and* out of the count line, making `four sessions are still
+unanswered.` false. Description has no evidence floor to excuse an undercount. One query, bounded
+by the same window.
+
+**Both claims select the first entry that clears the floor, not the widest gap.**
+`contrastByPartOfDay` returns the qualifying parts sorted, like `contrastByOutcome` — returning
+only the widest let a thin bucket suppress a thick qualifying one, and under ADR-0066 hand the
+slot to a claim that never had to compete. `contrastByOutcome`'s call site had the identical
+defect, pre-existing; fixed here on the owner's ruling, and it can make a domain sentence appear
+where none appears today. Ties *within* a claim now break deterministically (PARTS order, domain
+name) rather than on whatever order Postgres returned rows in.
+
+**The timezone decision is now ADR-0067**, written up after the whole-branch review found it lived
+only in this plan (ADR-0063: a decision not in `docs/adr/` has not been made).
+
 ## File Structure
 
 | File | Task | Responsibility |
