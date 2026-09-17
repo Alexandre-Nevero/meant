@@ -7,7 +7,7 @@ import { toWords } from '@/lib/words'
 import { Band } from '../band'
 import { contrastByOutcome } from '@/lib/attention-contrast'
 import { contrastByPartOfDay } from '@/lib/time-of-day'
-import { answerableBacklog } from '@/lib/unanswered'
+import { answerableBacklog, ANSWERABLE_WINDOW_DAYS } from '@/lib/unanswered'
 import { PATTERN_MIN_SESSIONS } from '@/lib/thresholds'
 
 export const dynamic = 'force-dynamic'
@@ -99,10 +99,23 @@ export default async function Dashboard() {
   const showPart = partClaim !== null && (domainClaim === null || partClaim.sessions > domainClaim.sessions)
   const showDomain = domainClaim !== null && !showPart
 
-  // Reuses the rows already fetched above — the backlog is a view of the record, not a
-  // second question to the database.
+  // Its own query, bounded by the answerable window — NOT the `sessions` rows above, which are
+  // the 50 most recent. A user averaging four sessions a day pushes a twelve-day-old unanswered
+  // session past row 50, where it vanishes from the shortcut AND from the count above it, and
+  // `four sessions are still unanswered.` becomes a false sentence. This is description, which
+  // has no evidence floor to excuse an undercount (ADR-0050). Reusing the fetched rows was the
+  // plan's instruction and it was wrong; owner ruling 2026-09-17.
+  const backlogRows = await sql`
+    select id, intention, ended_at, outcome
+      from session
+     where user_id = ${userId}
+       and outcome = 'unanswered'
+       and ended_at is not null
+       and ended_at >= ${new Date(Date.now() - ANSWERABLE_WINDOW_DAYS * 86_400_000).toISOString()}`
+  // answerableBacklog stays the authority on the window and the ordering — the SQL bound above
+  // is what keeps the query from being unbounded, not a second definition of the rule.
   const backlog = answerableBacklog(
-    sessions.map((s) => ({
+    backlogRows.map((s) => ({
       id: s.id as string,
       outcome: s.outcome as string,
       endedAt: s.ended_at ? new Date(s.ended_at as string).toISOString() : null,

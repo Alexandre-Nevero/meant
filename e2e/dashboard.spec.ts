@@ -154,6 +154,69 @@ test('at most one claim renders, and it is the one resting on more answered sess
   )
 })
 
+// The selection rule, domain side. `thin.com` has the wider gap (one minute against sixty) and
+// two sessions; `thick.com` has the narrower gap and eight. Every hour is null, so the
+// time-of-day claim does not exist and this is a test of one claim's own selection, not of
+// ADR-0066's competition. Reading only the widest-gap entry — what page.tsx did — gates on
+// thin.com's two sessions and renders NOTHING, so this fails the moment the selection reverts.
+test('the domain claim is the widest gap that clears the floor, not the widest gap', async ({ seededUser }) => {
+  const page = await seededUser([
+    { outcome: 'yes', startedAtLocalHour: null, events: [{ kind: 'attention', domain: 'thin.com', seconds: 60 }] },
+    { outcome: 'no', startedAtLocalHour: null, events: [{ kind: 'attention', domain: 'thin.com', seconds: 3600 }] },
+    ...Array.from({ length: 5 }, () => ({
+      outcome: 'yes' as const,
+      startedAtLocalHour: null,
+      events: [{ kind: 'attention', domain: 'thick.com', seconds: 540 }],
+    })),
+    ...Array.from({ length: 3 }, () => ({
+      outcome: 'no' as const,
+      startedAtLocalHour: null,
+      events: [{ kind: 'attention', domain: 'thick.com', seconds: 1860 }],
+    })),
+  ])
+  await page.goto('/dashboard')
+
+  await expect(page.locator('.m-ledger-pattern')).toHaveText(
+    'The sessions you finished averaged nine minutes on thick.com. The ones you did not averaged thirty-one.',
+  )
+})
+
+// The same rule, part-of-day side, and the exact reproduction from the whole-branch review:
+// evening has the wider gap (one against five) on six answered sessions, morning the narrower
+// gap (eight against six) on fourteen. No events, so the domain claim does not exist. Gating on
+// the widest-gap part rendered nothing at all while fourteen sessions sat behind the sentence
+// below.
+test('the part-of-day claim is the widest gap that clears the floor, not the widest gap', async ({ seededUser }) => {
+  const page = await seededUser([
+    ...answeredAt(9, ['yes', 'yes', 'yes', 'yes', 'yes', 'yes', 'yes', 'yes', 'no', 'no', 'no', 'no', 'no', 'no']),
+    ...answeredAt(20, ['yes', 'no', 'no', 'no', 'no', 'no']),
+  ])
+  await page.goto('/dashboard')
+
+  await expect(page.locator('.m-ledger-pattern')).toHaveText(
+    'Of the sessions you started in the morning, eight finished and six did not.',
+  )
+})
+
+// The backlog is its own query, bounded by the answerable window — not a view of the 50 most
+// recent rows. Fifty answered sessions sit on top of one unanswered one, so under the reuse the
+// unanswered session falls off row 50 and BOTH the count line and the shortcut disappear, while
+// the session is minutes old and squarely inside the fourteen-day window.
+test('an unanswered session past the fiftieth row is still counted and still linked', async ({ seededUser }) => {
+  const page = await seededUser([
+    { outcome: 'unanswered', intention: 'pushed off the end of the record' },
+    ...Array.from({ length: 50 }, () => ({ outcome: 'yes' as const })),
+  ])
+  await page.goto('/dashboard')
+
+  const actions = page.locator('.m-ledger-actions')
+  await expect(actions.locator('.m-meta')).toHaveText('one session is still unanswered.')
+  await expect(actions.getByRole('link', { name: 'pushed off the end of the record' })).toBeVisible()
+  // And the record above it really is capped at fifty, so the assertion above is about the
+  // backlog's own window rather than about a list that happened to be short.
+  await expect(page.locator('[data-surface="ledger"] .m-row')).toHaveCount(50)
+})
+
 // §3.1 bans these outright, and this is the surface most likely to grow one by accident.
 test('the ledger shows no percentage, no score and no hours headline', async ({ context, endedSession }) => {
   await endedSession({
