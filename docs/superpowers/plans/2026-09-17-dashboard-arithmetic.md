@@ -129,38 +129,59 @@ but **Task 4 is not optional and the branch does not merge without it.**
 
 ---
 
-## Blocker to resolve before Task 1 — the owner's call
+## The timezone question — RESOLVED 2026-09-17 (owner)
 
-**There is no timezone anywhere in this product.** `session.started_at` is `timestamptz`
-(`lib/migrations/001-baseline.sql:24`), `event.at` is `timestamptz`, and no column on any table
-records where the user is. Postgres will happily bucket by hour in UTC.
+**Answer: B, with the hour stored on the session row rather than a timezone on the user.**
 
-A time-of-day contrast computed in UTC is **wrong for every user outside UTC**, and wrong in the
-worst way: it would state a confident regularity about the person that is an artefact of server
-geography. ADR-0053 sets the evidence bar by the cost of being wrong, and the cost here is the
-product's credibility on the one claim it makes about you.
+`session` gains `started_at_local_hour int` (nullable). The extension already mints `startedAt`
+locally and posts it (`extension/sw.js:125,164`); it now posts `localHour` taken from the same
+clock reading. `normalizeStartPayload` validates it as an integer 0–23 and stores null otherwise,
+exactly as it already treats every other untrusted field. The dashboard selects the column. There
+is no `at time zone` anywhere, so an unrecognised timezone name cannot raise inside a page query.
 
-Three ways out:
+**Why not the user-level IANA timezone option B originally proposed:**
 
-| | |
-|---|---|
-| **A. Compute in the browser** | The dashboard is a Server Component, so this means shipping rows to the client and bucketing there with `Intl.DateTimeFormat().resolvedOptions().timeZone`. No migration, no new column, correct by construction. Costs a client component on a surface that currently has none |
-| **B. Store a timezone** | A migration adding `user_timezone`, written at pairing or first sign-in from the browser. Correct, reusable by the judge and coach later, and a schema change |
-| **C. Ship Task 1 without time-of-day** | Do the actions block and the ordering rule now; defer the second contrast until a timezone exists. Smallest, and leaves the dashboard with one arithmetic sentence |
+- `Europe/Lisbon` tells the server roughly where the user lives. `9` does not. A product that
+  stores hostnames and never full URLs (ADR-0008), never reads page text (ADR-0061) and keeps
+  paths on the device (ADR-0059) should not acquire a location column to answer a question a
+  single integer answers.
+- A user-level column is wrong under travel, and wrong across a DST boundary for historical rows.
+  The hour is captured at the instant the session starts, so it is right by construction.
+- ADR-0061 has the judge reading time of day **from local storage after the session ends** — the
+  fact is already client-supplied in the decided architecture. Per-session storage matches that.
 
-**Recommendation: B.** The judge (#22) reads *time of day* as a declared input under ADR-0061, and
-the coach reasons across sessions — both need the same fact, and both will be wrong in the same way
-without it. Solving it once in the schema is cheaper than solving it twice and wrong.
+**What it costs, and this belongs in the branch report:** every existing session row has
+`started_at_local_hour = null` and is excluded. The second contrast therefore renders nothing
+until eight answered sessions have been recorded after this branch ships. That is the honest
+behaviour under ADR-0053 — null means unknown, not "assume UTC" — but it means Task 3 Step 7's
+state 3 must be produced from seeded rows.
 
-**Do not start Task 1 until this is answered.** If the answer is C, Task 1 reduces to its test
-harness and Task 3 renders only the existing contrast.
+**Consequences for this plan:** the schema and extension work is **Task 1a** and runs before
+Task 1. Task 3 Step 3's query changes accordingly.
 
 ---
+
+## Amendment 2026-09-17 — the vacuous-assertion gap (owner)
+
+Task 3's below-floor test asserts `.m-ledger-pattern` has count 0, and this same change is what
+introduces that class. Written that way it passes whether or not the evidence gate works — the
+`landing.spec.ts` defect from the previous branch, in a new place. Task 4's one-claim rule has no
+test at all.
+
+Both need a signed-in user with eight or more answered sessions, which `endedSession` cannot
+produce (it creates a fresh account per call). **A seeding fixture is added in Task 3**, writing
+rows into `meant_test` directly, so that the absence assertion is falsifiable and the one-slot
+rule is testable. Task 3 Step 7 needs that same state anyway.
 
 ## File Structure
 
 | File | Task | Responsibility |
 |---|---|---|
+| `lib/migrations/005-local-hour.sql` | 1a | **New.** `session.started_at_local_hour` — the resolved timezone decision |
+| `lib/session-payload.ts` | 1a | Normalises the new untrusted `localHour` field |
+| `extension/sw.js` | 1a | Posts `localHour` from the same clock reading as `startedAt` |
+| `app/api/sessions/route.ts` | 1a | Inserts the new column |
+| `e2e/fixtures.ts` | 3 | **Modified.** Gains a seeding fixture so the evidence floor can be crossed |
 | `lib/attention-contrast.ts` | 1 | **Exists.** Domain contrast by outcome. Untouched except where Task 1 adds the time-of-day function beside it |
 | `lib/time-of-day.ts` | 1 | **New.** Pure: session start times + outcomes → the part of day with the widest finished/unfinished split. Alias-free |
 | `test/time-of-day.test.js` | 1 | **New.** Covers the gate, the both-arms rule, and the timezone contract |
@@ -174,10 +195,91 @@ harness and Task 3 renders only the existing contrast.
 
 ---
 
+## Task 1a: Where the hour comes from
+
+**Files:**
+- Create: `lib/migrations/005-local-hour.sql`
+- Modify: `lib/session-payload.ts`, `test/session-payload.test.js`, `app/api/sessions/route.ts`,
+  `extension/sw.js`
+
+**Interfaces:**
+- Produces: `session.started_at_local_hour` (int, nullable, 0–23) and
+  `StartPayload.localHour: number | null`. **Task 3 queries the column.**
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `test/session-payload.test.js`, matching that file's existing style.
+
+- `localHour: 9` normalises to `9`. **`localHour: 0` normalises to `0`** — a falsy-but-valid
+  value, and the bug that assertion exists to catch.
+- `24`, `-1`, `9.5`, `'9'`, `null`, and a missing key all normalise to `null`. The field is
+  client-supplied and untrusted, exactly like `body.id` and every array field in this module.
+
+Ask of each assertion what it would do if `localHour` were deleted from `normalizeStartPayload`
+altogether. If it would still pass, it is not a test.
+
+- [ ] **Step 2: Run it to make sure it fails**
+
+```bash
+npm test 2>&1 | grep -B2 -A6 "localHour"
+```
+
+- [ ] **Step 3: Write the implementation**
+
+`lib/migrations/005-local-hour.sql` — numbered and ordered per ADR-0018. One statement. Note that
+`lib/migrate.mjs` strips `--` comments before splitting on `;`, so comments are safe:
+
+```sql
+-- The hour, 0-23, local to the user at the instant the session started. Supplied by the
+-- extension from the same clock reading that produces started_at (extension/sw.js:125).
+--
+-- Deliberately NOT a timezone. 'Europe/Lisbon' is a location; 9 is not. This schema stores
+-- hostnames and never full URLs (ADR-0008), the judge never reads page text (ADR-0061), and
+-- paths stay on the device (ADR-0059). Acquiring a location column to answer a question an
+-- integer answers would be the same mistake in a new place.
+--
+-- Null on every row written before this migration, and null whenever the client sends
+-- anything that is not an integer 0-23. Null means unknown, and the time-of-day contrast
+-- excludes it rather than guessing (ADR-0053).
+alter table session add column if not exists started_at_local_hour int;
+```
+
+`lib/session-payload.ts` — add `localHour: number | null` to `StartPayload` and normalise it
+beside the other untrusted fields. Say in a comment why a bad value becomes null rather than a
+guess. `Number.isInteger(0)` is true and `0` is a legal hour: a truthiness check is wrong here.
+
+`app/api/sessions/route.ts` — insert the new column. The insert stays `on conflict (id) do
+nothing`; a replayed offline start must not overwrite anything.
+
+`extension/sw.js` — post `localHour` alongside `startedAt` at line 164, derived from the **same**
+`now` that line 125 uses. Do not read the clock a second time; the two must not be able to
+disagree.
+
+- [ ] **Step 4: Run the tests and apply the migration**
+
+```bash
+node --env-file=.env.test -e "console.log(new URL(process.env.DATABASE_URL).pathname)"
+npm test 2>&1 | grep -E "^. (tests|pass|fail)"
+npx tsc --noEmit
+node --env-file=.env.test lib/migrate.mjs
+```
+
+The first command must print `/meant_test` before the migration is run. It is the only guard
+between this step and the production database.
+
+- [ ] **Step 5: Commit**
+
+One commit, in this repository's style — long subjects are the convention here, do not trim to a
+generic limit. The body says why an hour and not a timezone, and that null means unknown.
+
+---
+
 ## Task 1: A second contrast — what time of day you finish things
 
-**Blocked on the timezone decision above.** Written assuming **B** (a stored timezone); if the
-answer is A or C, stop and have the plan amended rather than improvising.
+**The timezone question is resolved above, and Task 1a supplies the hour.** This module is
+unchanged by that decision: it takes `startedAtLocalHour`, an integer already local to the user,
+and never a timestamp — which is what made the decision impossible to answer by accident inside
+it.
 
 **Files:**
 - Create: `lib/time-of-day.ts`, `test/time-of-day.test.js`
@@ -522,6 +624,18 @@ changes is what sits beneath it:
 Append to `e2e/dashboard.spec.ts`. Use the `endedSession` fixture from `e2e/fixtures.ts`
 (`({ intention, events? }) => Promise<string>`) — do not open-code a pair-and-start preamble.
 
+**First, the seeding fixture (see the amendment above).** `endedSession` makes a fresh account per
+call, so no test can reach `PATTERN_MIN_SESSIONS = 8` sessions for one user. Add the smallest
+fixture that fixes that: it signs up and pairs once, then inserts N answered sessions for that
+same user straight into `meant_test` with `@neondatabase/serverless` and `process.env.DATABASE_URL`,
+returning the page. Rows carry `outcome`, `started_at`, `ended_at` and `started_at_local_hour`, so
+a caller can drive either contrast over the floor.
+
+Rules for it: **additive** — `endedSession` and the other fifteen spec files must keep working
+untouched, and `e2e/session-recovery.spec.ts` owns its own context and must not need it. It writes
+only to the database the guard already checks, never to production. The three tests below do not
+use it; the two new ones at the end of this step do.
+
 ```ts
 // The actions block. Description, not inference — no evidence floor applies (ADR-0050), so it
 // must appear for a single unanswered session, not wait for eight.
@@ -568,6 +682,23 @@ test('the ledger shows no percentage, no score and no hours headline', async ({ 
 })
 ```
 
+And two that need the seeded fixture, because without them the `toHaveCount(0)` above can never
+fail:
+
+```ts
+// The falsifier for the test above. If .m-ledger-pattern is never rendered by anything, the
+// below-floor assertion is vacuous — the landing.spec.ts defect of the previous branch. This
+// test fails if the class is wrong, missing, or if the gate never opens.
+test('at the evidence floor the pattern sentence appears', async ({ context, seededUser }) => {
+  const page = await seededUser({ sessions: 8 /* answered, contrast-bearing */ })
+  await page.goto('/dashboard')
+  await expect(page.locator('.m-ledger-pattern')).toHaveCount(1)
+})
+```
+
+The second — **the one-slot rule's test** — belongs to Task 4 and is written there, once the rule
+exists to be tested.
+
 - [ ] **Step 2: Run it to make sure it fails**
 
 ```bash
@@ -584,15 +715,19 @@ In `app/dashboard/page.tsx`, after the existing `contrastRows` query. The backlo
 `sessions` rows already fetched — **do not add a query for it.**
 
 ```tsx
-  // Task 1's contrast needs an hour already local to the user. See the plan's timezone decision:
-  // AT TIME ZONE with a stored user_timezone, never a bare extract(hour), which buckets in UTC
-  // and would state a regularity about the user that is an artefact of server geography.
+  // Task 1's contrast needs an hour already local to the user. Task 1a stores it on the session
+  // row at start, from the extension's own clock. Null means unknown — a session recorded before
+  // that column existed, or a client that sent something that was not an integer 0-23 — and is
+  // excluded rather than guessed at (ADR-0053). There is no `at time zone` here deliberately.
   const partRows = (await sql`
-    select extract(hour from s.started_at at time zone ${userTimezone})::int as "startedAtLocalHour",
-           s.outcome
+    select s.started_at_local_hour as "startedAtLocalHour", s.outcome
       from session s
      where s.user_id = ${userId}
-       and s.outcome in ('yes', 'no')`) as { startedAtLocalHour: number; outcome: string }[]
+       and s.outcome in ('yes', 'no')
+       and s.started_at_local_hour is not null`) as {
+    startedAtLocalHour: number
+    outcome: string
+  }[]
   const partOfDay = contrastByPartOfDay(partRows)
 
   const backlog = answerableBacklog(
@@ -606,8 +741,8 @@ In `app/dashboard/page.tsx`, after the existing `contrastRows` query. The backlo
   )
 ```
 
-`userTimezone` comes from whatever the timezone decision produced. If the answer was **C**, delete
-this whole block and skip to Step 5.
+No `userTimezone` variable exists and none may be introduced — see the resolved timezone section
+above.
 
 - [ ] **Step 4: Render the actions block**
 
@@ -717,6 +852,9 @@ on theirs is exactly that."
 **Files:**
 - Create: `docs/adr/ADR-0066-<slug>.md`
 - Modify: `docs/design.md` §5 and §6, `docs/design-toolkit.md` §8, `docs/sitemap-intent.md`
+- Modify: `app/dashboard/page.tsx`, `e2e/dashboard.spec.ts` — **the rule is code as well as a
+  document.** Task 3 renders both statements so this task can be decided by looking at them; this
+  task implements whatever it decides, and tests it.
 
 **This task does not merge-gate on taste; it gates on ADR-0063.** Two pattern statements now exist
 (`contrastByOutcome`, `contrastByPartOfDay`) and more are cheap to add. Without a rule, the dashboard
@@ -749,6 +887,17 @@ was made on ADR-0065 and had to be fixed.
 
 State in Consequences that this constrains every future statistic including the judge's own output,
 since a judge verdict rendered here would compete for the same slot.
+
+- [ ] **Step 2a: Implement the rule, and write the test that proves it**
+
+Whatever Step 1 decided, `app/dashboard/page.tsx` must enforce it and `e2e/dashboard.spec.ts` must
+fail if it stops being enforced. Under the recommended rule that is: both contrasts computed, one
+rendered, and a test using the seeded fixture from Task 3 that puts **both** over the floor and
+asserts `.m-ledger-pattern` has count exactly 1.
+
+A rule stated only in an ADR is a rule that regresses on the next branch. Ask of the test what it
+would do if the selection were deleted and both sentences rendered. If it would still pass, it is
+not a test.
 
 - [ ] **Step 3: Reconcile the documents**
 
