@@ -29,7 +29,17 @@ export type PartOfDayContrast = {
   sessions: number
 }
 
-export function contrastByPartOfDay(rows: PartOfDayRow[]): PartOfDayContrast | null {
+/** EVERY qualifying part of day, widest gap first — not the single widest.
+ *
+ *  Returning one meant a thin bucket silently suppressed a thick qualifying one: morning
+ *  8 yes / 6 no (14 answered) beside evening 1 yes / 5 no (6 answered) returned evening, whose
+ *  six sessions are below the I6 floor, so the caller gated on evening and the sentence about
+ *  mornings — which had fourteen sessions behind it — never rendered at all. Under ADR-0066 it
+ *  also handed the single slot to the domain contrast on a claim that never had to compete.
+ *
+ *  The caller takes the first entry that clears `PATTERN_MIN_SESSIONS`, exactly as it does with
+ *  contrastByOutcome. Ranking is this module's job; the evidence floor is the caller's. */
+export function contrastByPartOfDay(rows: PartOfDayRow[]): PartOfDayContrast[] {
   const byPart = new Map<PartName, { yes: number; no: number }>()
 
   for (const row of rows) {
@@ -43,17 +53,27 @@ export function contrastByPartOfDay(rows: PartOfDayRow[]): PartOfDayContrast | n
     byPart.set(part, entry)
   }
 
-  const withBothArms = [...byPart.entries()].filter(([, e]) => e.yes > 0 && e.no > 0)
-  if (withBothArms.length === 0) return null
-
-  // Widest gap in EITHER direction: a part of day you rarely finish in is as informative as one
-  // you usually do.
-  const [part, e] = withBothArms.sort(
-    (a, b) => Math.abs(b[1].yes - b[1].no) - Math.abs(a[1].yes - a[1].no),
-  )[0]
-
-  // The evidence is the named part's own sessions, not every answered session. Counting the
-  // whole day would clear the I6 gate on hours this sentence never mentions — the same
-  // inflation the domain contrast's per-session fold exists to prevent.
-  return { part, finished: e.yes, unfinished: e.no, sessions: e.yes + e.no }
+  return (
+    [...byPart.entries()]
+      // BOTH arms required. One arm is not a contrast, and stating one would be a pattern claim
+      // from a single side — I6 as amended by ADR-0050.
+      .filter(([, e]) => e.yes > 0 && e.no > 0)
+      // The evidence is the named part's own sessions, not every answered session. Counting the
+      // whole day would clear the I6 gate on hours this sentence never mentions — the same
+      // inflation the domain contrast's per-session fold exists to prevent.
+      .map(([part, e]) => ({ part, finished: e.yes, unfinished: e.no, sessions: e.yes + e.no }))
+      .sort(
+        (a, b) =>
+          // Widest gap in EITHER direction: a part of day you rarely finish in is as informative
+          // as one you usually do.
+          Math.abs(b.unfinished - b.finished) - Math.abs(a.unfinished - a.finished) ||
+          // Equal gaps used to fall back to Map insertion order, which is the order Postgres
+          // happened to return rows in — and the query has no ORDER BY. The same six rows in two
+          // orders produced `morning` and `evening`, so the sentence about the user could flip
+          // between two page loads with no data change. ADR-0066 defined the tie BETWEEN claims;
+          // this is the tie WITHIN one. PARTS declaration order settles it — earlier in the day
+          // wins — because it is a property of this file rather than of the database.
+          PARTS.findIndex((p) => p.name === a.part) - PARTS.findIndex((p) => p.name === b.part),
+      )
+  )
 }

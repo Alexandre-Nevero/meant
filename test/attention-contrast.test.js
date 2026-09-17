@@ -102,3 +102,38 @@ test('the average is per session, so a fragmented session does not outweigh a fo
 test('contrastByOutcome handles an empty input', () => {
   assert.deepEqual(contrastByOutcome([]), [])
 })
+
+test('a thin domain with a wide gap does not hide a thick one from the evidence floor', () => {
+  // The same defect the part-of-day contrast had, on the caller's side: the dashboard read the
+  // first entry and gated on THAT domain's session count, so a two-session claim with a huge gap
+  // vetoed an eight-session one and no sentence rendered at all. This module ranks by gap and
+  // returns everything; the caller takes the first entry that clears the floor. If either the
+  // ranking or the completeness of this list regresses, both assertions below move.
+  const rows = [
+    { domain: 'thin.com', sessionId: 't1', seconds: 60, outcome: 'yes' },
+    { domain: 'thin.com', sessionId: 't2', seconds: 3600, outcome: 'no' },
+    ...Array.from({ length: 5 }, (_, i) => ({
+      domain: 'thick.com', sessionId: `k${i}`, seconds: 540, outcome: 'yes',
+    })),
+    ...Array.from({ length: 3 }, (_, i) => ({
+      domain: 'thick.com', sessionId: `m${i}`, seconds: 1860, outcome: 'no',
+    })),
+  ]
+  const out = contrastByOutcome(rows)
+  assert.deepEqual(out.map((c) => c.domain), ['thin.com', 'thick.com'])
+  // What the dashboard does: the first entry that clears the eight-session floor.
+  assert.equal(out.find((c) => c.sessions >= 8).domain, 'thick.com')
+})
+
+test('equal gaps break by domain name, not by the order the rows arrived in', () => {
+  // Before the secondary key, two domains with identical gaps fell back to Map insertion order —
+  // the order Postgres returned the event rows in, from a query with no ORDER BY. The sentence
+  // could name a different domain between two page loads with no data change. Both orderings
+  // must now agree. Deleting the tie-break fails the second assertion.
+  const a = { domain: 'a.com', sessionId: 'a1', seconds: 100, outcome: 'yes' }
+  const b = { domain: 'a.com', sessionId: 'a2', seconds: 700, outcome: 'no' }
+  const c = { domain: 'z.com', sessionId: 'z1', seconds: 200, outcome: 'yes' }
+  const d = { domain: 'z.com', sessionId: 'z2', seconds: 800, outcome: 'no' }
+  assert.deepEqual(contrastByOutcome([a, b, c, d]).map((x) => x.domain), ['a.com', 'z.com'])
+  assert.deepEqual(contrastByOutcome([c, d, a, b]).map((x) => x.domain), ['a.com', 'z.com'])
+})

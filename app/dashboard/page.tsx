@@ -63,7 +63,7 @@ export default async function Dashboard() {
     outcome: string
     sessionId: string
   }[]
-  const [contrast] = contrastByOutcome(contrastRows)
+  const contrasts = contrastByOutcome(contrastRows)
 
   // Task 1's contrast needs an hour already local to the user: the extension stores it on the
   // session row at start, from its own clock. Null means unknown — a session recorded before the
@@ -80,7 +80,7 @@ export default async function Dashboard() {
     startedAtLocalHour: number
     outcome: string
   }[]
-  const partOfDay = contrastByPartOfDay(partRows)
+  const partsOfDay = contrastByPartOfDay(partRows)
 
   // ADR-0066: at most ONE inference sentence renders. Both contrasts are still computed — the
   // arithmetic is free and the losing one is what the winner is measured against — but only the
@@ -88,8 +88,14 @@ export default async function Dashboard() {
   // two gaps are not commensurable (seconds against session counts), so evidence is the only
   // comparison that invents nothing. Description below — the headline, the actions block, the
   // record — is unbounded and ungated (ADR-0050); this rule governs claims about the user only.
-  const domainClaim = contrast && contrast.sessions >= PATTERN_MIN_SESSIONS ? contrast : null
-  const partClaim = partOfDay && partOfDay.sessions >= PATTERN_MIN_SESSIONS ? partOfDay : null
+  //
+  // The FIRST entry that clears the floor, in both cases — never the widest gap alone. Both
+  // contrasts rank by gap size and a wide gap is often the thinnest evidence, so gating on the
+  // top entry let a two-session claim veto an eight-session one: neither sentence rendered, and
+  // under ADR-0066 the surviving claim took the slot without competing. The floor belongs here,
+  // the ranking belongs in the two modules.
+  const domainClaim = contrasts.find((c) => c.sessions >= PATTERN_MIN_SESSIONS) ?? null
+  const partClaim = partsOfDay.find((p) => p.sessions >= PATTERN_MIN_SESSIONS) ?? null
   const showPart = partClaim !== null && (domainClaim === null || partClaim.sessions > domainClaim.sessions)
   const showDomain = domainClaim !== null && !showPart
 
