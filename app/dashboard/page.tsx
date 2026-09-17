@@ -6,6 +6,8 @@ import { toBand } from '@/lib/band'
 import { toWords } from '@/lib/words'
 import { Band } from '../band'
 import { contrastByOutcome } from '@/lib/attention-contrast'
+import { contrastByPartOfDay } from '@/lib/time-of-day'
+import { answerableBacklog } from '@/lib/unanswered'
 import { PATTERN_MIN_SESSIONS } from '@/lib/thresholds'
 
 export const dynamic = 'force-dynamic'
@@ -63,21 +65,81 @@ export default async function Dashboard() {
   }[]
   const [contrast] = contrastByOutcome(contrastRows)
 
+  // Task 1's contrast needs an hour already local to the user: the extension stores it on the
+  // session row at start, from its own clock. Null means unknown — a session recorded before the
+  // column existed, or a client that sent something that was not an integer 0-23 — and is
+  // excluded rather than guessed at (ADR-0053). There is no `at time zone` here deliberately:
+  // a bare extract(hour) buckets in UTC and would state a confident regularity about the person
+  // that is an artefact of server geography.
+  const partRows = (await sql`
+    select s.started_at_local_hour as "startedAtLocalHour", s.outcome
+      from session s
+     where s.user_id = ${userId}
+       and s.outcome in ('yes', 'no')
+       and s.started_at_local_hour is not null`) as {
+    startedAtLocalHour: number
+    outcome: string
+  }[]
+  const partOfDay = contrastByPartOfDay(partRows)
+
+  // Reuses the rows already fetched above — the backlog is a view of the record, not a
+  // second question to the database.
+  const backlog = answerableBacklog(
+    sessions.map((s) => ({
+      id: s.id as string,
+      outcome: s.outcome as string,
+      endedAt: s.ended_at ? new Date(s.ended_at as string).toISOString() : null,
+      intention: s.intention as string,
+    })),
+    new Date(),
+  )
+
   return (
     <div data-surface="ledger">
       <h1 className="m-rate">
         {toWords(counts.answered)} this month. {toWords(counts.finished)} finished.
       </h1>
 
+      {backlog.length > 0 && (
+        <div className="m-ledger-actions">
+          {/* Description, not inference — no evidence floor (ADR-0050), so one unanswered
+              session is enough and it does not wait for eight. No valence (I3): an unanswered
+              session is a question still open, never a failure. Three at most — the list below
+              already carries every session, and a backlog that fills the screen is the guilt
+              ledger docs/design-toolkit.md §9 refuses. */}
+          <p className="m-meta">
+            {backlog.length === 1
+              ? 'One session is still unanswered.'
+              : `${toWords(backlog.length)} sessions are still unanswered.`}
+          </p>
+          {backlog.slice(0, 3).map((s) => (
+            <Link className="m-sentence" key={s.id} href={`/review/${s.id}`}>
+              {s.intention || 'No intention given'}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* A claim about the USER, so I6's evidence floor applies — ADR-0050 removed the floor
           from description, never from inference. Below the threshold this renders nothing at
           all, and does not hedge a partial pattern (PRD US-11). Minutes spelled as words; no
           rate, no percentage, no score (§3.1). */}
       {contrast && contrast.sessions >= PATTERN_MIN_SESSIONS && (
-        <p className="m-meta">
+        <p className="m-meta m-ledger-pattern">
           The sessions you finished averaged {toWords(Math.round(contrast.finishedAvgSeconds / 60))}{' '}
           minutes on {contrast.domain}. The ones you did not averaged{' '}
           {toWords(Math.round(contrast.unfinishedAvgSeconds / 60))}.
+        </p>
+      )}
+
+      {/* The same claim-about-the-user, so the same gate: counted on the named part's own
+          answered sessions, never the whole day. Grammar deliberately parallel to its sibling
+          above so the two read as one voice. Counts as words, no rate, no percentage, no score
+          (§3.1); no valence on either answer (I3 / ADR-0051). */}
+      {partOfDay && partOfDay.sessions >= PATTERN_MIN_SESSIONS && (
+        <p className="m-meta m-ledger-pattern">
+          Of the sessions you started in the {partOfDay.part}, {toWords(partOfDay.finished)}{' '}
+          finished and {toWords(partOfDay.unfinished)} did not.
         </p>
       )}
       <Link className="m-meta" href="/setup">Set up your sites</Link>

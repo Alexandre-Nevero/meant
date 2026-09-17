@@ -1,15 +1,28 @@
 import { test as base, expect, chromium, type BrowserContext, type Page } from '@playwright/test'
+import { neon } from '@neondatabase/serverless'
 import path from 'node:path'
 import os from 'node:os'
 import fs from 'node:fs'
+import { testDatabaseUrlFrom } from '../lib/db-guard'
 
 const EXTENSION_PATH = path.join(__dirname, '..', 'extension')
+
+/** One session to write straight into the database. `startedAtLocalHour` is the column added by
+ *  lib/migrations/005-local-hour.sql; omit it (or pass null) for the "unknown hour" case, which
+ *  the time-of-day contrast must exclude rather than bucket. */
+type SeedSession = {
+  outcome: 'yes' | 'no' | 'unanswered'
+  startedAtLocalHour?: number | null
+  intention?: string
+  events?: { kind: string; domain: string; seconds: number }[]
+}
 
 type Fixtures = {
   context: BrowserContext
   extensionId: string
   freshAccount: (page: Page) => Promise<{ email: string; password: string }>
   endedSession: (opts: { intention: string; events?: unknown[] }) => Promise<string>
+  seededUser: (sessions: SeedSession[]) => Promise<Page>
 }
 
 export const test = base.extend<Fixtures>({
@@ -106,6 +119,50 @@ export const test = base.extend<Fixtures>({
       // again. Left open, it leaked one page (and one real auth user's session) per call.
       await page.close()
       return sessionId
+    })
+  },
+
+  // endedSession makes a fresh account per call, so no test using it can reach
+  // PATTERN_MIN_SESSIONS sessions for ONE user — which is every test of the evidence floor.
+  // This signs up and pairs once, then writes N finished sessions for that same user directly.
+  //
+  // playwright.config.ts injects DATABASE_URL through webServer.env: that reaches the Next
+  // server, not this process. So the URL is read here the same way the config reads it, through
+  // the guard that refuses any database whose name does not end in _test. Never process.env,
+  // never a connection string assembled locally — the guard is the only door.
+  seededUser: async ({ context, freshAccount }, use) => {
+    const sql = neon(
+      testDatabaseUrlFrom(fs.readFileSync(path.join(__dirname, '..', '.env.test'), 'utf8')),
+    )
+    await use(async (seeds) => {
+      const page = await context.newPage()
+      await freshAccount(page)
+      // session.device_id is NOT NULL and references device(id), so a seeded row needs a real
+      // device. Pairing through the API is the only thing that makes one; no extension is
+      // involved, because nothing here goes through the extension's code path.
+      const { code } = await (await page.request.post('/api/pair')).json()
+      const { deviceId } = await (await page.request.post('/api/pair/claim', { data: { code } })).json()
+      const [device] = await sql`select user_id from device where id = ${deviceId}`
+
+      for (const [i, seed] of seeds.entries()) {
+        // Minutes ago, ascending with the index, so `order by started_at desc` is deterministic
+        // and every row stays inside date_trunc('month', now()) for the headline count.
+        const startedAt = new Date(Date.now() - (seeds.length - i) * 60_000)
+        const endedAt = new Date(startedAt.getTime() + 30_000)
+        const [row] = await sql`
+          insert into session (user_id, device_id, intention, started_at, ended_at, end_reason,
+                               outcome, started_at_local_hour)
+          values (${device.user_id}, ${deviceId}, ${seed.intention ?? `seeded session ${i + 1}`},
+                  ${startedAt.toISOString()}, ${endedAt.toISOString()}, 'stopped',
+                  ${seed.outcome}, ${seed.startedAtLocalHour ?? null})
+          returning id`
+        for (const e of seed.events ?? []) {
+          await sql`
+            insert into event (session_id, kind, domain, seconds, at)
+            values (${row.id}, ${e.kind}, ${e.domain}, ${e.seconds}, ${startedAt.toISOString()})`
+        }
+      }
+      return page
     })
   },
 })

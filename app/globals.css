@@ -101,6 +101,18 @@ a { color: inherit; text-decoration: none; }
   border-width: 0.5px;
 }
 
+/* The actions block (Rize's 2022 Home view: "a list of any actions you need to take"). Quiet by
+ * construction: it is a list of open questions, not a warning. No accent, no border, no icon —
+ * the only thing separating it from the record below is that it is closer to the headline. */
+[data-surface="ledger"] .m-ledger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* .m-row's own rule cannot reach these — they are links in a flex column, not row cells — so
+ * the ledger's sentence size is restated rather than inherited. */
+[data-surface="ledger"] .m-ledger-actions .m-sentence { font-size: 20px; }
+
 /* Ported from design/canvas/Main.dc.html:23,47,59. The artboard's step-list (:31) and its
  * "Drifted twice…" line (:57) are NOT ported: PRD-F8's generated plan is cut (ADR-0048) and
  * the drift signal is deleted (ADR-0057), and ADR-0063 makes the ADR right where the canvas
