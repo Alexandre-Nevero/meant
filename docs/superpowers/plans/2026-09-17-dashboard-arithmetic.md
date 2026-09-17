@@ -335,10 +335,25 @@ test('picks the part of day with the widest split, in either direction', () => {
 
 test('reports DISTINCT sessions so the I6 gate counts what it says it counts', () => {
   // The domain contrast had exactly this bug: it counted event rows and would have stated a
-  // pattern on five sessions while reporting fifty-three. One row is one session here, and the
-  // total must equal the rows that survived filtering — never the input length.
+  // pattern on five sessions while reporting fifty-three. One row is one session here, and
+  // unanswered rows never count as evidence.
   const rows = [at(9, 'yes'), at(9, 'no'), at(14, 'unanswered')]
   assert.equal(contrastByPartOfDay(rows).sessions, 2)
+})
+
+test('the evidence count is the named part alone, not every answered session', () => {
+  // contrastByOutcome counts only the sessions backing the claim — that domain's yes plus no.
+  // This must match (owner, 2026-09-17). A part of day does not inherit evidence from the
+  // hours the sentence never mentions: mornings here rest on two sessions, and the claim is
+  // about evenings, so the gate must see seven and not nine.
+  const rows = [
+    at(9, 'yes'), at(9, 'no'),
+    at(20, 'yes'), at(20, 'yes'), at(20, 'yes'), at(20, 'yes'), at(20, 'yes'), at(20, 'yes'),
+    at(21, 'no'),
+  ]
+  const r = contrastByPartOfDay(rows)
+  assert.equal(r.part, 'evening')
+  assert.equal(r.sessions, 7)
 })
 
 test('the four parts partition the clock with no gap and no overlap', () => {
@@ -391,13 +406,13 @@ export type PartOfDayContrast = {
   part: PartName
   finished: number
   unfinished: number
-  /** DISTINCT sessions that carried an answer. The I6 evidence floor counts these. */
+  /** DISTINCT answered sessions IN `part` — the rows this claim actually rests on, which is
+   *  what contrastByOutcome counts for its domain. The I6 evidence floor counts these. */
   sessions: number
 }
 
 export function contrastByPartOfDay(rows: PartOfDayRow[]): PartOfDayContrast | null {
   const byPart = new Map<PartName, { yes: number; no: number }>()
-  let answered = 0
 
   for (const row of rows) {
     // `unanswered` is the absence of an answer, not a third outcome to compare against.
@@ -408,7 +423,6 @@ export function contrastByPartOfDay(rows: PartOfDayRow[]): PartOfDayContrast | n
     const entry = byPart.get(part) ?? { yes: 0, no: 0 }
     entry[row.outcome === 'yes' ? 'yes' : 'no'] += 1
     byPart.set(part, entry)
-    answered += 1
   }
 
   const withBothArms = [...byPart.entries()].filter(([, e]) => e.yes > 0 && e.no > 0)
@@ -420,7 +434,10 @@ export function contrastByPartOfDay(rows: PartOfDayRow[]): PartOfDayContrast | n
     (a, b) => Math.abs(b[1].yes - b[1].no) - Math.abs(a[1].yes - a[1].no),
   )[0]
 
-  return { part, finished: e.yes, unfinished: e.no, sessions: answered }
+  // The evidence is the named part's own sessions, not every answered session. Counting the
+  // whole day would clear the I6 gate on hours this sentence never mentions — the same
+  // inflation the domain contrast's per-session fold exists to prevent.
+  return { part, finished: e.yes, unfinished: e.no, sessions: e.yes + e.no }
 }
 ```
 
@@ -431,7 +448,8 @@ npm test 2>&1 | grep -E "^. (tests|pass|fail)"
 npx tsc --noEmit
 ```
 
-Expected: 149 + 5 = **154 passing, 0 failures**, 0 type errors.
+Expected: six new tests passing, 0 failures, 0 type errors. Report the exact totals rather than
+a predicted number — Task 1a already moved the baseline.
 
 - [ ] **Step 5: Commit**
 
@@ -692,7 +710,9 @@ fail:
 test('at the evidence floor the pattern sentence appears', async ({ context, seededUser }) => {
   const page = await seededUser({ sessions: 8 /* answered, contrast-bearing */ })
   await page.goto('/dashboard')
-  await expect(page.locator('.m-ledger-pattern')).toHaveCount(1)
+  // Not toHaveCount(1): until Task 4's rule exists, both statements may fire at once — that is
+  // the state Step 7 has to render and Task 4 has to look at. Task 4 tightens this to exactly 1.
+  await expect(page.locator('.m-ledger-pattern')).not.toHaveCount(0)
 })
 ```
 
@@ -789,6 +809,24 @@ blocks compose existing primitives.
 
 Add `className="m-ledger-pattern"` to the existing pattern `<p>` so the test can assert its absence
 by class rather than by matching prose, which would break the moment the copy changes.
+
+**And render the second sentence, which the plan computed in Step 3 and never displayed.** It
+carries the same class, because Task 4's rule is about how many of these may appear, and it sits
+directly beneath the first. Copy approved by the owner 2026-09-17 — deliberately parallel to the
+existing sentence's grammar so the two read as one voice and Task 4's swap is invisible:
+
+```tsx
+      {partOfDay && partOfDay.sessions >= PATTERN_MIN_SESSIONS && (
+        <p className="m-meta m-ledger-pattern">
+          Of the sessions you started in the {partOfDay.part}, {toWords(partOfDay.finished)}{' '}
+          finished and {toWords(partOfDay.unfinished)} did not.
+        </p>
+      )}
+```
+
+Second person, past tense to match its sibling, counts as words (§3.1 — no rate, no percentage,
+no score), no valence on either answer (I3 / ADR-0051), the part of day lowercase. It is gated at
+`PATTERN_MIN_SESSIONS` exactly as the domain contrast is: it is a claim about the user.
 
 `.m-ledger-actions` and `.m-ledger-pattern` are **structural names under the `.m-landing-*` /
 `.m-shell-*` / `.m-review-*` precedent.** Task 4 declares them in the census. They do not resolve
