@@ -10,7 +10,7 @@ import { test as base } from './fixtures'
 // token fails (dual-auth, by design). Testing via page.request would pass even with a
 // revoked token, for the wrong reason: the session cookie, not the token, would be doing
 // the authenticating. A first pass here failed exactly this way before the isolation fix.
-base('pairing code is single-use, and disconnect actually revokes the device', async ({ context, freshAccount }) => {
+base('pairing code is single-use, and disconnect actually revokes the device', async ({ context, freshAccount, baseURL }) => {
   const page = await context.newPage()
   await freshAccount(page)
 
@@ -29,7 +29,9 @@ base('pairing code is single-use, and disconnect actually revokes the device', a
   const reclaim = await page.request.post('/api/pair/claim', { data: { code } })
   expect(reclaim.status()).toBe(401)
 
-  const deviceOnly = await pwRequest.newContext({ baseURL: 'http://localhost:3000' })
+  // baseURL from the config, not a hardcoded :3000 — #18 moved this suite's server to 3100, and
+  // :3000 is whatever dev server the developer happens to have running against .env.local.
+  const deviceOnly = await pwRequest.newContext({ baseURL })
 
   // The device token authenticates independently of the session cookie.
   const listsBeforeRevoke = await deviceOnly.get('/api/lists', {

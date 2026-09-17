@@ -6,6 +6,12 @@
   --m-display: var(--font-fraunces, Georgia, serif);
   --m-body: var(--font-public-sans, system-ui, sans-serif);
   --m-figure: var(--font-sometype-mono, ui-monospace, monospace);
+
+  /* The shell has no artboard (docs/design.md §6 — design/canvas/ holds seven and none of
+     them shows navigation), so this number lives here rather than in tokens.css, which
+     carries only values lifted from the artboards. Declared as a height rather than derived
+     from padding so calc() against it is exact — the landing header does the same at :476. */
+  --m-shell-h: 60px;
 }
 
 /* ---------- reset ---------- */
@@ -95,17 +101,69 @@ a { color: inherit; text-decoration: none; }
   border-width: 0.5px;
 }
 
+/* Ported from design/canvas/Main.dc.html:23,47,59. The artboard's step-list (:31) and its
+ * "Drifted twice…" line (:57) are NOT ported: PRD-F8's generated plan is cut (ADR-0048) and
+ * the drift signal is deleted (ADR-0057), and ADR-0063 makes the ADR right where the canvas
+ * is stale. Width stays 1000px, not the artboard's 880 — docs/design.md §6 corrected that on
+ * 2026-09-16; the review shares the ledger's shell. */
 [data-surface="review"] {
   max-width: 1000px;
   margin: 0 auto;
   padding: 72px 80px;
   display: flex;
   flex-direction: column;
+  gap: 40px;
+  /* So margin-top:auto below has somewhere to push. The artboard is a fixed 1120px board;
+     without a height here `auto` resolves to zero and the staging silently does nothing. */
+  min-height: calc(100dvh - var(--m-shell-h));
+}
+
+/* The rows are their own group at gap 0 — each already carries 14px of padding and a
+ * hairline. As direct children of a 40px column the list falls apart. */
+.m-review-rows { display: flex; flex-direction: column; }
+
+/* "Did you?" is the highest-stakes moment in the product and it arrived 24px below a grey
+ * caveat, in the same rhythm as everything above it. Staged, not listed.
+ *
+ * The wrapper holds BOTH outcome branches, not just the question: if only the question were
+ * pinned, answering would make the reply jump up the page at exactly the peak-end moment the
+ * review exists for. */
+.m-review-ask { display: flex; flex-direction: column; gap: 20px; margin-top: auto; }
+
+/* answer.tsx's [role="alert"] is unconditionally mounted, empty until a failed write fills
+ * it — reserve the line it will need so the empty and filled states are the same height.
+ * Without this, mounting the text (not the element) would still grow the group by a line and
+ * shift .m-review-ask's siblings, since the paragraph is a flex child at gap: 20px above. */
+.m-review-ask [role="alert"] { min-height: 1lh; }
+
+/* The review had no narrow step at all — 80px gutters leave a 230px column at 390px, the
+ * same defect the ledger had before #7. Same remedy, same breakpoint. */
+@media (max-width: 700px) {
+  [data-surface="review"] { padding: 40px 24px; gap: 28px; }
+}
+
+/* The failure surfaces. Centred and short on purpose — there is nothing to read here, only
+ * somewhere to go. Reuses the ledger's own column so it does not jump when it replaces one. */
+[data-surface="not-found"] {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 72px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 24px;
+}
+[data-surface="not-found"] .m-btn { width: auto; padding: 16px 32px; }
+
+@media (max-width: 700px) {
+  [data-surface="not-found"] { padding: 40px 24px; }
 }
 
 /* review's single combined band, once, above the per-domain rows */
-[data-surface="review"] > .m-mark:not(:empty) {
+/* Descendant, not direct child: the band is wrapped in a .m-rise div (#48), and this rule
+   is what gives it its full width. :not(:empty) already discriminates — the only other
+   .m-mark on this surface is the empty brand glyph at the top of the page. */
+[data-surface="review"] .m-mark:not(:empty) {
   width: 100%;
   height: 32px;
   border: none;
@@ -176,6 +234,19 @@ a { color: inherit; text-decoration: none; }
   color: var(--m-ink-3);
 }
 
+/* ---------- errors ----------------------------------------------------------------------
+ * One treatment, hooked on the ARIA role rather than a new class, so the thing that makes it
+ * visible and the thing that makes it audible cannot drift apart — and the 13-class contract
+ * is untouched.
+ *
+ * Colour cannot carry this. Clay is banned as a text colour at 3.74:1 (docs/design.md §10),
+ * and the defect being fixed (#46) is precisely that a failed sign-in rendered as --m-ink-3,
+ * the same grey as the word "or". So: full ink, one weight up, and announced. */
+[role="alert"] {
+  color: var(--m-ink);
+  font-weight: 500;
+}
+
 /* ---------- .m-field — the outline that holds the sentence ---------- */
 
 .m-field {
@@ -190,8 +261,12 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: var(--m-tracking);
   color: var(--m-ink);
 }
-.m-field::placeholder { color: var(--m-ink-3); font-family: var(--m-body); font-size: 15px; }
+.m-field::placeholder { color: var(--m-ink-2); font-family: var(--m-body); font-size: 15px; }
 .m-field:focus-visible { outline: var(--m-stroke) solid var(--m-clay); outline-offset: 2px; }
+
+/* Scoped with :has so a real <label> gets its layout without a 14th class name. */
+label:has(> .m-field) { display: flex; flex-direction: column; gap: 6px; }
+label:has(> .m-field) > .m-meta { color: var(--m-ink-2); }
 
 [data-surface="block"] .m-field {
   border-width: var(--m-stroke-loud);
@@ -369,6 +444,8 @@ a { color: inherit; text-decoration: none; }
   margin: 0 auto;
   padding: 64px 24px;
 }
+
+[data-surface="setup"] .m-btn { width: auto; padding: 16px 32px; }
 
 /* ---------- .m-empty — nothing here yet ---------- */
 
@@ -601,12 +678,15 @@ a { color: inherit; text-decoration: none; }
   [data-surface="landing"] .m-landing-ledger .m-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 }
 
-/* ---------- motion: entry ---------- */
-
+/* ---------- motion: entry ----------
+ * The one authored moment in the product (docs/design-toolkit.md §6). The step comes from
+ * --m-stagger, which tokens.css already drops to 0ms under prefers-reduced-motion — so the
+ * index below needs no branch of its own. */
 .m-rise {
   opacity: 1;
   transform: none;
   transition: opacity var(--m-dur-rise) var(--m-ease), transform var(--m-dur-rise) var(--m-ease);
+  transition-delay: calc(var(--m-rise-i, 0) * var(--m-stagger));
 }
 @starting-style { .m-rise { opacity: 0; transform: translateY(8px); } }
 
@@ -636,7 +716,8 @@ a { color: inherit; text-decoration: none; }
    * item ran off the right edge of the viewport. */
   max-width: 1000px;
   margin: 0 auto;
-  padding: 20px 80px 18px;
+  height: var(--m-shell-h);
+  padding: 0 80px;
   border-bottom: var(--m-stroke-hair) solid var(--m-rule);
 }
 

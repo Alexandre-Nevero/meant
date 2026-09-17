@@ -52,6 +52,8 @@ function css() {
       --m-ground: #F3F1EE;
       --m-clay: #C75B39;
       --m-ease: cubic-bezier(0.23, 1, 0.32, 1);
+      --m-dur-press: 160ms;
+      --m-stroke-loud: 2px;
       all: initial;
       position: fixed;
       z-index: 2147483647;
@@ -84,8 +86,11 @@ function css() {
     }
     .dot-wrap[data-dragging="true"] { cursor: grabbing; }
 
-    /* .ring — presence + style tells the state. Never a color change (an orbit that
-     * changes hue reads as a status light, not a witness) — solid vs. dashed vs. none. */
+    /* .ring — presence tells the state. Never a colour change (an orbit that changes hue
+     * reads as a status light, not a witness). ADR-0057 deleted the drift signal, so while a
+     * session runs there is exactly ONE state: solid, present, breathing. The dashed variant
+     * and its pulse were kept unreferenced for a week after that and are now gone —
+     * applyState() has only ever passed 'focus' since. */
     .ring {
       position: absolute;
       inset: 0;
@@ -95,21 +100,17 @@ function css() {
       transition: opacity 220ms var(--m-ease);
     }
     .dot-wrap[data-state="focus"] .ring { opacity: 0.55; }
-    .dot-wrap[data-state="drift"] .ring {
-      opacity: 1;
-      border-style: dashed;
-      animation: pulse-drift 1.2s ease-out infinite;
-    }
+
+    /* The receipt for the one-tap label (ADR-0058). It is ADR-0026's return-pulse motion,
+     * freed when the drift signal went — but NOT its duration: 0.6s was chosen when this
+     * meant the witness settling after drift, which is a moment. As feedback for a tap it
+     * belongs in the 100-160ms press band, and 600ms reads as lag. */
     .dot-wrap[data-returning="true"] .ring {
       opacity: 1;
       border-style: solid;
-      animation: return-pulse 0.6s ease-out;
+      animation: receipt var(--m-dur-press) var(--m-ease);
     }
-    @keyframes pulse-drift {
-      0% { transform: scale(1); opacity: 1; }
-      100% { transform: scale(1.35); opacity: 0; }
-    }
-    @keyframes return-pulse {
+    @keyframes receipt {
       0% { transform: scale(1); opacity: 1; }
       100% { transform: scale(1.6); opacity: 0; }
     }
@@ -174,6 +175,14 @@ function css() {
 
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; }
+      /* Reduced motion means fewer and gentler animations, not none at all — and the tap's
+       * ONLY confirmation was an animation, so this block used to leave the control looking
+       * dead. A discrete state change instead: the ring goes fully opaque and thickens for
+       * the receipt window, then returns. Nothing moves, nothing fades. */
+      .dot-wrap[data-returning="true"] .ring {
+        opacity: 1;
+        border-width: var(--m-stroke-loud);
+      }
     }
   `
 }
@@ -229,10 +238,11 @@ function onDrag(e) {
  *  A self-report cannot be a false positive, which is the whole reason this replaces the
  *  signal ADR-0057 removed rather than repairing it.
  *
- *  The 0.6s ring-collapse it plays is ADR-0026's return-pulse, freed when the drift signal
- *  went. Same motion, new meaning: a RECEIPT, not a celebration. I2 forbids positive
- *  feedback during a session; it does not forbid telling the user their deliberate action
- *  registered. Without it the tap is indistinguishable from a dead control. */
+ *  The receipt it plays is ADR-0026's ring-collapse, freed when the drift signal went and
+ *  retimed to feedback speed (ADR-0058, #50). Same motion, new meaning: a RECEIPT, not a
+ *  celebration. I2 forbids positive feedback during a session; it does not forbid telling
+ *  the user their deliberate action registered. Without it the tap is indistinguishable
+ *  from a dead control. */
 const TAP_SLOP_PX = 4
 const TAP_MAX_MS = 500
 
@@ -243,11 +253,24 @@ function wasTap(e) {
          Date.now() - downAt.t <= TAP_MAX_MS
 }
 
+// Two windows, because the two receipts are different things. The animated one must clear as
+// soon as it has played, or [data-returning] lingers as a visible opacity change long after
+// the motion ended. The static one must be held long enough to be *seen*, since it neither
+// moves nor fades.
+const RECEIPT_ANIMATED_MS = 180
+const RECEIPT_STATIC_MS = 600
+
+function receiptWindow() {
+  return matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? RECEIPT_STATIC_MS
+    : RECEIPT_ANIMATED_MS
+}
+
 function playReceipt() {
   if (!dot) return
   dot.dataset.returning = 'true'
   clearTimeout(returnTimer)
-  returnTimer = setTimeout(() => { if (dot) dot.dataset.returning = 'false' }, 620)
+  returnTimer = setTimeout(() => { if (dot) dot.dataset.returning = 'false' }, receiptWindow())
 }
 
 async function endDrag(e) {
@@ -344,23 +367,13 @@ function unmount() {
   clearTimeout(hoverTimer)
 }
 
-// ADR-0057 removed the drift signal, so a running session has exactly one visual state:
-// a solid, breathing ring. There is no 'drift' and therefore no drift->focus return, which
-// means ADR-0026's 0.6s return-pulse has nothing left to acknowledge and I2 is absolute
-// again with no named exception.
-//
-// The pulse machinery below is deliberately KEPT, unreferenced by state: ADR-0058 reuses
-// exactly this motion as the receipt for the one-tap label. Same animation, new meaning —
-// a receipt for an action the user chose to take is not positive feedback.
+// ADR-0057 removed the drift signal, so a running session has exactly one visual state: a
+// solid, breathing ring. The drift->focus branch that used to live here was unreachable —
+// applyState() has only ever passed 'focus'. Its motion survives, with a new meaning and a
+// new duration, as the receipt in playReceipt() (ADR-0058).
 function applyVisualState(next) {
   if (!dot) return
-  const prev = dot.dataset.state
   dot.dataset.state = next
-  if (prev === 'drift' && next === 'focus') {
-    dot.dataset.returning = 'true'
-    clearTimeout(returnTimer)
-    returnTimer = setTimeout(() => { if (dot) dot.dataset.returning = 'false' }, 620)
-  }
 }
 
 async function applyState(session, companionState) {

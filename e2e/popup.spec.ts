@@ -465,7 +465,7 @@ test.describe('popup, idle state', () => {
 
 // Case K — the running popup's own nav row and blocked-sites visibility (Task 6 brief).
 test.describe('popup, running state', () => {
-  test('shows a blocking row for the configured domains, plus History/meant.app', async ({ context, extensionId, freshAccount }) => {
+  test('shows a blocking row for the configured domains, plus History/meant.app', async ({ context, extensionId, freshAccount, baseURL }) => {
     const page = await context.newPage()
     await freshAccount(page)
     await pairPopup(page, extensionId)
@@ -481,11 +481,13 @@ test.describe('popup, running state', () => {
     await expect(page.getByRole('button', { name: 'View session history', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Open meant.app', exact: true })).toBeVisible()
 
-    const historyPage = await clickAndExpectNewTab(page, context, 'View session history', 'http://localhost:3000/dashboard')
+    // The popup builds these from apiBase(), which the fixture now seeds from this same
+    // baseURL — asserting a hardcoded :3000 asserted the old, production-adjacent port.
+    const historyPage = await clickAndExpectNewTab(page, context, 'View session history', `${baseURL}/dashboard`)
     expect(historyPage.url()).toContain('/dashboard')
     await historyPage.close()
 
-    const landingPage = await clickAndExpectNewTab(page, context, 'Open meant.app', 'http://localhost:3000/')
+    const landingPage = await clickAndExpectNewTab(page, context, 'Open meant.app', `${baseURL}/`)
     await landingPage.close()
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))

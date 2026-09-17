@@ -138,11 +138,26 @@ test.describe('floating companion', () => {
     const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
     await expect(dotWrap).toBeVisible()
 
-    await page.locator(HOST_SELECTOR).locator('.dot').click()
+    // .dot-wrap, not .dot. The inner core carries `animation: breathe 1.6s infinite`, and
+    // Playwright's actionability check waits for an element to stop moving — an infinite
+    // animation never stabilises, so clicking .dot could only ever time out. .dot-wrap is
+    // also the element that actually carries the pointer handlers (companion-overlay.js:298).
+    // The receipt window is now ~180ms (#50) — short enough that expect()'s polling plus
+    // round-trip latency can miss it outright. Watch for the attribute via MutationObserver,
+    // installed before the click, instead of reading it after the fact and hoping to win
+    // the race.
+    await dotWrap.evaluate((el: any) => {
+      ;(window as any).__sawReturning = false
+      new MutationObserver(() => {
+        if (el.dataset.returning === 'true') (window as any).__sawReturning = true
+      }).observe(el, { attributes: true, attributeFilter: ['data-returning'] })
+    })
+
+    await dotWrap.click()
 
     // The receipt: ADR-0026's freed ring-collapse, reused. A receipt, not a celebration —
     // I2 forbids positive feedback, not telling the user their deliberate action registered.
-    await expect(dotWrap).toHaveAttribute('data-returning', 'true', { timeout: 2_000 })
+    await expect.poll(() => page.evaluate(() => (window as any).__sawReturning), { timeout: 2_000 }).toBe(true)
     await expect(dotWrap).toHaveAttribute('data-returning', 'false', { timeout: 2_000 })
 
     const [sw] = context.serviceWorkers()
@@ -384,5 +399,68 @@ test.describe('floating companion', () => {
     expect(hasFreshWakeAnimation).toBe(true)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  // #50. The drift rule is dead code (ADR-0057) and the receipt is mistimed (ADR-0058).
+  test('carries no drift motion, and acknowledges a tap at feedback speed', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId)
+
+    const page = await context.newPage()
+    await page.goto('https://example.com')
+    await page.waitForTimeout(400) // let the wake animation settle
+
+    const sheet = await page.locator(HOST_SELECTOR).evaluate(
+      (host: any) => host.shadowRoot.querySelector('style').textContent,
+    )
+    expect(sheet).not.toContain('pulse-drift')
+    expect(sheet).not.toContain('data-state="drift"')
+    expect(sheet).toContain('animation: receipt var(--m-dur-press) var(--m-ease)')
+    expect(sheet).toContain('--m-dur-press: 160ms')
+
+    const host = page.locator(HOST_SELECTOR)
+    // The receipt now clears after 180ms, which a round trip can outlive — so watch for the
+    // attribute rather than reading it after the fact and hoping to win the race.
+    await host.evaluate((h: any) => {
+      const wrap = h.shadowRoot.querySelector('.dot-wrap')
+      ;(window as any).__receipt = false
+      new MutationObserver(() => {
+        if (wrap.dataset.returning === 'true') (window as any).__receipt = true
+      }).observe(wrap, { attributes: true, attributeFilter: ['data-returning'] })
+    })
+
+    const box = (await host.boundingBox())!
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await expect.poll(() => page.evaluate(() => (window as any).__receipt), { timeout: 2_000 }).toBe(true)
+  })
+
+  test.describe('reduced motion', () => {
+    test.use({ reducedMotion: 'reduce' })
+
+    test('the tap still gets a receipt, without moving anything', async ({ context, extensionId, freshAccount }) => {
+      const setupPage = await context.newPage()
+      await freshAccount(setupPage)
+      await pairAndStart(setupPage, extensionId)
+
+      const page = await context.newPage()
+      await page.goto('https://example.com')
+      await page.waitForTimeout(400)
+
+      const host = page.locator(HOST_SELECTOR)
+      const box = (await host.boundingBox())!
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+
+      // No animation at all, but the ring changes discretely — otherwise the control is dead.
+      // Polled, not read once: the static window is 600ms and a round trip can eat into it.
+      await expect
+        .poll(() =>
+          host.evaluate((h: any) => {
+            const cs = getComputedStyle(h.shadowRoot.querySelector('.ring'))
+            return `${cs.animationName}|${cs.opacity}|${cs.borderTopWidth}`
+          }),
+        )
+        .toBe('none|1|2px')
+    })
   })
 })

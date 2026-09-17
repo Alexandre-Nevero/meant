@@ -6,7 +6,7 @@
 **Cycle:** 1
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
-**Last reconciled:** 2026-09-11
+**Last reconciled:** 2026-09-16 (amendment 0.3a)
 **Upstream:** [prd-intent.md](prd-intent.md), [sitemap-intent.md](sitemap-intent.md), [flow-intent.md](flow-intent.md)
 
 > **Amendment 0.2c (2026-09-11).** A doc audit found this document badly behind shipped code —
@@ -22,6 +22,15 @@
 > itself needs a full pass against `lib/migrations/*.sql` as the source of truth; out of scope
 > for this pass, recorded here so it isn't mistaken for done.
 
+> **Amendment 0.3a (2026-09-16).** The 2026-09-15 pass rewrote §4.1's `/api/judge` row, §5.2 and
+> §5.3 and left the rest of the document describing the architecture those changes deleted.
+> Corrected in place here: **load-bearing constraint 3** (text is transient — there is no text),
+> **SDD-C1** and **SDD-C8**, the note under §4.1's endpoint table, **§4.2's tab-change and
+> correction sequences**, **V5/V7**, **§5.1's seven rules**, and **Q4/Q5**. The through-line is
+> one sentence: **the judge runs after the session and reads no page content** (ADR-0060,
+> ADR-0061), so every mechanism built around live text is void, and the companion signals nothing
+> (ADR-0057). **`docs/adr/` outranks this document** (ADR-0063).
+>
 > **Amendment 0.2 (2026-08-28).** Three tables, four components, three endpoints, and a fourth external service. §5 V5 — the payload-minimisation control this document calls "the abuse case that matters most" — is **amended, not deleted**: it changes from *never send* to *never store*. §6, which read "None," is now a real agent architecture. Read §5.1 before writing any code that touches page text.
 
 ---
@@ -47,11 +56,15 @@ Chrome / Edge extension (MV3)              Vercel (Next.js App Router)          
 └──────────────────────────┘               └──────────────────────────┘
 ```
 
+*(Diagram note, 2026-09-16: `/api/plan` and the `task` table are **cut** (ADR-0048); `/api/judge`
+no longer sits on the tab-change path (ADR-0060); `/api/memory` and `/api/coach` are specified and
+unbuilt. The shape is right; four of its boxes are history or future, not present tense.)*
+
 **Load-bearing constraint 1 — the service worker dies.** Terminated after 30s idle; `chrome.alarms` cannot tick faster than 30s *(verified 2026-08-18)*. No state lives in memory. Elapsed time is always `now − storedTimestamp`.
 
 **Load-bearing constraint 2 — the model is never in a user's way.** Blocking is a local domain match with no network call. Session start does not wait for the plan. Judging is asynchronous and its result may arrive after the tab has already changed. Any design where a person waits on inference is wrong.
 
-**Load-bearing constraint 3 — text is transient.** The only place page text exists is in flight between the extension and the gateway. It is never written to a column, a log line, an error report, or a queue. See §5.1.
+**Load-bearing constraint 3 — ~~text is transient~~ there is no text, and paths never leave the device.** **Rewritten 2026-09-16 (ADR-0059, ADR-0061).** Page text and page titles are never read, so the transience rules that governed them have no subject. The control moved to what replaced them: **full visit paths live in `chrome.storage.local` only**, never in Postgres, and transit transiently to the model at analysis time. A path is a durable handle to a specific private document — worse than a title, not better — so §5.1's rules bind it now. See §5.1.
 
 ---
 
@@ -59,16 +72,16 @@ Chrome / Edge extension (MV3)              Vercel (Next.js App Router)          
 
 | ID | Component | Responsibility | Does not |
 |---|---|---|---|
-| SDD-C1 | Service worker | Own session state in `chrome.storage.local`; attribute time; install and remove block rules; batch and flush; extract capped page text on tab change; consult the local memory cache before calling the judge | Hold a timer, hold a token in memory, store page text, call the model directly |
+| SDD-C1 | Service worker | Own session state in `chrome.storage.local`; attribute time; install and remove block rules; batch and flush; **record host and path locally** (ADR-0059); consult the local memory cache. **Corrected 2026-09-16:** ~~extract capped page text on tab change~~ — it never reads a page, and it never calls the judge during a session (ADR-0060, ADR-0061) | Hold a timer, hold a token in memory, **read or store page text or titles**, send a path to the server, call the model directly |
 | SDD-C2 | Popup | Declare intention, pick blocklist, start, stop, pair; show the plan once it arrives | Display history; block on the plan |
 | SDD-C3 | Block page | Show the intention and remaining time | Offer any bypass; call anything |
 | SDD-C4 | API routes | Authenticate, validate, write; broker all model calls | Aggregate or compute the review; persist any text it forwards |
 | SDD-C5 | Web UI | Dashboard, review, pairing, coach conversation | Track anything |
 | SDD-C6 | Schema | Seven tables, below | — |
 | **SDD-C7** | **Judge** | Classify one tab against **the intention sentence** (not a task — PRD-F8 was cut, ADR-0048/D38): `serves` / `drifts` / `unclear` + confidence | Persist text; run on the block path; be consulted for a domain memory has already classified |
-| **SDD-C8** | **Companion** | Hold presence: breathe (not blink — dropped in the Orbit reversal, ADR-0026), ring solid when settled / dashed when drifting (not a literal turn-to-face — that was the retired gaze design), accept one tap | Speak, celebrate, animate beyond its motion budget, accept typed input, mark a "task" (none exist), or move at all during the first 60s |
+| **SDD-C8** | **Companion** | **Rewritten 2026-09-16 (ADR-0057, ADR-0058).** Hold presence: breathe (not blink — dropped in the Orbit reversal, ADR-0026), **one solid ring, one state**; reveal the intention on hover; **accept one tap meaning "this isn't the work"** and acknowledge it with a 0.6s ring-collapse | Speak, celebrate, **signal drift or display any verdict**, ~~animate beyond its motion budget~~ **move for any reason the user did not cause**, accept typed input, mark a "task" (none exist), or move at all during the first 60s |
 | **SDD-C9** | **Memory** | Store and serve domain classifications, drift patterns, estimate accuracy; gate the judge; hold the evidence counts that license the coach to speak | State a pattern below the evidence threshold |
-| **SDD-C10** | **Coach** | In the review only: state observations, celebrate the return / the completion / the answering, offer executable suggestions | Exist during a session; vary its wording by the outcome answer (I3); suggest anything it cannot perform (I5) |
+| **SDD-C10** | **Coach** | In the review only: state observations, celebrate the completion and the answering, offer executable suggestions. **Corrected 2026-09-16:** "celebrate the return" assumed a signalled drift to return from (ADR-0057). Returns are still visible in recorded attention; they are no longer an event | Exist during a session; vary its wording by the outcome answer (I3); suggest anything it cannot perform (I5) |
 
 ---
 
@@ -155,15 +168,17 @@ Seven tables. The threshold that would justify a separate data-model document is
 | **GET** | **`/api/memory`** | device token | — | `{ domainClasses: {...}, updatedAt }` — the gating cache |
 | **POST** | **`/api/reviews/:id/coach`** | Neon Auth session | `{ message? }` | `{ observations, suggestions: [{text, action}] }` |
 
-`title` and `extract` are the only fields in this system that carry page content. Both exist for the duration of one request and no handler may write either anywhere. `/api/judge` is the only route that accepts them.
+~~`title` and `extract` are the only fields in this system that carry page content.~~ **Corrected 2026-09-16 (ADR-0061): no field in this system carries page content.** Both were removed with the two-tier judge. The field that now needs the same discipline is **`path`**, which `/api/judge` receives in its `visits` array, uses for one batch, and **no handler may write anywhere** — `event.domain` stays hostname-only (D8), and `002-drift.sql:24` makes a migration that adds a path column release-blocking.
 
 ### 4.2 Sequences
 
 **A session.** Popup Start → `POST /api/sessions` returns immediately → block rules installed → `chrome.storage.local` holds session state → **only then**, fire-and-forget, `POST /api/sessions/:id/plan`. The session is running before the plan exists; `plan_state` moves `generating → ready`. A failed plan sets `failed` and changes nothing else.
 
-**A tab change.** Worker attributes elapsed time to the previous domain (unchanged), then checks its local memory cache. Cache hit → record a `judgment` with `source='memory'`, no network. Cache miss → extract capped visible text, `POST /api/judge`, record with `source='model'`, and update the cache. Either way, if the verdict is `drifts` **and** confidence clears the floor **and** the session is past 60 seconds, the companion turns.
+**A tab change. Rewritten 2026-09-16 (ADR-0057, ADR-0059, ADR-0060).** Worker attributes elapsed time to the previous domain (unchanged) and records `{host, path, at}` in `chrome.storage.local`. **That is all that happens.** No text is read, no judge is called, no verdict is produced, and nothing changes on screen. ~~Cache miss → extract capped visible text…the companion turns~~ is void in full.
 
-**A correction.** User un-marks a task or taps "that was work" → `PATCH /api/tasks/:id` or a judgment correction → `judgment.corrected_to` is written and `memory` is upserted with `evidence_n + 1`. One tap produces both a fixed record and a training label.
+**An analysis.** The user asks for one, after the session. The extension sends `{sessionIds}` plus the on-device `visits`; the server judges the batch against what it already stores, gated by memory (I4), and returns `{sessionId, domain, verdict, confidence}` rows. The page is long gone, which is exactly why the path had to be kept locally — see §5.1.
+
+**~~A correction~~ A label. Rewritten 2026-09-16 (ADR-0058, ADR-0062).** There is nothing to correct, because nothing was asserted. The user taps the companion — *"this isn't the work"* — and a **per-visit label** is written for that domain; `memory` forms only on repetition, never at n=1. ~~`PATCH /api/tasks/:id`~~ is void with PRD-F8 (ADR-0048), and `judgment.corrected_to` — the column commented "THIS COLUMN IS THE TRAINING SET" — has no writer and zero rows. The tap is the training set now.
 
 **Recovery (E2).** Unchanged. On startup, an open session is closed at its last recorded event with `end_reason = 'recovered'`.
 
@@ -187,9 +202,9 @@ Two slots unallocated — one freed by D21, consolidating auth onto the database
 | V2 | Pairing code | 6 characters, no `0/O/1/I`; single use; 10-minute expiry; claiming is atomic |
 | V3 | Row ownership | Every query filters on `user_id`. Another user's row returns 404, never 403 |
 | V4 | Extension permissions — **corrected 2026-09-11, was wrong since 2026-09-07** | Installed set: `declarativeNetRequest`, `tabs`, `storage`, `alarms`, `idle`, `scripting`. **`<all_urls>` appears in `host_permissions`, unconditionally, shipped 2026-09-07 (ADR-0027)** — this row previously said the opposite. The content script (the companion) already ran at `<all_urls>`, and `declarativeNetRequest`'s `redirect` action needs host permission for whatever domain it blocks; a per-domain `optional_host_permissions` flow meant a fresh prompt on every new blocked site, for no added trust boundary. This is a separate matter from §5.2's judge permission tiers below, which still stand: `<all_urls>` being in `host_permissions` does not by itself grant the judge's tier-T-B text-reading — that's a distinct, still-future, still-opt-in decision if it's ever built. The companion renders as a content-script Shadow DOM overlay, not in a docked or floating browser surface — Q3, resolved below |
-| **V5** | **Payload minimisation — amended 2026-08-28** | **See §5.1. Text may be read and forwarded for one classification. It may never be stored.** |
+| **V5** | **Payload minimisation — amended 2026-08-28, rewritten 2026-09-16** | **See §5.1. ~~Text may be read and forwarded for one classification.~~ No page text or title is ever read (ADR-0061). Full paths are stored on the device only, forwarded for one batched analysis, and never written server-side (ADR-0059).** |
 | V6 | Transport | HTTPS only; the API rejects a request with no valid `Authorization` header without queueing or logging its body |
-| **V7** | Prompt-injection containment | Page text is untrusted input. The judge's system prompt is fixed; the extract is never concatenated into instructions; the response is validated against an enum (`serves`/`drifts`/`unclear`) and anything else is treated as `unclear`. A page cannot make the judge say anything except one of three words |
+| **V7** | Prompt-injection containment | **Narrowed 2026-09-16, not dropped.** Page text is no longer read, but **hostnames, paths and the user's own intention sentence are still untrusted input** — a path is attacker-controllable on any site that puts text in a URL. The judge's system prompt is fixed; no input is concatenated into instructions; the response is validated against an enum (`serves`/`drifts`/`unclear`) and anything else is treated as `unclear`. Nothing reaching the judge can make it say anything except one of three words |
 | **V8** | Spend ceiling | Per-user daily judgment cap, enforced server-side. Exceeding it degrades that user to memory-only classification for the rest of the day. Protects M9 and makes a runaway loop bounded rather than expensive |
 | **V9** | Model output is never executed | Coach suggestions map to a closed enum of product actions (I5). A suggestion the enum does not contain is dropped, not rendered |
 
@@ -199,15 +214,19 @@ Version 0.1 stated: *"The extension may only send hostname, kind, seconds, and t
 
 Cloud judging breaks that rule as written. It is replaced, not relaxed. The new rule is narrower in what it permits and stronger in what it guarantees:
 
-1. **One route may receive page text.** `/api/judge`, in the `extract` field, capped at a fixed character limit (Q4).
-2. **No column may hold it.** `judgment` has no text column. Adding one is release-blocking.
-3. **No log may hold it.** The extract is excluded from request logging, error reporting, and any telemetry. An exception thrown while judging must not carry the extract in its message.
-4. **No queue may hold it.** A failed judgment is dropped, not retried from a stored payload. Attention events queue offline; judgments do not.
-5. **The provider retains nothing.** Zero data retention is a requirement of the gateway configuration, not a preference.
-6. **Never a URL path, ever.** Hostname only, unchanged from v0.1. The extract is text from the page, never the address of it.
-7. **The user can see this.** The companion states, on one tap, what is read and where it goes (SITEMAP S9). A control the user cannot inspect is a policy, not a control.
+**Rewritten 2026-09-16 (ADR-0059, ADR-0061).** The subject of these rules changed. Page text is
+never read, so rules written about an `extract` have nothing to bind; what needs binding is the
+**visit path**, which is worse than the title this document once worried about.
 
-**Why this is still strong:** what persists after a judgment is `{hostname, verdict, confidence}` — strictly less information than the hostname-and-seconds that v0.1 already stored, plus one word. The thing that would make this product dangerous is retention, and retention is what rules 2–5 forbid.
+1. ~~**One route may receive page text.**~~ **No route receives page text or titles.** One route, `/api/judge`, receives **paths**, in its `visits` array, for the duration of one batched analysis.
+2. **No column may hold it.** `judgment` has no text column and **no path column**; `event.domain` is hostname-only. `lib/migrations/002-drift.sql:24` already says a migration that adds one is release-blocking — that line now covers paths.
+3. **No log may hold it.** Paths are excluded from request logging, error reporting, and telemetry. An exception thrown while judging must not carry a path in its message.
+4. **No queue may hold it.** A failed analysis is dropped and re-requested from the device, never retried from a stored server payload. Attention events queue offline; paths never queue server-side.
+5. **The provider retains nothing.** Zero data retention is a requirement of the gateway configuration, not a preference.
+6. ~~**Never a URL path, ever.**~~ **Amended, and this is the real change (ADR-0059).** Paths are recorded **on the device**, because a hostname cannot separate `chatgpt.com` the tool from `chatgpt.com` the rabbit hole and the path usually can. The line held is now *never a path server-side*. The device is not a new exposure class — the browser already stores full history — but it does need a **time-based TTL**, since a free-tier user's paths may never be analysed at all (PRD Q7).
+7. **The user can see this.** ~~The companion states, on one tap, what is read and where it goes (SITEMAP S9).~~ **This was never built, and the tap now means something else** (ADR-0058). A control the user cannot inspect is a policy, not a control — so **this rule is currently unmet**, and it matters more than it did, because the thing to disclose is larger. See `docs/design.md` §10.
+
+**Why this is still strong:** what persists after an analysis is `{hostname, verdict, confidence}` — strictly less information than the hostname-and-seconds that v0.1 already stored, plus one word. The thing that would make this product dangerous is retention, and retention is what rules 2–5 forbid. **The honest 2026-09-16 caveat:** the device now holds more than it did, and I7 was amended rather than clarified to say so (ADR-0059). The claim "nothing beyond hostnames ever transits" is no longer true; "nothing beyond hostnames ever persists" is.
 
 **The abuse case that matters most here is still the product itself.** A tool that reads the page you are on is one migration away from being a recorder. Rules 2 and 3 are the ones that hold that line, and they belong in code review.
 
@@ -277,7 +296,7 @@ Three calls, all brokered by the API, none reachable from the extension directly
 | N5 | Offline tolerance | Unlimited queueing for events; judgments are dropped, never queued | V5.4 |
 | **N6** | Session start | < 200ms, and never gated on the plan | US-01 |
 | **N7** | Plan arrival | < 5s after start, or `failed` | Sub-goals help at initiation (C13); late is worthless |
-| **N8** | Companion motion budget | ≤ 3 noticeable movements per 25-minute session; zero in the first 60s; breathing and blinking excluded | C11, C12 — arousal is the risk, not attention |
+| **N8** | Companion motion budget | **Rewritten 2026-09-16 (ADR-0057).** ~~≤ 3 noticeable movements per 25-minute session~~ — **zero movements the user did not cause.** The product initiates nothing; the only motion is the 0.6s receipt for a tap, plus the sub-perceptual breathe. Zero in the first 60s still holds | C11, C12 — arousal is the risk, not attention. The budget bounded a signal; removing the signal enforces the same reasoning structurally |
 | **N9** | Judge staleness | A verdict arriving after the tab has changed again is discarded | Signalling drift on a tab the user already left is the worst possible false positive |
 | **N10** | Inference spend | < 15% of subscription price per active user per month | M9, K6 |
 
@@ -381,8 +400,8 @@ Re-check the MV3 rows before building; MV3 details move. The Document PiP row is
 | ~~Q1~~ | ~~`requestDomains` or URL-filter matching?~~ **`requestDomains`** | SDD-C1 | done |
 | ~~Q2~~ | ~~Send events for sub-3-second visits?~~ **Send; filtering is a display decision** | SDD-C1 | done |
 | ~~Q3~~ | ~~Where does the companion render?~~ **Answered 2026-09-01/2026-09-05: neither.** A third option this question never listed — a content-script Shadow DOM overlay, injected at `<all_urls>` (now unconditionally granted, ADR-0027) — floats over the page directly. `chrome.sidePanel` (the docked answer this doc originally shipped with) was built, then retired 2026-09-05 in the Orbit reversal (ADR-0026); Document PiP was never built | SDD-C8, SITEMAP S9 | done |
-| **Q4** | Hard character cap on `extract`? Trades judge accuracy against M9 and against V5's blast radius | SDD-C7, V5, N10 | Alexandre |
-| ~~Q5~~ | ~~Does the extension extract text itself, or read what `tabs` gives it?~~ **Answered 2026-08-28: both, in two tiers. `activeTab` cannot read on a tab change (no gesture), so T-A judges on hostname + title with today's permissions and T-B adds a text extract behind `optional_host_permissions`. See §5.2** | SDD-C7, V4 | done |
+| ~~Q4~~ | ~~Hard character cap on `extract`?~~ **VOID 2026-09-16 (ADR-0061)** — there is no extract. **Live replacement: what is the TTL on locally stored paths?** Time-based, because an analysis may never be requested (PRD Q7, ADR-0059) | V5, PRD-F15 | Alexandre |
+| ~~Q5~~ | ~~Does the extension extract text itself, or read what `tabs` gives it?~~ **Answered 2026-08-28 (two tiers), then VOID 2026-09-16 (ADR-0061): it extracts nothing.** The question and both its answers are gone with §5.2 | SDD-C7, V4 | done |
 | **Q6** | Daily per-user judgment cap for V8? | V8, M9 | Alexandre |
 | **Q7** | Does memory sync to the extension in full, or does the worker query per domain? Full sync is one call per session and works offline; per-domain is fresher and chattier | SDD-C9, N5 | Alexandre |
 | ~~Q8~~ | ~~How much worse is tier T-A than T-B?~~ **VOID 2026-09-15 (ADR-0061)** — the tiers are gone and the permission already disappeared; the question has no referent. **Live replacement: is hostname + on-device path accurate enough to be worth showing?** Measurable offline against stored sessions | §6.5 (PRD), M7 | Alexandre |

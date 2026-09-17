@@ -8,6 +8,10 @@
 > **`docs/adr/` outranks this file and the PRD both (ADR-0063).** Where an ADR disagrees with
 > anything here, the ADR is right.
 >
+> **Status section refreshed 2026-09-16** against the code on `awareness-turn`: the drift signal is
+> deleted rather than merely unbacked, the 572 `memory` rows are all test data, and an app shell
+> shipped. The rest of this file was regenerated the day before and still holds.
+>
 > **Regenerated 2026-09-15 from PRD amendment 0.3** (ADR-0052–0064). What changed: awareness is the
 > goal and information the mechanism; the user is defined by behavior with the buyer as a separate
 > axis; the companion **no longer signals drift** and instead takes a one-tap label; the judge runs
@@ -25,7 +29,7 @@
 
 **Name:** MEANT. (Working name "Intent" retired 2026-08-18: "Intent — Focus" already ships on the App Store.)
 
-**One line:** A browser extension and web app that makes you say what you intend to finish, blocks what you chose to avoid, sits with you while you work and notices when you drift, and ends by asking whether you finished it.
+**One line:** A browser extension and web app that makes you say what you intend to finish, blocks what you chose to avoid, sits with you while you work and notices when you drift — **silently; it never says so during the session** (ADR-0057) — and ends by asking whether you finished it.
 
 **Who is served (ADR-0054):** anyone for whom **the work surface and the distraction surface are the same browser** — researchers, students, marketers, freelancers, operators, and the browser-resident half of anyone else's day. No job-title filter. The boundary is **browser share, reported at runtime**: where recorded attention is a small fraction of a session's wall clock, the review says what it did not see.
 
@@ -43,7 +47,7 @@
 
 **What makes it different, in one sentence:** Every AI accountability product in 2026 has to *ask* whether you were focused. This one is inside the tab and already knows.
 
-**The case that defines the product:** A social-media freelancer's Instagram *is* her work. Instagram at 11am, when she said she would finish the client deck, is drift. Instagram at 4pm, when she is scheduling posts, is the job. Same hostname, opposite meaning, four hours apart. No blocklist resolves this. Reading the tab against the stated intention does. *(PRD §1.2.)*
+**The case that defines the product:** A social-media freelancer's Instagram *is* her work. Instagram at 11am, when she said she would finish the client deck, is drift. Instagram at 4pm, when she is scheduling posts, is the job. Same hostname, opposite meaning, four hours apart. No blocklist resolves this. ~~Reading the tab against the stated intention does.~~ **The case stands; the conclusion is stale (PRD §1.2, ADR-0035, ADR-0061):** the user declares her work and distraction sites at session start, which resolves Instagram with no model at all. What the judge is actually for is the **residual** — sites nobody declared — and **in-site ambiguity**, which is a smaller and more honest job.
 
 **What the product measures:** Completed outcomes. Not hours, not checked steps, not a score. Hours appear only as evidence inside a single session's review.
 
@@ -51,7 +55,7 @@
 
 ---
 
-## Status — what is actually built (2026-09-11)
+## Status — what is actually built (2026-09-16)
 
 Read this before treating any feature below as shipped.
 
@@ -59,17 +63,30 @@ Read this before treating any feature below as shipped.
   `extension`, `package.json`: zero matches for any gateway or provider SDK. The judge, memory-as-
   classifier, and coach (PRD §6) are unbuilt.
 - **The `judgment` and `memory` tables exist** (`lib/migrations/002-drift.sql`, 2026-09-04).
-  `judgment` has never received a row from any code path. All 572 `memory` rows are `kind='list'`;
-  `domain_class` has never been written, because ADR-0039 admits only user taps and no correction
-  UI ships.
-- **The drift signal is not memory-backed** — a prior version of this file said it was.
-  `updateCompanion()` (`extension/sw.js:214`) is a static blocklist-membership test, plus a 60s
-  grace and a 3-per-25-minute budget. No dwell check, no refractory window, no per-domain evidence.
-  Nine of eleven constants in `lib/thresholds.ts` have **zero readers** in the repo.
+  `judgment` has never received a row from any code path. **Corrected 2026-09-16: the 572 `memory`
+  rows are all `kind='list'` *and they all belong to test users*** — this file previously cited the
+  count as if it were evidence of anything. `domain_class` has never been written.
+- **The drift signal is deleted, not merely unbacked** (ADR-0057, 2026-09-15). The prior version of
+  this section described `updateCompanion()` (`extension/sw.js:214`) as a live static
+  blocklist-membership test with a 60s grace and a 3-per-25-minute budget. **It no longer runs.**
+  Detection continues silently; only the signal is gone, and roughly five of the nine unread
+  constants in `lib/thresholds.ts` became deletable with it.
+- **The companion takes one tap** — *"this isn't the work"* (ADR-0058). It is the only write path
+  memory has, and the only reason `judgment.corrected_to`, commented *"THIS COLUMN IS THE TRAINING
+  SET"*, has a future.
+- **An app shell shipped 2026-09-15.** Before it there was no navigation between signed-in surfaces
+  and **no way to sign out at all**. It is the one surface with no artboard.
 - **The generated task plan (PRD-F8) is cut, not unbuilt** — a product decision (D38/ADR-0048).
 - **Three external services are allocated, not four** — a prior version of this file said four,
   carried over from before D21 consolidated auth onto Neon. Vercel (1), Neon Postgres + Auth (2),
   Vercel AI Gateway (3, **allocated but not yet integrated**). Two slots remain.
+- **The landing page still claims the product reads the page** (`app/page.tsx:107`, *"It reads the
+  page. It stores nothing"*). **ADR-0061 made that false**: no page text or title is ever read. The
+  copy needs replacing with ADR-0059's truth — paths on the device, `{domain, verdict, confidence}`
+  server-side — and until it is, the most prominent privacy claim in the product is stale.
+- **About 37 minutes of real observed browser attention exists, from one person.** Everything
+  strategic rests on that number (ADR-0053). Two claims repeated for days turned out wrong when
+  queried — an "n=5, clean split" was n=2, and the 572 memory rows above are test data.
 
 ---
 
@@ -113,7 +130,7 @@ Breaking one is a bug, not a preference.
   at `<all_urls>`, and `declarativeNetRequest`'s `redirect` needs host permission for the domain it
   redirects — a per-domain optional flow would prompt on every new blocked site. One honest upfront
   grant is better UX for a feature that fundamentally needs it.
-- Hostname only, in storage. Page title and page text are read in flight and stored nowhere.
+- **Corrected 2026-09-16 (ADR-0059, ADR-0061).** ~~Page title and page text are read in flight and stored nowhere.~~ **They are never read.** Hostname only in the database; **full paths on the device only**, transiting transiently at analysis time.
 - Nothing waits on a model. Not the session start, not a block, not a page load.
 - The product must remain shippable with any of its four upper features switched off (I9).
 - **It will be filmed being built.** Every step must produce a *visible* change on screen; empty and
@@ -129,7 +146,7 @@ Breaking one is a bug, not a preference.
 | Surface | Mode | Seen |
 |---|---|---|
 | Extension popup (idle / running / unpaired) | Operate | Dozens of times a day |
-| Companion | Accompany | Continuously, and noticed at most three times a session |
+| Companion | Accompany | Continuously, and **never noticed unless the user touches it** (ADR-0057; this cell read "noticed at most three times a session" when it still signalled) |
 | Block page | Operate | A few times a day, at a moment of friction |
 | Session review | Understand | Once per session — *the product* |
 | Dashboard ledger | Understand | Daily |
@@ -143,12 +160,17 @@ The frequency column is a design constraint, not a statistic: it is why the popu
 
 - **It is a pet, not a coach.** A minimal orbital dot at the edge of the page — 28px, bottom-right
   by default, draggable. Presence over posture.
-- **State is ring presence and style, not color.** Resting: dot only, no ring. Focus: a solid ring.
-  Drift: the same ring, dashed. Clay is the only accent the companion ever uses, at any state — so
-  state reads as a shape change, not a status light.
-- ~~**Return gets one visible acknowledgment.**~~ **Removed 2026-09-15 (ADR-0057)** — the 0.6s
+- **State is ring presence, not color.** Resting: dot only, no ring. Running: a solid ring.
+  ~~Drift: the same ring, dashed.~~ **Removed 2026-09-15 (ADR-0057)** — there is one state while a
+  session runs. Clay is the only accent the companion ever uses, at any state, so state reads as a
+  shape change, not a status light.
+- **It is an input (ADR-0058).** Hover reveals the intention; one tap says *"this isn't the work"*
+  and writes a per-visit label (ADR-0062). A 160ms ring-collapse acknowledges the tap; under
+  reduced motion the ring instead goes opaque and thickens, discretely, for 600ms.
+- ~~**Return gets one visible acknowledgment.**~~ **Removed 2026-09-15 (ADR-0057)** — the
   ring-collapse existed to acknowledge a return *from drift*, and there is no drift signal to return
-  from. I2 is absolute again. **The motion is reused** as the receipt for the one-tap label (ADR-0058).
+  from. I2 is absolute again. **The motion is reused** as the receipt for the one-tap label (ADR-0058),
+  retimed to 160ms feedback speed (#50).
 - **Aliveness is breathing, not blinking.** A continuous slow scale/opacity cycle (~1.6s).
 - **It reads at 28px** — ambient presence, not a focal element.
 - Built as `extension/companion-overlay.js`, a self-contained Shadow DOM. It is no longer built from

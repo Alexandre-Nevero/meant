@@ -18,8 +18,26 @@ const sometypeMono = Sometype_Mono({
   variable: '--font-sometype-mono',
 })
 
+// The description is the landing page's own lede (app/page.tsx:82), verbatim — it is the
+// strongest writing in the product and #49 is explicit that nothing new is invented here.
+// Deliberately NOT the "It reads the page" section: ADR-0061 made that claim false.
+const DESCRIPTION = 'Say what you mean. It knows if you did.'
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'http://localhost:3000')
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'meant',
+  description: DESCRIPTION,
+  openGraph: {
+    title: 'meant',
+    description: DESCRIPTION,
+    type: 'website',
+  },
 }
 
 export default function RootLayout({

@@ -157,3 +157,87 @@ test('the review page never shows an extension-ID-shaped domain in its per-domai
   await expect(reviewPage.getByText('chatgpt.com')).toBeVisible()
   await expect(reviewPage.getByText('emnalgngpciahekjdcgpbgnhmkpjhlhi')).toHaveCount(0)
 })
+
+// #47. The most important write in the product, and it was unchecked.
+test('a failed outcome write re-enables both buttons, says so, and retries on the same two', async ({ context, endedSession }) => {
+  const sessionId = await endedSession({ intention: 'outcome failure test' })
+
+  const page = await context.newPage()
+  await page.route('**/api/sessions/*/outcome', (route) => route.fulfill({ status: 500, body: '{}' }))
+  await page.goto(`/review/${sessionId}`)
+
+  const reviewSurface = page.locator('[data-surface="review"]')
+  await page.getByRole('button', { name: 'Yes' }).click()
+  await expect(reviewSurface.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Yes' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Not yet' })).toBeEnabled()
+  // I1: the retry affordance is the two buttons themselves, never a third control.
+  // Scoped to the surface — the app shell contributes its own <button> for Sign out.
+  await expect(page.locator('[data-surface="review"] button')).toHaveCount(2)
+
+  await page.unroute('**/api/sessions/*/outcome')
+  // The client clears `failed` synchronously before the retry's fetch resolves, so the alert
+  // disappears from the DOM well before the PATCH lands server-side — waiting on the response
+  // itself (not a guessed delay) is what actually orders this check after the write completes.
+  await Promise.all([
+    page.waitForResponse('**/api/sessions/*/outcome'),
+    page.getByRole('button', { name: 'Yes' }).click(),
+  ])
+  await expect(reviewSurface.getByRole('alert')).toHaveCount(0)
+
+  const review = await page.request.get(`/api/sessions/${sessionId}/review`)
+  expect((await review.json()).outcome).toBe('yes')
+})
+
+// #45. The artboard stages the question (Main.dc.html:59, margin-top:auto); the code listed it.
+test('the review stages the question at the bottom of the fold, and keeps rows tight', async ({ context, endedSession }) => {
+  const sessionId = await endedSession({
+    intention: 'staging test',
+    events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 90, at: new Date().toISOString() }],
+  })
+
+  const page = await context.newPage()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(`/review/${sessionId}`)
+
+  const surface = page.locator('[data-surface="review"]')
+  const ask = page.locator('.m-review-ask')
+  const [surfaceBox, askBox, shellBox] = await Promise.all([
+    surface.boundingBox(), ask.boundingBox(), page.locator('.m-shell').boundingBox(),
+  ])
+
+  // The shell's height is a real number, so calc(100dvh - var(--m-shell-h)) is honest.
+  expect(shellBox!.height).toBeCloseTo(60, 0)
+  // The surface fills the fold, so margin-top:auto has somewhere to push.
+  expect(surfaceBox!.height).toBeGreaterThanOrEqual(900 - 60 - 1)
+  // And the question group sits at its bottom, not 24px under the last row.
+  const askBottom = askBox!.y + askBox!.height
+  const surfaceBottom = surfaceBox!.y + surfaceBox!.height
+  expect(surfaceBottom - askBottom).toBeLessThanOrEqual(73) // the 72px pad, plus a pixel
+
+  await expect(page.locator('.m-review-rows')).toBeVisible()
+})
+
+// The narrow breakpoint. The ledger got one in #7; the review never did.
+test('the review does not scroll sideways at 390px', async ({ context, endedSession }) => {
+  const sessionId = await endedSession({
+    intention: 'a deliberately long intention sentence for the narrow breakpoint',
+    // Without a row, .m-review-rows is empty and no .m-row grid is ever laid out — the
+    // overflow assertion below would then turn on the width of one word, not on the
+    // @media (max-width: 700px) rule this test exists to pin. Same one-row shape the
+    // staging test above uses.
+    events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 90, at: new Date().toISOString() }],
+  })
+
+  const page = await context.newPage()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(`/review/${sessionId}`)
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+  expect(overflow).toBeLessThanOrEqual(0)
+
+  const surface = page.locator('[data-surface="review"]')
+  await expect(surface.locator('.m-row')).toHaveCount(1)
+  // Names the rule directly: without the @media (max-width: 700px) block, the surface's
+  // padding stays 80px and this would read '80px', not '24px'.
+  expect(await surface.evaluate((el) => getComputedStyle(el).paddingLeft)).toBe('24px')
+})

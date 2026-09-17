@@ -6,10 +6,18 @@
 **Cycle:** 1
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
-**Last reconciled:** 2026-09-10
+**Last reconciled:** 2026-09-16 (amendment 0.3a)
 **Upstream:** [idea-intent.md](idea-intent.md)
 **Downstream:** [sitemap-intent.md](sitemap-intent.md), [flow-intent.md](flow-intent.md), [sdd-intent.md](sdd-intent.md)
 
+> **Amendment 0.3a (2026-09-16).** A second pass over 0.3, auditing the *whole* document rather
+> than the sections the ADRs named. Amendment 0.3 rewrote PRD-F9 and PRD-F10 but left the same
+> decisions un-applied further down: **§3.2's ring table**, **US-09**, **US-10** (a correction
+> story for a flag that no longer exists), **§6.2's Judge row**, **§6.3's precision-floor and
+> one-tap-correction rules**, and two **§7** constraints still described live drift signalling and
+> a page-text judge. All corrected in place. Nothing new was decided here; this is the same log,
+> applied where it had been missed.
+>
 > **Amendment 0.3 (2026-09-15).** A strategy sitting, recorded as **ADR-0052 through ADR-0064**.
 > Per **ADR-0063**, `docs/adr/` is now the most up-to-date record in the repository: where an ADR
 > and this document disagree, **the ADR is right and this document is stale.** This amendment is a
@@ -245,12 +253,13 @@ These are product rules, not preferences. Breaking one is a bug.
 
 ### 3.2 The companion, as shipped (the Orbit reversal, 2026-09-05)
 
-PRD-F10 above states the requirement in the abstract — presence, turning on drift, one tap, no words. The companion's **visual form** reversed after this PRD was written and is recorded here, not re-litigated: the 0.2 spec called it "a coach, not a pet," gaze/posture only, 80–120px, no on-screen acknowledgment of a returned drift. Mid-build, the owner chose a supplied reference ("Orbit") over that spec instead, on the explicit basis that the documented spec should update to match the shipped code, not the other way round. Full reasoning: `docs/dead-ends.md` ("The companion's design reversed…") and the ADR in `docs/adr/`.
+PRD-F10 above states the requirement in the abstract — presence, one tap, no words (**"turning on drift" was struck 2026-09-16, ADR-0057**). The companion's **visual form** reversed after this PRD was written and is recorded here, not re-litigated: the 0.2 spec called it "a coach, not a pet," gaze/posture only, 80–120px, no on-screen acknowledgment of a returned drift. Mid-build, the owner chose a supplied reference ("Orbit") over that spec instead, on the explicit basis that the documented spec should update to match the shipped code, not the other way round. Full reasoning: `docs/dead-ends.md` ("The companion's design reversed…") and the ADR in `docs/adr/`.
 
 **What shipped instead:**
 - **It is a pet, not a coach.** A 28px orbital dot, bottom-right by default, draggable. Presence over posture — the opposite framing of the superseded spec.
-- **State is ring presence and style, never color.** Resting: dot only. Focus: solid ring. Drift: the same ring, dashed. Clay is the only accent color at any state, so state reads as a shape change, never a status light (holds I1 — the ring never varies with the outcome answer).
-- **Return gets one visible acknowledgment**, deliberately: a 0.6s ring-collapse pulse on the drift-to-focus transition, then the ring settles. A narrow, named exception to "nothing good happens on screen during a session" (I2) — scoped to the witness settling, not to an outcome celebration.
+- **State is ring presence, never color.** Resting: dot only. Running: a solid ring. **Corrected 2026-09-16 (ADR-0057): there is no drift state and no dashed ring.** Clay is the only accent color at any state, so state reads as a shape change, never a status light (holds I1 — the ring never varies with the outcome answer).
+- ~~**Return gets one visible acknowledgment**, deliberately: a 0.6s ring-collapse pulse on the drift-to-focus transition.~~ **Removed 2026-09-15 (ADR-0057).** It acknowledged a return *from drift*, and there is no drift signal to return from, so I2 loses its one named exception and is absolute again. **The motion is reused** (ADR-0058) as the receipt for the one-tap label — the same ring-collapse, retimed to 160ms feedback speed (#50) and caused by the user rather than by the product. Reduced motion gets its own, static receipt: the ring goes opaque and thickens for 600ms rather than animating.
+- **It is an input, not only a presence (ADR-0058).** Hover reveals the intention (`companion-overlay.js:266`); one tap means *"this isn't the work"* and writes a per-visit label (ADR-0062). This is the whole of what the companion does with drift now: it lets the person say it, and never says it first.
 - **Aliveness is a continuous, slow breathe (~1.6s) on the dot**, not a rare blink.
 - Built as `extension/companion-overlay.js`, a self-contained Shadow DOM injected at `<all_urls>` — not `.m-mark`'s primitives, and not `chrome.sidePanel` (superseded; see the host-permission correction in §7 and the ADR log).
 
@@ -326,14 +335,18 @@ As a user, I want the product to know whether where I am serves what I said.
 
 **US-09 — Be witnessed (PRD-F10)**
 - Given a session is running and nothing is wrong, when I glance at the companion, then it is a solid ring, breathing, and has not moved in a way I would notice. **(Corrected 2026-09-11 — "facing my work" described the pre-Orbit gaze design; the shipped Orbit companion signals by ring style, not orientation. See ADR-0026.)**
-- Given a drift is detected above the floor, when the companion responds, then its ring goes from solid to dashed and does nothing else — no sound, no words, no colour change.
-- Given a session is running, when any positive event occurs (a return from drift), then **nothing happens on screen until the review** (I2), except the one narrow, named exception in ADR-0026 (the 0.6s return-pulse).
+- ~~Given a drift is detected above the floor, when the companion responds, then its ring goes from solid to dashed…~~ **VOID 2026-09-16 (ADR-0057).** Drift is still *detected* and recorded; it is never *signalled*. Replaced by:
+- Given a drift is detected, when I look at the companion, then **nothing about it has changed** — the detection reaches me in the review, or when I ask for an analysis, and never during the work.
+- Given a session is running, when any positive event occurs, then **nothing happens on screen until the review** (I2), **with no exception** — ADR-0026's return-pulse died with the signal it acknowledged.
+- Given I tap the companion, then a 160ms ring-collapse acknowledges it (600ms, non-moving, under reduced motion) and nothing else happens: no words, no colour change, no count. **A receipt is not celebration**, and without one I cannot tell the tap registered.
 - Given the first 60 seconds of a session, when anything at all is detected, then the companion does not move.
 
-**US-10 — Correct it (PRD-F9, PRD-F11)**
-As a user, I want to fix the agent when it is wrong, in one tap.
-- Given a tab was judged `drifts` and it was work, when I tap "that was work," then the session record is corrected and memory records the classification so it is not asked again.
-- Given any correction, when the review renders, then it reflects the corrected state, never the original verdict.
+**US-10 — ~~Correct it~~ Say it yourself (PRD-F10, PRD-F11)**
+**Rewritten 2026-09-16 (ADR-0057, ADR-0058).** As a user, I want to tell it what the work is not — in one tap, unprompted.
+- ~~Given a tab was judged `drifts` and it was work, when I tap "that was work"…~~ **VOID.** Nothing is flagged live, so there is nothing to correct. The correction UI this story specified **was never built**, and its absence is the reason ADR-0057 removed the signal: a false positive that cannot be reported is a cost the user pays with no way out.
+- Given I am on a site that is not the work, when I tap the companion, then a per-visit label is recorded (ADR-0062) and the ring collapses once to acknowledge it.
+- Given I tap, when the review renders, then my own labels are shown as mine — **a self-report is not a verdict and must never be displayed as one**.
+- Given I label the same domain repeatedly, when memory forms, then it forms on the repetition and never at n=1 (ADR-0062, I4).
 
 **US-11 — Be known (PRD-F11)**
 - Given enough sessions to clear the evidence threshold, when I open the review or dashboard, then the coach states a pattern about me in one sentence.
@@ -379,17 +392,17 @@ The reversal is also forced by the product itself: **the case that defines this 
 
 | Call | When | Input | Output | Bounded by |
 |---|---|---|---|---|
-| **Judge** | On tab change, only for domains memory has not classified (I4) | Current task text + hostname + a hard-capped extract of visible page text | `serves` / `drifts` / `unclear`, plus confidence | Memory gating; text cap; never on the block path |
+| **Judge** | **Corrected 2026-09-16 (ADR-0060, ADR-0061).** ~~On tab change~~ — **after the session, in a batch, when the user asks**; only for domains memory has not classified (I4) | The intention sentence + hostname + **on-device path** + dwell, sequence, time of day, the declared work/distraction sites, and the outcome answer. ~~a hard-capped extract of visible page text~~ — **no page text, no page title, ever** | `serves` / `drifts` / `unclear`, plus confidence | Memory gating; **never in a session**; never on the block path. See §6.5 |
 | **Coach** | In the review only | Session record, plan, verdicts, corrections, and memory above the evidence threshold | Observations and executable suggestions | One session's context; review surface only |
 
 ### 6.3 Rules the agent operates under
 
 - **Never in the latency path of a block.** Blocking is a local domain match. A model is never between a user and a page.
 - **Never persists what it reads.** I7. The `judgment` table has no text column, by design.
-- **Never speaks below the floor.** Drift is signalled only above the precision floor (Q6); patterns only above the evidence threshold (Q7).
+- **Never speaks below the floor.** ~~Drift is signalled only above the precision floor (Q6)~~ — **void 2026-09-16 (ADR-0057): drift is never signalled at all**, so the precision floor has nothing to gate on screen. What remains and still binds: patterns only above the evidence threshold (Q5), which gates *inference*, never *description* (I6, ADR-0050).
 - **Never suggests what it cannot do.** I5.
 - **Never celebrates while you work.** I2.
-- **Wrong is correctable in one tap**, and every correction is a training label (US-10).
+- ~~**Wrong is correctable in one tap**, and every correction is a training label (US-10).~~ **Rewritten 2026-09-16 (ADR-0058):** nothing is asserted live, so nothing needs correcting live. The tap is now an **unprompted self-report**, which is a better label than a correction — it cannot be a false positive, and it does not depend on the product being wrong first.
 
 ### 6.4 What it is not
 
@@ -452,10 +465,10 @@ Two slots remain — D21 freed one by consolidating auth onto Neon. Spending eit
 
 - No OS permissions, no admin rights, no installer.
 - **Corrected 2026-09-10:** `<all_urls>` appears in `host_permissions`, unconditionally, shipped 2026-09-07 (this line previously said the opposite and was stale against shipped code — see `docs/adr/` and `docs/dead-ends.md`). The content script (the companion) already ran at `<all_urls>`; `declarativeNetRequest`'s `redirect` action needs host permission for whatever domain it blocks, and a `optional_host_permissions` flow would mean a new permission prompt every time the user names a fresh site to block — worse UX than one honest upfront grant for a feature that fundamentally needs it. Not a new category of trust beyond what the content script already required. SDD V4/§5.2 need the same correction.
-- No screenshots, no keystrokes. Page text is read transiently for one classification and never stored (I7).
+- No screenshots, no keystrokes. ~~Page text is read transiently for one classification and never stored (I7).~~ **Corrected 2026-09-16 (ADR-0061): page text and page titles are never read.** What the judge reads is hostname, **on-device path** (ADR-0059), dwell, sequence, time of day, the declared sites and the outcome answer.
 - The model tier chosen inside the gateway is a **business-model decision**, not a quality decision. See M9.
 - **Every external service costs a student 10–15 minutes of provisioning.** Four of five allocated is roughly 40–60 minutes of a 4–8 hour rebuild before a line of product code exists. The integration budget was a taste constraint at 0.1; it is now arithmetic (`../apexhuman.md` §5).
-- **This product will be filmed being built.** That is a design constraint, not a marketing one: every build step must produce a **visible** change on screen, because console output is bad television and worse teaching. Empty states and error states are seen *first* by every viewer rather than last. The moments worth watching must be visual — which is one more reason the companion's gaze, and not a log line, is the drift signal.
+- **This product will be filmed being built.** That is a design constraint, not a marketing one: every build step must produce a **visible** change on screen, because console output is bad television and worse teaching. Empty states and error states are seen *first* by every viewer rather than last. The moments worth watching must be visual — ~~which is one more reason the companion's gaze, and not a log line, is the drift signal~~. **Corrected 2026-09-16:** the gaze was replaced in September (ADR-0026) and the drift signal was deleted (ADR-0057). The visible moment the camera gets is now **the review**, and the tap the person chooses to make — not something the product does at them.
 - **Nothing on the rebuild path may require a Chrome Web Store review.** Review runs days to weeks (C18). The product must be real and working while loaded unpacked; publishing is an epilogue, never a step.
 - **Windows and macOS identically.** Apex states a macOS 13+ / Windows 10+ floor and no RAM or disk floor. Any macOS-only convenience is banned.
 

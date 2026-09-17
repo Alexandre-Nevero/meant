@@ -4,9 +4,10 @@
 
 MEANT is a browser extension plus web app that makes you say what you intend to finish,
 blocks what you chose to avoid, sits with you while you work, and ends by asking whether you
-finished it. It serves self-employed, non-technical, browser-native workers (freelancers,
-consultants, coaches, VAs) who need to know whether a work block produced the thing it was
-for. Second audience: this is also the reference build for apexhuman.ai and will be filmed —
+finished it. **Corrected 2026-09-16 (ADR-0054): the user and the buyer are separate axes.** It
+*serves* anyone whose work surface and distraction surface are the same browser — no job-title
+filter — and it is *bought* by the self-employed browser-native worker (freelancers, consultants,
+coaches, VAs), who owns the laptop and the card. Segments are deliberately unranked. Second audience: this is also the reference build for apexhuman.ai and will be filmed —
 see [apexhuman.md](apexhuman.md), which is course context, never product truth.
 
 ## For teammates (30-second orientation)
@@ -31,9 +32,13 @@ You need `/docs` (including `docs/design.md`), `PRODUCT.md`, `CLAUDE.md`, and th
 Chrome/Edge MV3 extension (`extension/`, plain ES modules — no bundler, no TypeScript, no
 React) plus a Next.js 16 web app (`app/`) on Vercel, with Neon Postgres + Neon Auth and
 inference via Vercel AI Gateway (not yet wired to any product code — see Stack currency).
-**Status as of 2026-09-10: the entire AI stack (plan, judge, memory, coach — PRD §6) is
-unbuilt.** The companion's drift signal is a mechanical hostname-category check standing in
-for the judge (ADR-0025) — do not read its presence as evidence the judge exists.
+**Status as of 2026-09-16: the entire AI stack (plan, judge, memory, coach — PRD §6) is
+unbuilt.** ~~The companion's drift signal is a mechanical hostname-category check standing in
+for the judge (ADR-0025).~~ **Corrected 2026-09-16: that signal was deleted (ADR-0057).** The
+companion signals nothing; it **takes one tap** meaning *"this isn't the work"* (ADR-0058).
+Attention is still recorded live and silently; the judge, when it exists, will run **after** the
+session in batches (ADR-0060) and will **never read page text or titles** (ADR-0061). Full visit
+paths are kept **on the device only** (ADR-0059).
 
 See [System Design](docs/sdd-intent.md), [PRD](docs/prd-intent.md), [Sitemap](docs/sitemap-intent.md), [User Flow](docs/flow-intent.md).
 
@@ -53,7 +58,11 @@ npm test           # node --test — pure-function unit tests
 npm run test:e2e   # npx playwright test --workers=1 — no --reporter flag
 npx tsc --noEmit    # web app only; extension/ has no TypeScript
 ```
-All three clean before any change is considered done. `e2e/*.spec.ts` is the source of truth
+All three clean before any change is considered done. **`test:e2e` requires `.env.test` and
+refuses to start without it** (added 2026-09-15): that refusal is correct behaviour, not a
+failure — without it the suite writes to **production**. See `.env.test.example`; the database
+*name* must end `_test`, because a Neon branch inherits its parent's database name and would
+otherwise pass the check while pointing at real data. `e2e/*.spec.ts` is the source of truth
 for what's covered — read a spec file's own comments for why a case exists, not a separate
 prose recipe (the one that used to track this, `docs/qa-recipe-playwright-e2e.md`, was
 removed 2026-09-11: 74+ cases of narrative duplicating what the real specs already assert).
@@ -66,7 +75,9 @@ removed 2026-09-11: 74+ cases of narrative duplicating what the real specs alrea
   normalize-domain) — keep them pure and unit-tested; `sw.js` is the only place that touches
   `chrome.*` APIs for background state.
 - Design: `design/tokens.css` only — never a hex value in a component. `docs/design.md` is the
-  read-first index over tokens/canvas/toolkit; read it before touching any UI.
+  read-first index over tokens/canvas/toolkit; read it before touching any UI. **The app shell is
+  the one surface with no artboard** — `design/canvas/` holds seven and none shows navigation, so
+  on that surface the usual "the canvas outranks the docs" rule has nothing to point at.
 - Tests are TDD-first: a failing test before the fix, for every behavior change.
 
 ## Stack currency (verify before coding — overrides training memory)
@@ -89,7 +100,11 @@ Pinned versions: Next.js 16.3.1, React 19.2.8, `@neondatabase/serverless` ^1.1.0
   The popup animates nothing. Nothing good happens on screen during a session — positive
   feedback lives only in the review. The companion never varies with the outcome answer.
 - **The frozen 13-class contract** (`docs/design.md` §5): don't add a 14th class; `data-*`
-  attribute extensibility is fine.
+  attribute extensibility is fine. **Counted 2026-09-16, the code defines 15** — `.m-chip` and
+  `.m-chip-row` ship in the popup — plus three structural families (`.m-landing-*`, `.m-rise`,
+  `.m-shell-*`). **Whether the contract is 13 or "13 plus named structural families" is an open
+  owner decision (#51). Until it is decided, treat the rule as binding and argue any new class in
+  writing before using it** — do not settle it by editing a number in a doc.
 - **Canonical-truth ownership**: **`docs/adr/` outranks everything below on anything it has
   ruled on (ADR-0063).** Beneath that, `docs/prd-intent.md` is canonical for product requirements.
   `PRODUCT.md` is a regenerated derived summary (kept only because design tooling reads a root
@@ -191,7 +206,11 @@ another: if the week is already at ~35h, the next card is next week's.
 ## Definition of done
 
 - `npm test`, `npm run test:e2e`, and `npx tsc --noEmit` all pass.
-- A UI-affecting change is verified by rendering it (`node ~/.agents/skills/impeccable/scripts/detect.mjs <files|url>`), not just a clean build — see `CLAUDE.md`.
+- A UI-affecting change is verified by **rendering it and looking** — a screenshot at 1440px and
+  390px — not by a clean build. **The detector is a floor, not evidence** (recorded 2026-09-15):
+  `node ~/.agents/skills/impeccable/scripts/detect.mjs <files|url>` returned `[]` for a `.tsx` file
+  containing `#ff0000`, 10px type and `transition: all 0.3s`, because most of its rules only run
+  for full-page documents. **An empty result proves nothing about a component file.**
 - Code change ties to a `PRD-F#` where applicable; anything newly verifiable gets a real
   `e2e/*.spec.ts` case, not a prose recipe entry.
 - A real product/architecture/plan decision is logged as an ADR before the task is called done.

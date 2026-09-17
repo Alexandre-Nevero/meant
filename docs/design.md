@@ -9,6 +9,14 @@ cover: accessibility, verified against this codebase rather than asserted.
 from [`design/tokens.css`](../design/tokens.css), not reinvented. Where this file and a
 canonical source could ever disagree, the source wins — see the hierarchy below.
 
+> **Reconciled 2026-09-16 against ADR-0052–ADR-0064 and the code on `awareness-turn`.** The
+> 2026-09-15 reconciliation pass covered the PRD, SDD, IDEA, sitemap, flow, `PRODUCT.md` and
+> `apexhuman.md`; it did not reach this file, so §4, §6, §7 and §8 had been describing a
+> companion that no longer exists. What changed here: the companion **no longer signals drift**
+> and instead **takes one tap** (ADR-0057, ADR-0058); the motion budget it was capped by is dead
+> code; the judge **never reads page text or titles** (ADR-0061); the app shell shipped with four
+> structural classes and **no artboard** (§6, §10). **`docs/adr/` outranks this file** (ADR-0063).
+
 ---
 
 ## 1. Hierarchy of truth
@@ -65,7 +73,7 @@ in a component — if a color is missing here, it belongs in `tokens.css` first.
 | `--m-ink` on `--m-ground` | 16.58:1 | Passes AA body text (≥4.5:1) with room to spare |
 | `--m-ink-2` on `--m-ground` | 6.77:1 | Passes AA body text |
 | `--m-ink-3` on `--m-ground` (light) | **3.20:1** | **Fails AA body text.** Clears the 3:1 floor for large text (≥18.66px, or ≥14px bold) and for non-text UI boundaries — but `.m-meta` ships at 13px, below that. Inherited from the committed visual world (the artboards draw labels this light on purpose); flagged here, not silently fixed. Keep `.m-meta` to short labels, never body copy, until this gets a real design call |
-| `--m-ink-3` on `--m-ground` (**dark**) | **5.19:1** | Passes AA body text — dark mode is *more* accessible here than light, which is easy to miss since nothing renders dark by default |
+| `--m-ink-3` on `--m-ground` (**dark**) | **5.19:1** | Passes AA body text — dark mode is *more* accessible here than light. **Corrected 2026-09-16:** this row previously said "nothing renders dark by default," which is false. `design/tokens.css:54` swaps the whole palette under `prefers-color-scheme: dark`, so a user on a dark OS gets the dark world today, and **nothing in `app/` or `extension/` ever sets `data-theme`** — the light/dark override exists in the token file and has no writer. **Settled 2026-09-16 (ADR-0065):** MEANT is a cream product and the dark palette above is a fallback for a user whose OS asks for one, not a second look — `docs/design-toolkit.md` §9's refusal stands and is no longer contradicted |
 | `--m-ink-3` on `--m-ground-sunk` (light) | 2.90:1 | Fails even the 3:1 UI-component floor. Don't put `.m-meta` on a sunk panel in light mode without re-checking |
 | `--m-clay` on `--m-ground` | 3.74:1 | Fine for the band/swatches (non-text); would fail as body text — never set `--m-clay` as a text `color` |
 | `--m-clay-2`, `--m-clay-3` on `--m-ground` | 2.41:1, 1.68:1 | Fail outright. These exist for fills only (the 2nd/3rd band segment), never text, never an icon stroke |
@@ -123,11 +131,29 @@ companion section and `docs/prd-intent.md` §3.2 are current; `docs/dead-ends.md
 The three-node table above described `extension/sidepanel.js` and a `chrome.sidePanel`
 surface — **both retired.** The shipped companion is `extension/companion-overlay.js`, a
 self-contained Shadow DOM injected at `<all_urls>` as a content script (not a side panel, not
-built from `.m-mark`'s primitives): a 28px orbital dot, ring presence/style (never hue) tells
-state, one 0.6s return-pulse plays on drift-to-focus, continuous ~1.6s breathe. Same
-invariants as before, still structural not aspirational: never varies with the outcome
-answer, never celebrates, never moves in the first 60 seconds, capped at 3 turn-aways per
-25-minute window (`extension/sw.js#updateCompanion`).
+built from `.m-mark`'s primitives): a 28px orbital dot, continuous ~1.6s breathe, draggable,
+and it reveals the session's intention on hover (`showHoverPill()`).
+
+**Rewritten 2026-09-16 (ADR-0057, ADR-0058) — the companion stopped being an output.** It has
+**one visual state while a session runs: a solid, breathing ring.** There is no drift state, no
+dashed ring, and no return-pulse triggered by anything the product decides, because the product
+no longer decides anything at the user on screen. The ring-collapse survives in the CSS with
+a new owner and a new duration: it is the **receipt for a user-initiated tap**, retimed to 160ms
+feedback speed (600ms, static, under reduced motion) in `companion-overlay.js:269-274` (#50).
+Reading the design consequence plainly:
+
+- **The companion is an input device.** One tap, one meaning — *"this isn't the work."* Hover
+  shows the intention; tap records a per-visit label (ADR-0062). Nothing is pushed at the user.
+- **I2 is absolute again.** Its one named exception (the return-pulse, ADR-0026) died with the
+  thing it acknowledged. A receipt for an action the user chose is feedback, not celebration —
+  that distinction is the whole design argument, and it is the only motion left.
+- **The motion budget is dead code, not a live rule.** "≤3 turn-aways per 25 minutes" governed a
+  signal that no longer fires; `DRIFT_GRACE_MS` / `DRIFT_WINDOW_MS` / `DRIFT_BUDGET` and
+  `updateCompanion()` are deletable, not dormant (ADR-0057). Do not cite the budget as a live
+  constraint on new motion — the constraint that replaced it is that **only a user action may
+  cause motion.**
+- Unchanged and still structural: it never varies with the outcome answer, never celebrates, and
+  never moves on its own in the first 60 seconds.
 
 ---
 
@@ -137,6 +163,19 @@ Fixed at 13 classes (`docs/design-toolkit.md` §8). Never add a 14th without che
 whether an existing class already does the job by context — `.m-row-bar` alone covers a
 ledger-row swatch, a plan-step marker, *and* a band segment, differentiated only by its
 `data-kind` and which ancestor it's rendered inside.
+
+> **The contract and the code disagree, and this is an open owner decision (issue #51), not a
+> licence.** Counted 2026-09-16, `app/globals.css` and `extension/meant.css` define **15** classes
+> from the product vocabulary — the 13 below plus `.m-chip` and `.m-chip-row`, which the popup's
+> duration and blocklist pickers have shipped for weeks — and four further families that were
+> always argued as *structural, not vocabulary*: `.m-landing-*` (marketing layout), `.m-rise` (the
+> review's one authored motion), `.m-shell-*` (the app shell, added on `awareness-turn` under
+> the `.m-landing-*` precedent), and `.m-review-rows` / `.m-review-ask` (the review's row and
+> question groups, added on `bugfix-seven` under the same precedent). Either the contract is 13
+> and `.m-chip`/`.m-chip-row` are a
+> standing violation, or the contract is "13 semantic classes plus named structural families" and
+> should say so. **Do not resolve it by editing the number here**; it is the same decision in
+> `docs/design-toolkit.md` §8, and it belongs to the owner.
 
 ```
 .m-app  .m-mark[data-state]  .m-sentence  .m-meta  .m-field  .m-btn[data-variant]
@@ -156,7 +195,7 @@ time this file changes.
 
 ## 6. Surfaces reference
 
-Every surface reads the same 13 classes at a different scale, keyed by one attribute:
+Every surface reads the same core vocabulary at a different scale, keyed by one attribute:
 `data-surface`. On the web app it sits on a wrapper inside the page (Next.js owns
 `<body>` from the root layout, so a leaf page can't set an attribute on it); on the
 extension, where there's no such constraint, it sits directly on `<body>`.
@@ -164,12 +203,15 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 | `data-surface` | Where | Real width | Ticks? | Notes |
 |---|---|---|---|---|
 | `landing` | `app/page.tsx` | 1440 desktop fold | — | Marketing layout classes (`.m-landing-*`) are structural only, not part of the 13-class contract |
-| `review` | `app/review/[id]/page.tsx` | 880px column | — | The one page with an *authored* motion moment (staggered rise, 50ms steps) |
+| `review` | `app/review/[id]/page.tsx` | 1000px box, 840px content, gap 40px (**corrected 2026-09-16** — this cell said 880px; `globals.css:110` is `max-width: 1000px` with 80px side padding, the same shell as the ledger; the column runs at `gap: 40px`, not the flat 24px it shipped with — rows sit in their own `.m-review-rows` group at `gap: 0`, and the question+answers stage in `.m-review-ask` with `margin-top: auto`, #45) | — | The one page with an *authored* motion moment (staggered rise, 50ms steps) |
 | `ledger` | `app/dashboard/page.tsx` | 1000px column | — | Each row's band is real per-session data via `lib/band.ts`, not decoration |
 | `pair` | `app/pair/page.tsx` | centered, 320px card | **No** — single scheduled `setTimeout` flips to "expired," not a countdown | |
 | `popup` | `extension/popup.html` | fixed 360px | **No**, anywhere, ever | Opened dozens of times a day — see §7 |
 | `block` | `extension/blocked.html` | full page | **No** | Static "N minutes left," read once |
-| `companion` | `extension/companion-overlay.js` (Shadow DOM, injected at `<all_urls>`) | 28px, floats over the page | Aliveness only (breathe); ring flips ≤3×/25min | Retired the side panel and `.m-mark`'s primitives entirely — see §4's Orbit note |
+| `setup` | `app/setup/page.tsx` | 1000px column | — | Declare work and distraction sites (ADR-0035). **Not in the sitemap until 2026-09-16**, and carrying the most damaging open bug in the product (#42: a failed fetch renders as "you have no sites," and saving then replaces the stored list) |
+| `not-found` | `app/error.tsx`, `app/not-found.tsx`, `app/global-error.tsx` | 1000px column | No | Root boundaries under `app/layout.tsx`, not any route layout — no shell mounts. Reuses the ledger's own column so it does not jump when it replaces one |
+| — (chrome) | `app/shell.tsx`, mounted by four route layouts | full width, hairline rule | — | **Added 2026-09-15, and the exception in this table.** The app shell is the one surface with **no artboard** — `design/canvas/` holds seven and none of them shows navigation. The build plan for #40 required drawing `Shell.dc.html` *first*; it was not drawn. It composes `.m-mark` and `.m-meta` plus four `.m-shell-*` structural classes, renders nothing signed-out, and shows no counts or figures. See §10 |
+| `companion` | `extension/companion-overlay.js` (Shadow DOM, injected at `<all_urls>`) | 28px, floats over the page | **No.** One state: a solid, breathing ring | **Corrected 2026-09-16 (ADR-0057, ADR-0058); retimed 2026-09-17 (#50).** This row read "ring flips ≤3×/25min" — there are no flips. The only motion the product initiates is the breathe; the ring-collapse now fires **only as the receipt for a tap**, at 160ms feedback speed, not the 0.6s it had when it meant a return from drift. Reduced motion gets its own receipt — the ring goes opaque and thickens for 600ms instead of animating — rather than losing the tap's only confirmation. Retired the side panel and `.m-mark`'s primitives entirely — see §4 |
 
 ---
 
@@ -181,8 +223,11 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 2. No total-hours figure, no percentage, no score, on any surface.
 3. The popup animates nothing — not even a button press. `[data-surface="popup"] .m-btn {
    transition: none; }` overrides the shared press-scale rule that every other surface gets.
-4. Nothing good happens on screen during a session. A return from drift turns the companion
-   back silently; it's recorded and shown only in the review.
+4. Nothing good happens on screen during a session. **Absolute since 2026-09-15 (ADR-0057)** —
+   this line used to describe a return from drift turning the companion back. There is no drift
+   signal to return from, so the invariant has no exception left. The one motion permitted during
+   a session is the **receipt** for a tap the user chose to make (ADR-0058); a receipt is not
+   positive feedback, and nothing the product notices on its own may reach the screen.
 5. The companion's appearance never varies with the outcome answer.
 6. Away is a hatch (`--m-away`, a `repeating-linear-gradient`), never a solid gray — a hatch
    says *unmeasured*, a gray says *another site*.
@@ -224,9 +269,13 @@ accessibility fix that requires a hex value or a new visual language goes back t
 - Reduced motion means *fewer and gentler*, not *zero* — the companion's breathe/blink stay
   off entirely under the media query (they're sub-perceptual by design, not information), but
   an opacity-only crossfade would be fine to keep if one ever gets added here.
-- The companion's own motion budget (≤3 turn-aways/25min, none in the first 60s) is itself an
-  accessibility control, not just a brand decision — arousal from being watched is the risk
-  this audience's work is most sensitive to (apexhuman.md, PRD invariant I2's citations).
+- **Corrected 2026-09-16.** The companion's motion budget (≤3 turn-aways/25min, none in the
+  first 60s) was an accessibility control as much as a brand one — arousal from being watched is
+  the risk this audience's work is most sensitive to (apexhuman.md, PRD invariant I2's citations).
+  **It no longer binds anything, because the product initiates no motion at all** (ADR-0057). The
+  control that replaced it is stronger and simpler: **motion during a session requires a user
+  action.** An interruption the user did not ask for costs attention whether or not it is correct,
+  and that argument — not the budget — is what any new in-session motion has to beat.
 
 ### Icons
 
@@ -291,8 +340,33 @@ they don't quietly disappear:
   announced via `role="alert"` (§8). Small, mechanical, not yet done.
 - Button focus rings are the unstyled browser default everywhere except `.m-field` (§8). Not
   broken — just not designed.
-- The companion's disclosure copy ("it reads the site name…") is honest about today's
-  mechanism — `sw.js#updateCompanion` checks the tab's hostname against known distraction
-  categories, nothing more. `docs/index.md` D25 records that this heuristic stands in for the
-  judge; when the judge ships and starts reading page content under I7, this exact copy needs
-  rewriting to match the new, larger truth — not just the logic behind it.
+- **Rewritten 2026-09-16.** The disclosure gap is not the one this bullet used to describe. It
+  said the copy would need rewriting "when the judge ships and starts reading page content" —
+  **that never happens now.** ADR-0061 removed page text and titles from the product's inputs
+  permanently, so the disclosure never has to grow. It has to change in the other direction:
+  the judge reads **full visit paths, held on the device** (ADR-0059), which are a stronger
+  claim about privacy than "the site name," not a weaker one. Nothing on any surface says this
+  yet, and the tap that writes a label (ADR-0058) has no disclosure at all.
+- **The app shell has no artboard** (§6). Seven artboards exist and not one shows navigation;
+  `design/canvas/Shell.dc.html` was specified as step 1 of the work that built it and was never
+  drawn. Either draw it, or record in `docs/adr/` that the shell is chrome that lives outside
+  the canvas — but do not leave the canvas silently outranked by a `.tsx` file while §1 of this
+  document says the canvas is visual truth.
+- **The landing page makes a privacy claim the product no longer honours, and it is the loudest
+  copy on the site.** `app/page.tsx:107` heads a whole section *"It reads the page. It stores
+  nothing,"* and the paragraph under it explains that it reads the tab once and keeps one word.
+  **ADR-0061 removed page reading entirely** — no text, no titles, ever. The claim is now wrong in
+  the direction that matters (it promises a smaller thing than the truth in one respect and a
+  larger capability in another), and what actually needs saying is ADR-0059's: **full visit paths
+  live on the device, and only `{domain, verdict, confidence}` ever leaves it.** Copy fix, owner's
+  wording, not a silent edit — but it is a public claim about privacy and it is stale.
+- **The landing hero asks for nothing** (issue #51). `Landing.dc.html` specifies a primary *"Add
+  to Chrome"* in the hero. What ships has **no CTA in the hero at all** — the primary button is
+  *"Sign in"*, in the header and again above the footer, and *"Add to Chrome"* is a secondary nav
+  link. A visitor is asked to create an account before they have the extension the account is for.
+- **MEANT has an answer now** (§3.1, issue #51 part 1). **Settled 2026-09-16 (ADR-0065):** this
+  line previously said MEANT "has no answer to 'is it light or dark.'" It does now — a cream
+  product, with the dark palette a fallback, not a second look. The dark palette still ships and
+  applies itself from the OS, and `data-theme` still has no writer — both remain true, and are why
+  a fallback shipped rather than a toggle. #51 parts 2 and 3 (the landing hero, the class contract)
+  stay open.

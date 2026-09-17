@@ -6,7 +6,7 @@
 **Cycle:** 1
 **Owner:** Alexandre Andrei Nevero
 **Status:** Draft
-**Last reconciled:** 2026-09-11 — doc audit corrected two items D11/D14-adjacent facts had drifted from
+**Last reconciled:** 2026-09-16 (Q10 void, ADR-0061). Previously 2026-09-11 — doc audit corrected two items D11/D14-adjacent facts had drifted from
 **Downstream:** [prd-intent.md](prd-intent.md)
 **Loop closes from:** [flow-intent.md](flow-intent.md) §6 events → [prd-intent.md](prd-intent.md) §8 metrics → §10 below
 
@@ -107,9 +107,9 @@ And model inference became cheap and fast enough that reading one tab against on
 
 ## 4. The One Thing
 
-**Minimum demonstrable value:** A session review that shows "you said you would finish the client proposal; here are the three steps, two of them moved; you spent 41 minutes in the AI chat, 12 in the document, 9 on a news site; twice you drifted and came back within ninety seconds; did you finish it?" — and a history where the answer to that question, not the hours, is the number that accumulates.
+**Minimum demonstrable value:** *(Corrected 2026-09-16 — the generated steps were cut, ADR-0048.)* A session review that shows "you said you would finish the client proposal; you spent 41 minutes in the AI chat, 12 in the document, 9 on a news site; twice you drifted and came back within ninety seconds; did you finish it?" — and a history where the answer to that question, not the hours, is the number that accumulates.
 
-**How we would show it in two minutes:** Install → type "finish the client proposal" → session starts instantly; three steps appear a moment later → open a blocked site, get the block page showing the intention back → work; the companion faces your work and turns to face you when you drift → session ends → review: intention, plan, attention, the returns → answer "not yet" → ledger shows three sessions, two completed.
+**How we would show it in two minutes:** Install → type "finish the client proposal" → session starts instantly → open a blocked site, get the block page showing the intention back → work; the companion sits there, one solid breathing ring, and **one tap on it says "this isn't the work"** → session ends → review: intention, attention, the returns → answer "not yet" → ledger shows three sessions, two completed. **(Corrected 2026-09-16: the three generated steps were cut with PRD-F8, ADR-0048; "turns to face you when you drift" was the gaze design, replaced 2026-09-05 and the signal deleted 2026-09-15 — ADR-0026, ADR-0057, ADR-0058.)**
 
 **What has to be true for that to work:** The user's work is genuinely inside the browser. They will type one sentence before working. "Did you finish it?" is answerable for their real work. The generated plan is more often useful than misleading. The judge is right often enough to be allowed to interrupt.
 
@@ -266,7 +266,7 @@ Empty until v1 ships to someone other than the builder. Expected, not a gap.
 | **Q7** | How many sessions of evidence before the coach may state a pattern (I6)? | A9, I6 | Alexandre | Before the coach speaks |
 | **Q8** | Where is the free/paid line, exactly? Provisional: free is mechanical (blocking, review, ledger); paid is the half that knows you (plan, judge, companion, memory, coach) | A10, M8 | Alexandre | Before pricing is shown |
 | **Q9** | How is A9 tested at all, given the product's own metrics would look better if it were false? | A9, K5 | Alexandre | Before the companion ships beyond the builder |
-| **Q10** | Does judging on hostname + page title alone clear the precision floor? If yes, the product never has to ask for broad page access and C19's constraint stops mattering. This is the cheapest question here and the highest-leverage | A8, Q6, the install funnel | Alexandre | Before designing any permission prompt |
+| ~~Q10~~ | ~~Does judging on hostname + page title alone clear the precision floor?~~ **VOID 2026-09-16 (ADR-0061).** Page titles are never read, and there is no permission prompt to design — `<all_urls>` ships unconditionally (ADR-0027) and the judge runs after the session, when the page is gone (ADR-0060). **Live replacement: is hostname + on-device path accurate enough to be worth showing?** Measurable offline against stored sessions, with no prompt and no new permission | A8, Q6 | Alexandre | Before the judge is built |
 
 ---
 

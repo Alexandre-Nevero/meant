@@ -36,7 +36,7 @@ export default function Pair() {
   if (failed) {
     return (
       <div data-surface="pair">
-        <p className="m-meta">
+        <p className="m-meta" role="alert">
           Sign in first, then <a href="/pair">reload this page</a>.
         </p>
       </div>

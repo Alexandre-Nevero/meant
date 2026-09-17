@@ -20,7 +20,11 @@ it is for and why it must be rebuildable, `docs/` for canonical truth.
 - No total-hours figure, no percentage, no score, on any surface.
 - The popup animates nothing. It is opened dozens of times a day.
 - Nothing good happens on screen during a session. Positive feedback lives in the review.
-- The companion never varies with the outcome answer.
+  **No exception since ADR-0057** — the return-pulse died with the drift signal.
+- The companion never varies with the outcome answer, and **never signals drift** (ADR-0057).
+  It moves only when the user causes it to: one tap means *"this isn't the work"* (ADR-0058),
+  acknowledged by a 160ms ring-collapse (600ms, static, under reduced motion). A receipt is not
+  celebration.
 - Away is a hatch, never a solid grey.
 
 ## Verifying UI
@@ -28,7 +32,7 @@ it is for and why it must be rebuildable, `docs/` for canonical truth.
 Static code and a clean build are not evidence. Render it and look.
 
 ```bash
-node ~/.agents/skills/impeccable/scripts/detect.mjs <files|url>   # anti-pattern floor
+node ~/.agents/skills/impeccable/scripts/detect.mjs <files|url>   # floor only: [] on a .tsx proves nothing
 node ~/.agents/skills/impeccable/scripts/detect.mjs --viewport 390x844 <url>
 ~/.claude/skills/gstack/browse/dist/browse goto <url> && ... screenshot
 ```
