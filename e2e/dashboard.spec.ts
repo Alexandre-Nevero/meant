@@ -49,6 +49,21 @@ test('the actions block counts the whole backlog but lists at most three of it',
   await expect(actions.locator('.m-sentence')).toHaveCount(3)
   // Oldest first, so the newest is the one that falls off the end.
   await expect(actions.getByText('newest open question')).toHaveCount(0)
+
+  // Geometry, not existence. Without these the whole .m-ledger-actions CSS block can be deleted
+  // and every test in this file stays green, while the links silently collapse to the body
+  // default — the 34x16 attention band of the previous branch, in a new place.
+  await expect(actions).toHaveCSS('row-gap', '10px')
+  await expect(actions.locator('.m-sentence').first()).toHaveCSS('font-size', '20px')
+
+  // Below 700px the actions block must step down WITH the record, never above it: these three
+  // sentences are repeated verbatim as the first rows of the list below, and a shortcut
+  // rendering larger than the record it points at is a hierarchy error.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(actions.locator('.m-sentence').first()).toHaveCSS('font-size', '18px')
+  await expect(page.locator('[data-surface="ledger"] .m-row .m-sentence').first()).toHaveCSS(
+    'font-size', '18px',
+  )
 })
 
 // PRD US-11: below the threshold, render NOTHING. Not a hedge, not a partial pattern. Seven
@@ -68,7 +83,13 @@ test('no pattern sentence appears one session below the evidence floor', async (
 // rows actually imply, so a gate that opens on the wrong arithmetic fails here, loudly, rather
 // than passing on the presence of a <p>.
 test('at the evidence floor the pattern sentence appears and says what the rows say', async ({ seededUser }) => {
-  const page = await seededUser(answeredAt(9, ['yes', 'yes', 'yes', 'yes', 'yes', 'no', 'no', 'no']))
+  const page = await seededUser([
+    ...answeredAt(9, ['yes', 'yes', 'yes', 'yes', 'yes', 'no', 'no', 'no']),
+    // An answered session whose local hour is unknown (ADR-0053): it must stay out of the named
+    // part's arithmetic entirely rather than be bucketed or assumed — so the sentence below is
+    // still five and three, not five and four.
+    { outcome: 'no' as const, startedAtLocalHour: null },
+  ])
   await page.goto('/dashboard')
 
   await expect(page.locator('.m-ledger-pattern')).toHaveText(
