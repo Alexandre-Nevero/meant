@@ -1,0 +1,12 @@
+-- The hour, 0-23, local to the user at the instant the session started. Supplied by the
+-- extension from the same clock reading that produces started_at (extension/sw.js:124).
+--
+-- Deliberately NOT a timezone. 'Europe/Lisbon' is a location; 9 is not. This schema stores
+-- hostnames and never full URLs (ADR-0008), the judge never reads page text (ADR-0061), and
+-- paths stay on the device (ADR-0059). Acquiring a location column to answer a question an
+-- integer answers would be the same mistake in a new place.
+--
+-- Null on every row written before this migration, and null whenever the client sends
+-- anything that is not an integer 0-23. Null means unknown, and the time-of-day contrast
+-- excludes it rather than guessing (ADR-0053).
+alter table session add column if not exists started_at_local_hour int;
