@@ -899,22 +899,45 @@ on theirs is exactly that."
 accretes claims about the user until it is grading them — which is the *productivity score* §9
 refuses, arrived at by accumulation rather than by decision.
 
-- [ ] **Step 1: Decide, using Task 3 Step 7's state-3 render**
+- [ ] **Step 1: DECIDED 2026-09-17 by the owner, on Task 3 Step 7's state-3 render**
 
-Look at the screenshot where both fire. The recommended rule, to accept or replace:
+The rule the plan originally recommended — *the one with the widest gap relative to its own
+evidence* — **is not implementable and was replaced.** The two gaps are not commensurable: the
+domain contrast's is in seconds, the time-of-day contrast's is in session counts, and comparing
+them requires an invented normalisation. The rule as adopted:
 
-> **At most one inference sentence renders at a time — the one with the widest gap relative to its
-> own evidence.** Description (the headline, the actions block, the sessions list) is unbounded and
-> ungated, per ADR-0050. Adding a new statistic does not add a line to the dashboard; it enters the
-> competition for the single slot.
+> **At most one inference sentence renders at a time — the one whose claim rests on more answered
+> sessions, ties going to the domain contrast.** Description — the headline, the actions block, the
+> sessions list — is unbounded and ungated, per ADR-0050. Adding a new statistic does not add a
+> line to the dashboard; it enters the competition for the single slot.
 
-The argument for it: the ban in §9 is on *a productivity score of any kind*, and a stack of
-simultaneous claims is a score assembled from parts. One slot also keeps the surface's peak-end
-intact — a single sentence is read; four are skimmed.
+Both contrasts already report `sessions` as a count of answered sessions, so the comparison is
+computable from what exists and invents nothing.
 
-The argument against, which must be recorded if the rule is adopted: **a user whose strongest signal
-is time-of-day never sees the domain contrast, and cannot ask for it.** Whatever is chosen, record
-what it costs.
+**The evidence from the render.** With both firing, the column below the headline is four
+consecutive 13px `--m-ink-3` lines — the backlog count, two pattern sentences, and `Set up your
+sites` — at identical size, weight and colour, separated only by the container's uniform 24px gap.
+A navigation link is visually indistinguishable from an inference about the person, and two pattern
+sentences in sequence read as a paragraph of grading where one sentence does not. The defect is not
+that the second sentence is wrong; it is that two of them change what the surface is doing. §9 bans
+*a productivity score of any kind*, and a stack of simultaneous claims is a score assembled from
+parts.
+
+**What it costs, and the ADR must say so:** a user whose time-of-day signal is stronger but thinner
+never sees it, and has no way to ask for it. There is no control anywhere in the product that would
+let them.
+
+**Two further owner rulings from the same render, to be recorded in the ADR's Consequences:**
+
+1. **The actions block keeps its three links** even though they repeat the first rows of the record
+   verbatim, both inside the first viewport at 1440. The block is a shortcut to the review; the row
+   is the record. The duplication is inherent to a list of what needs answering sitting above a
+   list of everything, and it was looked at and accepted rather than overlooked.
+2. **The actions-block copy is lowercase in both branches** — `one session is still unanswered.`
+   and `four sessions are still unanswered.` The two branches disagreed with each other as shipped
+   in Task 3 (capital `One`, lowercase `four`); lowercase matches the headline directly above on
+   the same surface, which renders `eight this month. five finished.` from the same `toWords`. Fix
+   this in Step 2a and update the string the three-item cap test pins.
 
 - [ ] **Step 2: Write the ADR**
 
@@ -928,10 +951,14 @@ since a judge verdict rendered here would compete for the same slot.
 
 - [ ] **Step 2a: Implement the rule, and write the test that proves it**
 
-Whatever Step 1 decided, `app/dashboard/page.tsx` must enforce it and `e2e/dashboard.spec.ts` must
-fail if it stops being enforced. Under the recommended rule that is: both contrasts computed, one
-rendered, and a test using the seeded fixture from Task 3 that puts **both** over the floor and
-asserts `.m-ledger-pattern` has count exactly 1.
+`app/dashboard/page.tsx` must enforce the rule and `e2e/dashboard.spec.ts` must fail if it stops
+being enforced. Concretely: both contrasts computed, the one resting on more answered sessions
+rendered (ties to the domain contrast), and a test using Task 3's `seededUser` fixture that puts
+**both** over the floor and asserts `.m-ledger-pattern` has count exactly 1 — and asserts *which*
+sentence won, or the test cannot tell the rule from a rule that always picks the first one.
+
+Also in this step: the lowercase copy fix from Step 1's ruling 2, and the cap test's pinned string
+updated to match.
 
 A rule stated only in an ADR is a rule that regresses on the next branch. Ask of the test what it
 would do if the selection were deleted and both sentences rendered. If it would still pass, it is
