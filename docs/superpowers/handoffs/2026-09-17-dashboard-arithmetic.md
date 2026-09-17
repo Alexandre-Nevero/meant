@@ -104,7 +104,7 @@ on the branch changes existing behaviour.
   defect fixed in both contrasts.
 - `docs/design.md` §6's surface table still calls `.m-ledger-pattern` a styled group; §5 and
   `docs/design-toolkit.md` §8 say correctly that nothing styles it — it is a marker class.
-- `docs/index.md`'s D-table gained D66 and D67. **D65 is still missing**, from the previous branch.
+- `docs/index.md`'s D-table gained D66 and D67 — and D65, which the previous branch never registered and which adding the two new rows turned into a visible hole.
 - The 51-row seed test makes ~53 sequential Neon round trips inside a 30s timeout. It passes; it is
   the first thing that will break if latency rises.
 - The plan document still shows `PartOfDayContrast | null` in three places. Its own amendment
