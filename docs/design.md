@@ -167,11 +167,13 @@ ledger-row swatch, a plan-step marker, *and* a band segment, differentiated only
 > **The contract and the code disagree, and this is an open owner decision (issue #51), not a
 > licence.** Counted 2026-09-16, `app/globals.css` and `extension/meant.css` define **15** classes
 > from the product vocabulary — the 13 below plus `.m-chip` and `.m-chip-row`, which the popup's
-> duration and blocklist pickers have shipped for weeks — and four further families that were
+> duration and blocklist pickers have shipped for weeks — and five further families that were
 > always argued as *structural, not vocabulary*: `.m-landing-*` (marketing layout), `.m-rise` (the
 > review's one authored motion), `.m-shell-*` (the app shell, added on `awareness-turn` under
-> the `.m-landing-*` precedent), and `.m-review-rows` / `.m-review-ask` (the review's row and
-> question groups, added on `bugfix-seven` under the same precedent). Either the contract is 13
+> the `.m-landing-*` precedent), `.m-review-rows` / `.m-review-ask` (the review's row and
+> question groups, added on `bugfix-seven` under the same precedent), and `.m-ledger-actions` /
+> `.m-ledger-pattern` (the dashboard's shortcut group and its one inference sentence, added on
+> `dashboard-arithmetic` under the same precedent — ADR-0066). Either the contract is 13
 > and `.m-chip`/`.m-chip-row` are a
 > standing violation, or the contract is "13 semantic classes plus named structural families" and
 > should say so. **Do not resolve it by editing the number here**; it is the same decision in
@@ -204,7 +206,7 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 |---|---|---|---|---|
 | `landing` | `app/page.tsx` | 1440 desktop fold | — | Marketing layout classes (`.m-landing-*`) are structural only, not part of the 13-class contract |
 | `review` | `app/review/[id]/page.tsx` | 1000px box, 840px content, gap 40px (**corrected 2026-09-16** — this cell said 880px; `globals.css:110` is `max-width: 1000px` with 80px side padding, the same shell as the ledger; the column runs at `gap: 40px`, not the flat 24px it shipped with — rows sit in their own `.m-review-rows` group at `gap: 0`, and the question+answers stage in `.m-review-ask` with `margin-top: auto`, #45) | — | The one page with an *authored* motion moment (staggered rise, 50ms steps) |
-| `ledger` | `app/dashboard/page.tsx` | 1000px column | — | Each row's band is real per-session data via `lib/band.ts`, not decoration |
+| `ledger` | `app/dashboard/page.tsx` | 1000px column | — | Each row's band is real per-session data via `lib/band.ts`, not decoration. **Two structural groups added 2026-09-17:** `.m-ledger-actions`, a shortcut to the sessions still waiting on an answer (at most three links, no evidence floor — it is description, ADR-0050; its sentences step down with the record below 700px, never above it), and `.m-ledger-pattern`, the surface's **one** inference sentence. **ADR-0066: at most one claim about the user renders at a time** — the one resting on more answered sessions, ties to the domain contrast. Both contrasts are computed; a new statistic competes for that slot rather than adding a line |
 | `pair` | `app/pair/page.tsx` | centered, 320px card | **No** — single scheduled `setTimeout` flips to "expired," not a countdown | |
 | `popup` | `extension/popup.html` | fixed 360px | **No**, anywhere, ever | Opened dozens of times a day — see §7 |
 | `block` | `extension/blocked.html` | full page | **No** | Static "N minutes left," read once |

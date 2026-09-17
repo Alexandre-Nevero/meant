@@ -168,10 +168,13 @@ removing it from the contract is a decision nobody has recorded — but a surfac
 `data-state="drifting"` today is rendering a state the product cannot enter.
 
 **Counted against the code, 2026-09-16: the file defines 15, not 13.** `.m-chip` and `.m-chip-row`
-ship in the popup and are not in the list above, and `.m-landing-*`, `.m-rise`, `.m-shell-*` and
-`.m-review-*` (the review's row and question groups, added on `bugfix-seven`) exist as structural
-families outside it. See `docs/design.md` §5 — the number and the code have to be reconciled by a
-decision, not by editing this line.
+ship in the popup and are not in the list above, and `.m-landing-*`, `.m-rise`, `.m-shell-*`,
+`.m-review-*` (the review's row and question groups, added on `bugfix-seven`) and `.m-ledger-*`
+(the dashboard's shortcut group and its one inference sentence, added on `dashboard-arithmetic`,
+ADR-0066) exist as structural families outside it. See `docs/design.md` §5 — the number and the
+code have to be reconciled by a decision, not by editing this line. **`.m-ledger-*` is structural,
+not vocabulary, on the same argument as every family before it, and declaring it settles nothing
+about 13 or 15.**
 
 ---
 

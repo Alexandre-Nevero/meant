@@ -199,8 +199,8 @@ FMD's guidance for a solo short build is that one phase is usually the whole bui
 
 ### TASK-009 · Dashboard ledger
 **Files:** `app/dashboard/page.tsx`
-**Contract:** sessions descending by `started_at` — intention, duration, top domain, outcome. Completion rate over answered sessions is the one headline number. **Total hours is not displayed as a headline anywhere** (PRD-F5). Empty state explains what will appear.
-**Done when (US-05):** three sessions visible with outcomes and a completion rate.
+**Contract:** sessions descending by `started_at` — intention, attention band, outcome. **Corrected 2026-09-17:** this line said *"intention, duration, top domain, outcome"* and called a completion rate the one headline number. Neither column is rendered, and a rate is the percentage §3.1 bans; PRD-F5 and US-05 were corrected 2026-09-11 and this contract was left behind. The headline is **counts spelled as words** ("eight this month. five finished."). **Total hours is not displayed as a headline anywhere** (PRD-F5). Above the record: the backlog shortcut, and **at most one** inference sentence (ADR-0066). Empty state explains what will appear.
+**Done when (US-05):** three sessions visible with outcomes and the word-count headline.
 
 ### TASK-010 · Verification and rehearsal
 Run §8. Rehearse the demo script (build-intent §5) twice with no reload. Record what was cut in build-intent §7.
@@ -271,7 +271,7 @@ Release needs T1, T2, T4, T7 plus the demo running twice (SDD §8.3).
 | Store `tab.url` or `tab.title` | `new URL(url).hostname` | INV-2 |
 | Add Redux/Zustand/Prisma/an ORM/a UI kit | `chrome.storage.local`, raw SQL, plain CSS | Four hours; INV-4 |
 | Add error tracking or analytics "quickly" | The `event` table already answers every metric | INV-4 |
-| Show total hours on the dashboard | Completion rate | PRD-F5 — hours are the metric this product demotes |
+| Show total hours on the dashboard | Counts, spelled as words (**corrected 2026-09-17** — this cell said "completion rate," which is the percentage §3.1 bans) | PRD-F5 — hours are the metric this product demotes |
 | Force an answer on the review | Allow dismissal, record `unanswered` | E5 — forcing it destroys the A3 signal |
 
 ---

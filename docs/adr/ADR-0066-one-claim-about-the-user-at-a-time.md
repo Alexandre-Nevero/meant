@@ -1,0 +1,27 @@
+# ADR-0066 — One claim about the user at a time
+
+- **Date:** 2026-09-17
+- **Status:** Accepted
+- **Context:** The dashboard computes two statements about the user — `contrastByOutcome` (time on a domain, finished sessions against unfinished) and `contrastByPartOfDay` (finished against unfinished within the part of the day the sessions started in). Both are free arithmetic over columns that already exist (ADR-0060), both are gated by `PATTERN_MIN_SESSIONS`, and a third is cheap to add. Nothing said how many of them may be on screen at once.
+
+  **Seen on the state-3 render, 1440 wide.** With both firing, the column under the headline is four consecutive 13px `--m-ink-3` lines: the backlog count, two pattern sentences, and `Set up your sites`. Identical size, weight and colour, separated only by the container's uniform 24px gap. A navigation link is visually indistinguishable from an inference about the person, and two pattern sentences in sequence read as a paragraph of grading where one sentence does not.
+
+  The defect is not that the second sentence is wrong. It is that two of them change what the surface is doing. `docs/design-toolkit.md` §9 refuses *a productivity score of any kind*, and a stack of simultaneous claims is a score assembled from parts — arrived at by accretion rather than by anyone deciding to ship one.
+
+  **The rule the plan recommended is not implementable, and this is recorded so it is not proposed again.** That rule was *the claim with the widest gap relative to its own evidence*. The two gaps are not commensurable: the domain contrast's gap is in seconds, the time-of-day contrast's is in session counts. Ranking one against the other requires a normalisation nobody has justified, and inventing one would make the choice of which sentence a user sees an artefact of a fudge factor.
+- **Decision:** **At most one inference sentence renders at a time — the one whose claim rests on more answered sessions, ties going to the domain contrast.** Both contrasts are still computed; only one is stated. Evidence count is the comparison because both contrasts already report `sessions` as a count of answered sessions, so it invents nothing.
+
+  Description is unbounded and ungated, per ADR-0050: the headline, the actions block and the sessions list are the user's own rows, and showing someone their record is not a claim about them. The rule governs inference only.
+
+  **Adding a new statistic does not add a line to the dashboard. It enters the competition for the single slot.**
+
+  Enforced in `app/dashboard/page.tsx` and pinned by two tests in `e2e/dashboard.spec.ts` that share one seed: the first renders the domain sentence from eight answered sessions, the second suppresses that identical sentence by giving the time-of-day claim two sessions more and changing nothing else.
+- **Consequences:**
+  - **This constrains every future statistic, including the judge's own output.** A judge verdict rendered on this surface is a claim about the user and competes for the same slot as the arithmetic. It does not get a line of its own because it cost a model call, and if it cannot beat free averaging on evidence it does not appear at all — which is the test ADR-0060 already set for it.
+  - **What the rule costs.** A user whose time-of-day signal is stronger but rests on fewer sessions never sees it, and **there is no control anywhere in the product that would let them ask for it.** No settings surface, no toggle, no "show me the other one". This is accepted, not overlooked: the alternative is a preference that only a user who already knows both statements exist could ever set.
+  - Evidence is not interest. A thin, vivid claim loses to a thick, dull one, every time. That is the trade, and the tie-break makes it explicit rather than leaving it to the sort order of whichever contrast was written first.
+  - **The actions block keeps its three sentence links**, even though they repeat the first rows of the record verbatim and both sit inside the first viewport at 1440. The block is a shortcut to the review; the row is the record. The duplication is inherent to a list of what needs answering sitting above a list of everything. It was looked at on the same render and accepted.
+  - **The actions copy is lowercase in both branches** — `one session is still unanswered.` and `four sessions are still unanswered.` The two branches shipped disagreeing with each other, and lowercase is what matches the headline directly above on the same surface, which renders `eight this month. five finished.` from the same `toWords`.
+  - `.m-ledger-actions` and `.m-ledger-pattern` are declared in `docs/design.md` §5 and `docs/design-toolkit.md` §8 as a structural family, exactly as `.m-review-*` was, under the `.m-landing-*` / `.m-shell-*` precedent. **They resolve nothing about the class contract (#51 part 3) and the count in those sections is unchanged.**
+  - `docs/sitemap-intent.md`'s S3 row described a surface that had not existed since 2026-09-11 (duration, top domain, and a completion rate the §3.1 invariant bans). Reconciled here under ADR-0063, along with `docs/build.md`'s TASK-009 contract, which still called the completion rate the one headline number.
+- **Source:** owner decision 2026-09-17, on Task 3's state-3 render; `docs/superpowers/plans/2026-09-17-dashboard-arithmetic.md` Task 4
