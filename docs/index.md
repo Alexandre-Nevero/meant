@@ -188,6 +188,9 @@ which applied those same decisions where the first pass had missed them.
 | **D62** | **Labels written per visit (`event.label`); memory accumulates by threshold, not at n=1.** Defers the undefined "intention class" | 2026-09-15 | ADR-0062 |
 | **D63** | **`docs/adr/` is the most up-to-date record in the repo.** Where an ADR and any document disagree, the ADR is right | 2026-09-15 | ADR-0063, AGENTS.md |
 | **D64** | **The coach's preset corpus: relevance over recency, a source-tier gate, and a review date.** SEO "statistics 2026" pages are inadmissible | 2026-09-15 | ADR-0064 |
+| **D65** | **MEANT is a cream product; dark is a fallback, not a second look.** `prefers-color-scheme: dark` had made it dark for any user on a dark OS, with no way to say otherwise | 2026-09-16 | ADR-0065 |
+| **D66** | **At most one inference sentence renders at a time** — the claim resting on more answered sessions, ties to the domain contrast. A new statistic competes for the slot rather than adding a line | 2026-09-17 | ADR-0066 |
+| **D67** | **The session row stores the hour (0-23), never a timezone.** A timezone name is location data; bucketing server-side would bucket in UTC and state a regularity that is an artefact of server geography | 2026-09-17 | ADR-0067 |
 
 ## 7. Pending spawn proposals
 

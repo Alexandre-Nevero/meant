@@ -53,7 +53,7 @@ They meet at exactly two points: the pairing code, and the review tab the extens
 |---|---|---|---|---|
 | S1 | Landing | Web | The marketing page; sign-in now lives at S11. **Two open problems, noted 2026-09-16:** its *"It reads the page. It stores nothing"* section is **false since ADR-0061** — nothing is read — and the hero **asks for nothing**, pushing *Sign in* where `Landing.dc.html` specifies *Add to Chrome* (#51) | PRD-F6 |
 | S2 | Pairing | Web | Show a short-lived code to paste into the extension | PRD-F6 |
-| S3 | Dashboard (the ledger) | Web | Every session with its intention, duration, top domain, and outcome; completion rate at the top | PRD-F5 |
+| S3 | Dashboard (the ledger) | Web | Every session with its intention, its attention band and its outcome. **Corrected 2026-09-17:** this cell said *"duration, top domain, and outcome; completion rate at the top"* — neither column is rendered and a completion rate is the percentage §3.1 bans (PRD-F5 was corrected 2026-09-11; this row was not). The headline is counts spelled as words. Above the record sit two things added 2026-09-17: a shortcut to the sessions still waiting on an answer (at most three, no evidence floor, ADR-0050) and **one** sentence of inference about the user — never two, whatever the arithmetic offers (ADR-0066) | PRD-F5 |
 | S4 | Session review | Web | Intention and plan beside time-per-domain, away time, drift-and-returns, blocked attempts; the coach speaks here; then the outcome question | PRD-F4, F12 |
 | S5 | Popup — idle | Extension | Intention field, optional duration, blocklist picker, Start | PRD-F1, PRD-F7 |
 | S6 | Popup — session running | Extension | Current intention, the plan once it arrives, elapsed time, Stop | PRD-F1, F8 |
@@ -106,7 +106,7 @@ without it was a plan this document was printing as if it were an API.
 | `/` | S1 | Public | ✅ | Redirects to `/dashboard` when signed in |
 | `/sign-in` | S11 | Public | ✅ | **Added to this table 2026-09-16.** Its own route; the landing links to it |
 | `/pair` | S2 | Required | ✅ | Generates a code on load; code expires (see SDD §5) |
-| `/dashboard` | S3 | Required | ✅ | |
+| `/dashboard` | S3 | Required | ✅ | The record, the backlog shortcut, and at most one inference sentence (ADR-0066) |
 | `/setup` | S10 | Required | ✅ | **Added to this table 2026-09-16.** Work and distraction sites (ADR-0035). See #42 |
 | `/review/[sessionId]` | S4 | Required | ✅ | 404 if the session belongs to another account |
 | `/api/auth/[...path]` | — | — | ✅ | **Added 2026-09-16.** Neon Auth's own handler (ADR-0021) |

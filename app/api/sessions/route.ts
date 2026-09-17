@@ -25,11 +25,11 @@ export async function POST(req: Request) {
   await sql`
     insert into session (
       id, user_id, device_id, intention, planned_minutes, blocklist, started_at,
-      work_sites, blocked_domains, cycle_work_min, cycle_break_min)
+      work_sites, blocked_domains, cycle_work_min, cycle_break_min, started_at_local_hour)
     values (
       ${body.id}, ${device.user_id}, ${device.id}, ${p.intention}, ${p.plannedMinutes},
       ${p.blocklist}, ${body.startedAt},
-      ${p.workSites}, ${p.blockedDomains}, ${p.cycleWorkMin}, ${p.cycleBreakMin})
+      ${p.workSites}, ${p.blockedDomains}, ${p.cycleWorkMin}, ${p.cycleBreakMin}, ${p.localHour})
     on conflict (id) do nothing`
 
   return Response.json({ sessionId: body.id })

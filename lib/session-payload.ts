@@ -16,6 +16,7 @@ export type StartPayload = {
   workSites: string[]
   cycleWorkMin: number | null
   cycleBreakMin: number | null
+  localHour: number | null
 }
 
 /** Client-supplied and untrusted, exactly like `body.id`. A non-array becomes an empty
@@ -35,5 +36,13 @@ export function normalizeStartPayload(body: Record<string, unknown>): StartPaylo
     // block. Null, not 0: a zero would be indistinguishable from a zero-length cycle.
     cycleWorkMin: Number.isInteger(cycle?.work) ? (cycle!.work as number) : null,
     cycleBreakMin: Number.isInteger(cycle?.break) ? (cycle!.break as number) : null,
+    // Client-supplied and untrusted, exactly like the fields above. A bad value (out of
+    // range, non-integer, wrong type, or missing) becomes null rather than a guess — null
+    // means unknown and is excluded from the time-of-day contrast (ADR-0053), whereas
+    // guessing would state a false hour. `Number.isInteger(0)` is true and 0 (midnight) is
+    // a legal hour, so this cannot be a truthiness check — it must test range explicitly.
+    localHour: Number.isInteger(body.localHour) && (body.localHour as number) >= 0 && (body.localHour as number) <= 23
+      ? (body.localHour as number)
+      : null,
   }
 }

@@ -49,3 +49,18 @@ test('normalizeStartPayload rejects a non-integer plannedMinutes', () => {
   assert.equal(normalizeStartPayload({ plannedMinutes: 12.5 }).plannedMinutes, null)
   assert.equal(normalizeStartPayload({ plannedMinutes: '30' }).plannedMinutes, null)
 })
+
+test('normalizeStartPayload carries a valid localHour through, including midnight', () => {
+  assert.equal(normalizeStartPayload({ localHour: 9 }).localHour, 9)
+  // 0 is falsy but a legal hour (midnight) — a truthiness check would wrongly null this out.
+  assert.equal(normalizeStartPayload({ localHour: 0 }).localHour, 0)
+})
+
+test('normalizeStartPayload nulls an out-of-range, non-integer, wrong-type or missing localHour', () => {
+  assert.equal(normalizeStartPayload({ localHour: 24 }).localHour, null)
+  assert.equal(normalizeStartPayload({ localHour: -1 }).localHour, null)
+  assert.equal(normalizeStartPayload({ localHour: 9.5 }).localHour, null)
+  assert.equal(normalizeStartPayload({ localHour: '9' }).localHour, null)
+  assert.equal(normalizeStartPayload({ localHour: null }).localHour, null)
+  assert.equal(normalizeStartPayload({}).localHour, null)
+})

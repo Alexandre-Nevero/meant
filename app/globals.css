@@ -101,6 +101,20 @@ a { color: inherit; text-decoration: none; }
   border-width: 0.5px;
 }
 
+/* The actions block (Rize's 2022 Home view: "a list of any actions you need to take"). Quiet by
+ * construction: it is a list of open questions, not a warning. No accent, no border, no icon —
+ * the only thing separating it from the record below is that it is closer to the headline. */
+[data-surface="ledger"] .m-ledger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* .m-row's own rule cannot reach these — they are links in a flex column, not row cells — so
+ * the ledger's sentence size is restated rather than inherited. BOTH halves have to be: the
+ * mobile step at the bottom of this file restates it again, beside the row rule it must match.
+ * The shortcut must never render larger than the record it points at. */
+[data-surface="ledger"] .m-ledger-actions .m-sentence { font-size: 20px; }
+
 /* Ported from design/canvas/Main.dc.html:23,47,59. The artboard's step-list (:31) and its
  * "Drifted twice…" line (:57) are NOT ported: PRD-F8's generated plan is cut (ADR-0048) and
  * the drift signal is deleted (ADR-0057), and ADR-0063 makes the ADR right where the canvas
@@ -782,6 +796,10 @@ label:has(> .m-field) > .m-meta { color: var(--m-ink-2); }
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
   }
-  [data-surface="ledger"] .m-row .m-sentence { font-size: 18px; }
+  /* Grouped with the row deliberately: the actions block duplicates these very sentences
+     directly above them, and a shortcut that renders larger than the record it points at is
+     the defect this pairing exists to prevent. */
+  [data-surface="ledger"] .m-row .m-sentence,
+  [data-surface="ledger"] .m-ledger-actions .m-sentence { font-size: 18px; }
   [data-surface="ledger"] .m-row .m-row-figure { text-align: left; }
 }

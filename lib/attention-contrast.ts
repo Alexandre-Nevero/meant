@@ -62,9 +62,19 @@ export function contrastByOutcome(rows: ContrastRow[]): Contrast[] {
     }))
     // Largest gap first, in EITHER direction: more time during finished sessions is just as
     // informative as less — that is the shape of a tool that is working.
+    //
+    // The caller takes the first entry that clears the evidence floor, not this one: a thin
+    // domain with a wide gap must not suppress a thick one that qualifies. Ranking is this
+    // module's job; the floor is the caller's.
     .sort(
       (a, b) =>
         Math.abs(b.unfinishedAvgSeconds - b.finishedAvgSeconds) -
-        Math.abs(a.unfinishedAvgSeconds - a.finishedAvgSeconds),
+          Math.abs(a.unfinishedAvgSeconds - a.finishedAvgSeconds) ||
+        // Two domains with equal gaps used to fall back to Map insertion order, which is the
+        // order Postgres happened to return the event rows in — and that query has no ORDER BY,
+        // so the sentence could name a different domain between two page loads with no data
+        // change. Domain name settles it, by plain code-unit comparison rather than
+        // localeCompare, so the answer does not depend on the runtime's ICU data.
+        (a.domain < b.domain ? -1 : a.domain > b.domain ? 1 : 0),
     )
 }

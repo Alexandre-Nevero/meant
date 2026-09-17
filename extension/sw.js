@@ -161,7 +161,10 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
 
   // Then tell the server. `post` queues on failure (api.js:33-40), so an offline start syncs on
   // the next flush. The missing `await` is the fire-and-forget and is deliberate.
-  post('/api/sessions', { id: sessionId, intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle, startedAt })
+  // localHour comes from the SAME `now` that produced startedAt — reading the clock again
+  // here could let the two disagree (e.g. across a midnight rollover mid-function).
+  const localHour = new Date(now).getHours()
+  post('/api/sessions', { id: sessionId, intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle, startedAt, localHour })
   return { ok: true, sessionId }
 }
 
