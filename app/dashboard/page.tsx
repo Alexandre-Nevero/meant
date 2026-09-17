@@ -82,6 +82,17 @@ export default async function Dashboard() {
   }[]
   const partOfDay = contrastByPartOfDay(partRows)
 
+  // ADR-0066: at most ONE inference sentence renders. Both contrasts are still computed — the
+  // arithmetic is free and the losing one is what the winner is measured against — but only the
+  // claim resting on MORE answered sessions is stated, ties going to the domain contrast. The
+  // two gaps are not commensurable (seconds against session counts), so evidence is the only
+  // comparison that invents nothing. Description below — the headline, the actions block, the
+  // record — is unbounded and ungated (ADR-0050); this rule governs claims about the user only.
+  const domainClaim = contrast && contrast.sessions >= PATTERN_MIN_SESSIONS ? contrast : null
+  const partClaim = partOfDay && partOfDay.sessions >= PATTERN_MIN_SESSIONS ? partOfDay : null
+  const showPart = partClaim !== null && (domainClaim === null || partClaim.sessions > domainClaim.sessions)
+  const showDomain = domainClaim !== null && !showPart
+
   // Reuses the rows already fetched above — the backlog is a view of the record, not a
   // second question to the database.
   const backlog = answerableBacklog(
@@ -106,10 +117,12 @@ export default async function Dashboard() {
               session is enough and it does not wait for eight. No valence (I3): an unanswered
               session is a question still open, never a failure. Three at most — the list below
               already carries every session, and a backlog that fills the screen is the guilt
-              ledger docs/design-toolkit.md §9 refuses. */}
+              ledger docs/design-toolkit.md §9 refuses. Lowercase in BOTH branches (ADR-0066):
+              the headline directly above renders `eight this month. five finished.` from the
+              same toWords, and the two branches shipped disagreeing with each other. */}
           <p className="m-meta">
             {backlog.length === 1
-              ? 'One session is still unanswered.'
+              ? 'one session is still unanswered.'
               : `${toWords(backlog.length)} sessions are still unanswered.`}
           </p>
           {backlog.slice(0, 3).map((s) => (
@@ -124,22 +137,24 @@ export default async function Dashboard() {
           from description, never from inference. Below the threshold this renders nothing at
           all, and does not hedge a partial pattern (PRD US-11). Minutes spelled as words; no
           rate, no percentage, no score (§3.1). */}
-      {contrast && contrast.sessions >= PATTERN_MIN_SESSIONS && (
+      {showDomain && domainClaim && (
         <p className="m-meta m-ledger-pattern">
-          The sessions you finished averaged {toWords(Math.round(contrast.finishedAvgSeconds / 60))}{' '}
-          minutes on {contrast.domain}. The ones you did not averaged{' '}
-          {toWords(Math.round(contrast.unfinishedAvgSeconds / 60))}.
+          The sessions you finished averaged {toWords(Math.round(domainClaim.finishedAvgSeconds / 60))}{' '}
+          minutes on {domainClaim.domain}. The ones you did not averaged{' '}
+          {toWords(Math.round(domainClaim.unfinishedAvgSeconds / 60))}.
         </p>
       )}
 
-      {/* The same claim-about-the-user, so the same gate: counted on the named part's own
-          answered sessions, never the whole day. Grammar deliberately parallel to its sibling
-          above so the two read as one voice. Counts as words, no rate, no percentage, no score
-          (§3.1); no valence on either answer (I3 / ADR-0051). */}
-      {partOfDay && partOfDay.sessions >= PATTERN_MIN_SESSIONS && (
+      {/* The same claim-about-the-user, so the same gate — and the same single slot, which it
+          takes only by resting on strictly more answered sessions (ADR-0066). Counted on the
+          named part's own answered sessions, never the whole day. Grammar deliberately parallel
+          to its sibling above, because at most one of the two ever renders and the surface must
+          sound the same either way. Counts as words, no rate, no percentage, no score (§3.1);
+          no valence on either answer (I3 / ADR-0051). */}
+      {showPart && partClaim && (
         <p className="m-meta m-ledger-pattern">
-          Of the sessions you started in the {partOfDay.part}, {toWords(partOfDay.finished)}{' '}
-          finished and {toWords(partOfDay.unfinished)} did not.
+          Of the sessions you started in the {partClaim.part}, {toWords(partClaim.finished)}{' '}
+          finished and {toWords(partClaim.unfinished)} did not.
         </p>
       )}
       <Link className="m-meta" href="/setup">Set up your sites</Link>

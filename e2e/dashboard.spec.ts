@@ -30,6 +30,10 @@ test('one unanswered session is enough to raise an action, and it links to the r
   await expect(actions.getByRole('link', { name: /unanswered on purpose/ })).toHaveAttribute(
     'href', `/review/${sessionId}`,
   )
+  // Lowercase, exactly as the plural branch below and the headline above (ADR-0066). This
+  // branch shipped capitalised while its sibling did not; nothing failed, because nothing
+  // pinned it.
+  await expect(actions.locator('.m-meta')).toHaveText('one session is still unanswered.')
 })
 
 // The cap is a design decision (docs/design-toolkit.md §9 — a backlog that fills the screen is a
@@ -94,6 +98,59 @@ test('at the evidence floor the pattern sentence appears and says what the rows 
 
   await expect(page.locator('.m-ledger-pattern')).toHaveText(
     'Of the sessions you started in the morning, five finished and three did not.',
+  )
+})
+
+/** Eight answered sessions in the morning, all carrying the same domain with both arms present:
+ *  the domain contrast rests on exactly PATTERN_MIN_SESSIONS and the part-of-day contrast on the
+ *  same eight. Nine minutes against thirty-one, so the domain sentence is fully determined. The
+ *  two tests below share this seed EXACTLY, which is what makes the pair discriminating: the
+ *  first renders the domain sentence from it, the second suppresses that identical sentence by
+ *  adding sessions to the OTHER claim and nothing else. */
+const TIED_AT_THE_FLOOR = [
+  ...Array.from({ length: 5 }, () => ({
+    outcome: 'yes' as const,
+    startedAtLocalHour: 9,
+    events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 540 }],
+  })),
+  ...Array.from({ length: 3 }, () => ({
+    outcome: 'no' as const,
+    startedAtLocalHour: 9,
+    events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 1860 }],
+  })),
+]
+
+// ADR-0066, the tie. Both claims clear the floor on eight answered sessions each, so neither
+// rests on more — and the domain contrast takes the slot. This is also the eligibility proof for
+// the test below it: the domain sentence asserted here is the one that must NOT appear there,
+// from byte-identical rows.
+test('when both claims rest on the same evidence, the domain contrast takes the only slot', async ({ seededUser }) => {
+  const page = await seededUser(TIED_AT_THE_FLOOR)
+  await page.goto('/dashboard')
+
+  await expect(page.locator('.m-ledger-pattern')).toHaveCount(1)
+  await expect(page.locator('.m-ledger-pattern')).toHaveText(
+    'The sessions you finished averaged nine minutes on chatgpt.com. The ones you did not averaged thirty-one.',
+  )
+})
+
+// ADR-0066, the rule itself. The seed above plus two morning sessions carrying no events: the
+// domain contrast still rests on exactly eight and still says what it said one test up, while
+// the part-of-day contrast now rests on ten. Ten is more than eight, so the time-of-day sentence
+// takes the slot and the domain sentence — eligible, unchanged, and proven to render on its own
+// above — is the one that does not appear. A rule that always rendered the first claim, or both,
+// fails here.
+test('at most one claim renders, and it is the one resting on more answered sessions', async ({ seededUser }) => {
+  const page = await seededUser([
+    ...TIED_AT_THE_FLOOR,
+    { outcome: 'yes' as const, startedAtLocalHour: 9 },
+    { outcome: 'yes' as const, startedAtLocalHour: 9 },
+  ])
+  await page.goto('/dashboard')
+
+  await expect(page.locator('.m-ledger-pattern')).toHaveCount(1)
+  await expect(page.locator('.m-ledger-pattern')).toHaveText(
+    'Of the sessions you started in the morning, seven finished and three did not.',
   )
 })
 
