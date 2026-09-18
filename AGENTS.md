@@ -186,7 +186,7 @@ gh project item-edit --id <item> --project-id PVT_kwDOEecM1s4BjXGX --field-id <f
 
 Labels: `extension` · `api` · `web` · `data` · `adr` · `blocked` · `documentation` · `bug`.
 
-### Three rules that exist because they were broken
+### Rules that exist because they were broken
 
 1. **Never mark Done from a plan. Mark Done from a verification.** On 2026-09-15 the EDEN sheet
    carried five DONE rows; three were false against the code. *"Task 10: The signalling gate"* was
@@ -197,8 +197,13 @@ Labels: `extension` · `api` · `web` · `data` · `adr` · `blocked` · `docume
 2. **Blocked means blocked on evidence or data, never on scheduling**, and the body must name what
    unblocks it. Issue #16 is blocked because `judgment` has 0 rows and `work_sites` is empty in
    3,668 of 3,668 — not because nobody got to it.
-3. **Close issues from commits**, so history and tracker cannot drift: `Closes #12` in the commit
-   body. Never close by hand what a commit could close.
+3. **Close issues from commits and PRs**, so history and tracker cannot drift: `Closes #12` in the
+   commit body and at the top of every PR body. Never close by hand what a commit or PR could close.
+4. **Always link and update project issues from PRs.** Every PR must link to its corresponding
+   issue on GitHub Project 16 (`Closes #NN` / `Resolves #NN`). If no issue exists on Project 16
+   for the work or ADR, create the real issue first (`gh issue create`), add it to Project 16,
+   and link it in the PR before opening. A PR that does not update a project issue is untracked
+   work that leaves the board out of sync.
 
 **Estimates are hours and they are a budget, not a wish.** Sum the open Week items before adding
 another: if the week is already at ~35h, the next card is next week's.
@@ -215,6 +220,7 @@ another: if the week is already at ~35h, the next card is next week's.
   `e2e/*.spec.ts` case, not a prose recipe entry.
 - A real product/architecture/plan decision is logged as an ADR before the task is called done.
 - The GitHub Project card is moved **after** the verification runs, never after the code is written.
+- Every PR links to and updates its corresponding issue on GitHub Project 16 (`Closes #NN`).
 - Framework APIs verified against pinned docs — see Stack currency above.
 - No secrets committed.
 
