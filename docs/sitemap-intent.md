@@ -53,7 +53,8 @@ They meet at exactly two points: the pairing code, and the review tab the extens
 |---|---|---|---|---|
 | S1 | Landing | Web | The marketing page; sign-in now lives at S11. **Two open problems, noted 2026-09-16:** its *"It reads the page. It stores nothing"* section is **false since ADR-0061** — nothing is read — and the hero **asks for nothing**, pushing *Sign in* where `Landing.dc.html` specifies *Add to Chrome* (#51) | PRD-F6 |
 | S2 | Pairing | Web | Show a short-lived code to paste into the extension | PRD-F6 |
-| S3 | Dashboard (the ledger) | Web | Every session with its intention, its attention band and its outcome. **Corrected 2026-09-17:** this cell said *"duration, top domain, and outcome; completion rate at the top"* — neither column is rendered and a completion rate is the percentage §3.1 bans (PRD-F5 was corrected 2026-09-11; this row was not). The headline is counts spelled as words. Above the record sit two things added 2026-09-17: a shortcut to the sessions still waiting on an answer (at most three, no evidence floor, ADR-0050) and **one** sentence of inference about the user — never two, whatever the arithmetic offers (ADR-0066) | PRD-F5 |
+| S3 | Dashboard (monthly) | Web | Macro monthly reporting: 30-day stacked bar breakdown (0h–8h axis), top sites ranking, concentric circular donut distribution, performance & fidelity stats, single inference observation (ADR-0068, ADR-0069) | PRD-F5 |
+| S12 | Ledger (daily) | Web | Daily focus surface: 04:00–22:00 chronological timeline hero, today's session rows with band data and tabular metrics, anchored Tomato companion actor (ADR-0069) | PRD-F5 |
 | S4 | Session review | Web | Intention and plan beside time-per-domain, away time, drift-and-returns, blocked attempts; the coach speaks here; then the outcome question | PRD-F4, F12 |
 | S5 | Popup — idle | Extension | Intention field, optional duration, blocklist picker, Start | PRD-F1, PRD-F7 |
 | S6 | Popup — session running | Extension | Current intention, the plan once it arrives, elapsed time, Stop | PRD-F1, F8 |
@@ -62,6 +63,7 @@ They meet at exactly two points: the pairing code, and the review tab the extens
 | **S9** | **Companion** | **Extension** | **Rewritten 2026-09-16 (ADR-0057, ADR-0058).** Presence during a session — a 28px orbital dot, content-script overlay at `<all_urls>` (not docked, not PiP). **One state: a solid, breathing ring.** It never goes dashed and never signals drift. Hover reveals the intention; **one tap means "this isn't the work"** and writes a per-visit label (ADR-0062), acknowledged by a 0.6s ring-collapse. No plan, no steps to mark (PRD-F8 cut). ~~Tapping reveals what it reads and where it goes (V5.7)~~ — **never built, and the tap now has a different job; the disclosure surface is missing** | **PRD-F10** |
 | **S10** | **Setup — your sites** | **Web** | **Added to this map 2026-09-16; shipped earlier.** Declare the sites that are work and the sites that are distraction, per ADR-0035 — the data the judge's whole narrower job depends on (`/setup`, `app/setup/page.tsx`). **Carries the most damaging open bug in the product (#42):** a failed fetch renders as "you have no sites," the page stays editable, and saving replaces the stored list wholesale | PRD-F7, ADR-0035 |
 | **S11** | **Sign-in** | **Web** | **Added to this map 2026-09-16; shipped earlier.** `/sign-in` is its own route — S1 is the marketing landing, which links to it. Signed out, the app shell renders nothing, so this page and `/` keep their own header | PRD-F6 |
+| **S13** | **Settings** | **Web** | **Added 2026-09-18 (ADR-0065).** Appearance toggle (Cream default vs Dark fallback) and links to `/setup` and `/pair` | ADR-0065 |
 | **—** | **App shell** | **Web (chrome)** | **Added 2026-09-15, and not a screen.** A header on every signed-in surface: brand to `/dashboard`, links to Sessions / Sites / Extension, and **sign out**. Mounted by four route layouts, absent when signed out, no counts and no figures. **It is the one surface with no artboard** — `design/canvas/` holds seven and none shows navigation (`docs/design.md` §6, §10) | — |
 
 **Amended in 0.2:**
@@ -70,7 +72,7 @@ They meet at exactly two points: the pairing code, and the review tab the extens
 
 ~~Nine screens, three of them states of the same popup.~~ **Eleven screens as of 2026-09-16**, three of them states of the same popup, plus one piece of chrome that is not a screen. Anything not on this list is not in v1. The count was wrong for weeks in the safest-looking way: the two missing screens were both *shipped*, so nothing broke — the map simply stopped describing the product.
 
-**Deliberately absent:** any chat input on S5, S6, S8, or S9. Conversation exists on S4 and nowhere else (PRD §5). Any celebration surface during a session (I2). Any screen showing a score or a total-hours figure (IDEA §9).
+**Deliberately absent:** any chat input on S5, S6, S8, or S9. Conversation exists on S4 and nowhere else (PRD §5). Any celebration surface during a session (I2). Any screen showing a composite productivity score (ADR-0068).
 
 ---
 
@@ -81,16 +83,16 @@ Web app                          Extension
   /                (S1)            popup  ──┬── unpaired      (S7)
   /sign-in         (S11)                    ├── idle          (S5)
   /pair            (S2)   ┐                 └── running       (S6)
-  /dashboard       (S3)   │ ◀── default
-  /setup           (S10)  ├── the app shell wraps these four
+  /ledger          (S12)  │ ◀── daily focus
+  /dashboard       (S3)   │ ◀── monthly macro
+  /setup           (S10)  ├── the app shell wraps these five
   /review/[id]     (S4)   ┘ ◀── opened by the extension when a session ends
                                    block page (S8) ◀── served on a blocked navigation
                                    companion  (S9) ◀── opens with the session, closes with it
 ```
 
-*(Updated 2026-09-16. The shell is mounted by a layout on each of the four routes it wraps —
-not a route group, which would have moved directories and broken the relative imports the pages
-already use.)*
+*(Updated 2026-09-18. The shell is mounted by a layout on each of the five routes it wraps —
+`/ledger`, `/dashboard`, `/pair`, `/setup`, `/review/[id]`.)*
 
 The dashboard is the web app's home once signed in. The review is reachable from the dashboard as well as from the extension, so a dismissed review is never lost.
 
@@ -98,7 +100,7 @@ The dashboard is the web app's home once signed in. The review is reachable from
 
 ## 4. Route Table
 
-**Audited against `app/` on 2026-09-16.** The "Built" column is the point of the table: every row
+**Audited against `app/` on 2026-09-18.** The "Built" column is the point of the table: every row
 without it was a plan this document was printing as if it were an API.
 
 | Route | Screen | Auth | Built | Notes |
@@ -106,7 +108,9 @@ without it was a plan this document was printing as if it were an API.
 | `/` | S1 | Public | ✅ | Redirects to `/dashboard` when signed in |
 | `/sign-in` | S11 | Public | ✅ | **Added to this table 2026-09-16.** Its own route; the landing links to it |
 | `/pair` | S2 | Required | ✅ | Generates a code on load; code expires (see SDD §5) |
-| `/dashboard` | S3 | Required | ✅ | The record, the backlog shortcut, and at most one inference sentence (ADR-0066) |
+| `/ledger` | S12 | Required | ✅ | **Added 2026-09-18 (ADR-0069).** Daily timeline hero (04:00–22:00) & today's session record |
+| `/dashboard` | S3 | Required | ✅ | Macro monthly breakdown, stats grid, and single inference sentence (ADR-0068, ADR-0069) |
+| `/settings` | S13 | Required | ✅ | **Added 2026-09-18 (ADR-0065).** Appearance toggle & configuration links |
 | `/setup` | S10 | Required | ✅ | **Added to this table 2026-09-16.** Work and distraction sites (ADR-0035). See #42 |
 | `/review/[sessionId]` | S4 | Required | ✅ | 404 if the session belongs to another account |
 | `/api/auth/[...path]` | — | — | ✅ | **Added 2026-09-16.** Neon Auth's own handler (ADR-0021) |

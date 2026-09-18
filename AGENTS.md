@@ -96,7 +96,7 @@ Pinned versions: Next.js 16.3.1, React 19.2.8, `@neondatabase/serverless` ^1.1.0
 ## Do not touch
 
 - **Invariants** (`docs/prd-intent.md` §3.1, restated `PRODUCT.md`): `Yes`/`Not yet` stay
-  byte-identical in every property. No total-hours figure, no percentage, no score, anywhere.
+  byte-identical in every property. Quantities render on the dashboard: attended time, counts, shares, and change against the previous period (ADR-0068). Nothing renders a composite productivity score, and no figure carries a colour that grades it.
   The popup animates nothing. Nothing good happens on screen during a session — positive
   feedback lives only in the review. The companion never varies with the outcome answer.
 - **The frozen 13-class contract** (`docs/design.md` §5): don't add a 14th class; `data-*`

@@ -217,8 +217,8 @@ test('an unanswered session past the fiftieth row is still counted and still lin
   await expect(page.locator('[data-surface="ledger"] .m-row')).toHaveCount(50)
 })
 
-// §3.1 bans these outright, and this is the surface most likely to grow one by accident.
-test('the ledger shows no percentage, no score and no hours headline', async ({ context, endedSession }) => {
+// ADR-0068: quantities render on the dashboard, but composite productivity scores are strictly banned.
+test('the dashboard shows quantities but no composite score', async ({ context, endedSession }) => {
   await endedSession({
     intention: 'no metrics here',
     events: [{ kind: 'attention', domain: 'chatgpt.com', seconds: 3600, at: new Date().toISOString() }],
@@ -227,8 +227,8 @@ test('the ledger shows no percentage, no score and no hours headline', async ({ 
   await page.goto('/dashboard')
   const text = await page.locator('[data-surface="ledger"]').innerText()
 
-  expect(text).not.toMatch(/\d+\s*%/)
+  // ADR-0068: quantities render (e.g. 1 hr 0 min, 1h 00m, min, or %)
+  expect(text).toMatch(/\b(min|hr|h|%)\b/i)
+  // Composite score is strictly banned
   expect(text).not.toMatch(/\bscore\b/i)
-  // "3 hrs", "3 hours", "3h" — a total-hours figure in any spelling.
-  expect(text).not.toMatch(/\b\d+(\.\d+)?\s*(h|hr|hrs|hours)\b/i)
 })

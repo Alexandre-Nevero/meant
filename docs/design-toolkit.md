@@ -185,7 +185,7 @@ about 13 or 15.**
 > `design/tokens.css:54` is a *fallback* for a user whose OS asks for one, not a second look.
 > Shipping a correct fallback is not "dark mode as the default look" — the refusal below stands.
 
-Dark mode as the default look · a productivity score of any kind · a total-hours headline anywhere · green for `Yes` · streaks, badges, flames, rings · a Pomodoro dial · confetti · a progress ring · a second accent colour · a card with a left-border accent · emoji as iconography · a chat input on any surface during a session · any celebration while the session is running · gradients on the band · a countdown that ticks (a live clock invites waiting it out).
+Dark mode as the default look · a composite productivity score of any kind · green for `Yes` · streaks, badges, flames · a Pomodoro dial · confetti · a second accent colour · a card with a left-border accent · emoji as iconography · a chat input on any surface during a session · any celebration while the session is running · gradients on the band · a countdown that ticks (a live clock invites waiting it out).
 
 ---
 
@@ -193,7 +193,7 @@ Dark mode as the default look · a productivity score of any kind · a total-hou
 
 - [ ] Every colour comes from `design/tokens.css`; no hex in any component
 - [ ] `Yes` and `Not yet` are byte-identical in every visual property
-- [ ] No total-hours figure, no percentage, no score, on any surface
+- [ ] Quantities render on the dashboard: attended time, counts, shares, and change against the previous period (ADR-0068). Nothing renders a composite productivity score, and no figure carries a colour that grades it
 - [ ] The popup animates nothing
 - [ ] The companion's appearance does not vary with the outcome answer
 - [ ] ~~A 25-minute screen recording shows ≤3 noticeable companion movements, none in the first 60s~~ **Replaced 2026-09-16 (ADR-0057):** a 25-minute screen recording shows **no companion movement the user did not cause** — the breathe excepted

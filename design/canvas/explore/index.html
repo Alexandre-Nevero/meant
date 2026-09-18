@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MEANT Dashboard Redesign — 5 Explorations</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Public+Sans:wght@400;500;600&family=Sometype+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --bg: #EAE7E2;
+      --card-bg: #F3F1EE;
+      --ink: #14120F;
+      --ink-3: #8B8681;
+      --rule: #D8D4CE;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Public Sans', system-ui, sans-serif;
+      padding: 32px;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      max-width: 1600px;
+      margin: 0 auto 32px;
+    }
+    h1 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 36px;
+      margin: 0 0 8px;
+    }
+    p {
+      color: var(--ink-3);
+      margin: 0;
+      font-size: 15px;
+    }
+    .board-grid {
+      display: flex;
+      gap: 32px;
+      overflow-x: auto;
+      padding-bottom: 32px;
+    }
+    .mockup-card {
+      background: var(--card-bg);
+      border: 1px solid var(--rule);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      width: 620px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 16px;
+      margin: 0;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: var(--ink-3);
+    }
+    .frame-container {
+      width: 620px;
+      height: 800px;
+      position: relative;
+      overflow: hidden;
+      background: #FFF;
+    }
+    iframe {
+      width: 1440px;
+      height: 1850px;
+      border: none;
+      transform: scale(0.4305);
+      transform-origin: top left;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MEANT Dashboard Explorations</h1>
+    <p>Five comparative artboards tested against the shared fixture dataset (September 2026). Scroll horizontally to compare.</p>
+  </header>
+
+  <div class="board-grid">
+    <!-- M1 -->
+    <div class="mockup-card">
+      <div class="card-header">
+        <h2 class="card-title">M1 The Ledger, Amplified</h2>
+        <span class="card-desc">No grid &middot; Stacked strip &middot; Dense table</span>
+      </div>
+      <div class="frame-container">
+        <iframe src="./m1-ledger-amplified.html"></iframe>
+      </div>
+    </div>
+
+    <!-- M2 -->
+    <div class="mockup-card">
+      <div class="card-header">
+        <h2 class="card-title">M2 Rize Grammar, Cream Material</h2>
+        <span class="card-desc">Direct brief: Rize skeleton, MEANT skin</span>
+      </div>
+      <div class="frame-container">
+        <iframe src="./m2-rize-cream.html"></iframe>
+      </div>
+    </div>
+
+    <!-- M3 -->
+    <div class="mockup-card">
+      <div class="card-header">
+        <h2 class="card-title">M3 Rize Grammar, Rize Material</h2>
+        <span class="card-desc">The anti-reference &middot; Dark &middot; 4 hues</span>
+      </div>
+      <div class="frame-container">
+        <iframe src="./m3-rize-literal.html"></iframe>
+      </div>
+    </div>
+
+    <!-- M4 -->
+    <div class="mockup-card">
+      <div class="card-header">
+        <h2 class="card-title">M4 Editorial Broadsheet</h2>
+        <span class="card-desc">64px mono masthead &middot; 2-col &middot; Zero containers</span>
+      </div>
+      <div class="frame-container">
+        <iframe src="./m4-broadsheet.html"></iframe>
+      </div>
+    </div>
+
+    <!-- M5 -->
+    <div class="mockup-card">
+      <div class="card-header">
+        <h2 class="card-title">M5 Instrument Panel</h2>
+        <span class="card-desc">Icon rail &middot; Timeline &middot; Multi-claim test</span>
+      </div>
+      <div class="frame-container">
+        <iframe src="./m5-instrument.html"></iframe>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,397 @@
+/**
+ * Pure aggregation and formatting logic for the MEANT dashboard.
+ *
+ * Implements the Rize-aligned layout grammar (ADR-0068):
+ * - Time formatting (hours + minutes, or minutes alone)
+ * - Kind totals (attention, away, breaks)
+ * - Domain ranking with share percentages
+ * - Period-over-period delta calculation
+ * - Daily timeline positioning (04:00 to 22:00 track)
+ * - Performance & fidelity metrics
+ *
+ * PURE LOGIC ONLY: No `@/` imports so it is directly testable with `node --test`.
+ */
+
+export interface EventRow {
+  kind: string
+  domain?: string | null
+  seconds?: number | null
+  label?: string | null
+}
+
+export interface SessionRow {
+  id: string
+  intention?: string | null
+  outcome?: string | null
+  started_at: string
+  ended_at?: string | null
+  events?: EventRow[]
+}
+
+/** Formats a second count into human-readable "X hr Y min" or "Y min" */
+export function formatHm(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds))
+  const h = Math.floor(s / 3600)
+  const m = Math.round((s % 3600) / 60)
+  if (h > 0) {
+    return `${h} hr ${m} min`
+  }
+  return `${m} min`
+}
+
+/** Compact format: "41h 20m" or "25m" */
+export function formatHmCompact(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds))
+  const h = Math.floor(s / 3600)
+  const m = Math.round((s % 3600) / 60)
+  if (h > 0) {
+    return `${h}h ${m < 10 ? '0' + m : m}m`
+  }
+  return `${m}m`
+}
+
+/** Aggregates attention, away, and break duration by kind. Ignores non-duration events like block_hit. */
+export function totalsByKind(rows: EventRow[]): {
+  attention: number
+  away: number
+  break: number
+  unrecorded: number
+} {
+  let attention = 0
+  let away = 0
+  let breakSec = 0
+  let unrecorded = 0
+
+  for (const r of rows) {
+    if (typeof r.seconds !== 'number' || r.seconds <= 0) continue
+    if (r.kind === 'attention') attention += r.seconds
+    else if (r.kind === 'away') away += r.seconds
+    else if (r.kind === 'break') breakSec += r.seconds
+    else if (r.kind === 'unrecorded') unrecorded += r.seconds
+  }
+
+  return {
+    attention,
+    away,
+    break: breakSec,
+    unrecorded,
+  }
+}
+
+export interface DomainRank {
+  domain: string
+  seconds: number
+  label: string
+  share: number
+}
+
+/** Ranks attention domains descending by duration, with percentage share against total attention. */
+export function rankDomains(rows: EventRow[], limit = 6): DomainRank[] {
+  const domainMap = new Map<string, { seconds: number; label: string }>()
+  let totalAttention = 0
+
+  for (const r of rows) {
+    if (!r.domain || typeof r.seconds !== 'number' || r.seconds <= 0) continue
+    totalAttention += r.seconds
+    const cur = domainMap.get(r.domain) ?? { seconds: 0, label: r.label || 'work' }
+    cur.seconds += r.seconds
+    domainMap.set(r.domain, cur)
+  }
+
+  const sorted = Array.from(domainMap.entries())
+    .map(([domain, data]) => ({
+      domain,
+      seconds: data.seconds,
+      label: data.label,
+      share: totalAttention > 0 ? Math.round((data.seconds / totalAttention) * 100) : 0,
+    }))
+    .sort((a, b) => b.seconds - a.seconds)
+
+  return sorted.slice(0, limit)
+}
+
+export interface DeltaResult {
+  delta: number
+  direction: 'up' | 'down' | 'flat'
+}
+
+/** Computes change between current and previous period quantities. */
+export function changeAgainst(current: number, previous: number): DeltaResult {
+  const delta = current - previous
+  if (delta === 0) {
+    return { delta: 0, direction: 'flat' }
+  }
+  return {
+    delta,
+    direction: delta > 0 ? 'up' : 'down',
+  }
+}
+
+export interface PerformanceFidelity {
+  sessionCount: number
+  finishedCount: number
+  notYetCount: number
+  unansweredCount: number
+  finishedPct: number
+  sessionDelta: DeltaResult
+  attentionDelta: DeltaResult
+  avgSessionSeconds: number
+  avgSessionDelta: DeltaResult
+}
+
+/** Computes overall performance and fidelity metrics. */
+export function computePerformanceFidelity(
+  currentSessions: { outcome?: string | null }[],
+  prevSessionsCount = 0,
+  currentAttentionSeconds = 0,
+  prevAttentionSeconds = 0,
+): PerformanceFidelity {
+  const sessionCount = currentSessions.length
+  let finishedCount = 0
+  let notYetCount = 0
+  let unansweredCount = 0
+
+  for (const s of currentSessions) {
+    const out = (s.outcome || '').toLowerCase()
+    if (out === 'yes') finishedCount++
+    else if (out === 'no') notYetCount++
+    else unansweredCount++
+  }
+
+  const answered = finishedCount + notYetCount
+  const finishedPct = answered > 0 ? Math.round((finishedCount / answered) * 100) : 0
+
+  const avgSessionSeconds = sessionCount > 0 ? Math.round(currentAttentionSeconds / sessionCount) : 0
+  const prevAvgSessionSeconds = prevSessionsCount > 0 ? Math.round(prevAttentionSeconds / prevSessionsCount) : 0
+
+  return {
+    sessionCount,
+    finishedCount,
+    notYetCount,
+    unansweredCount,
+    finishedPct,
+    sessionDelta: changeAgainst(sessionCount, prevSessionsCount),
+    attentionDelta: changeAgainst(currentAttentionSeconds, prevAttentionSeconds),
+    avgSessionSeconds,
+    avgSessionDelta: changeAgainst(avgSessionSeconds, prevAvgSessionSeconds),
+  }
+}
+
+export interface TimelineBlock {
+  id: string
+  intention: string
+  startedAt: string
+  endedAt: string | null
+  leftPercent: number
+  widthPercent: number
+  attendedSeconds: number
+  awaySeconds: number
+  breakSeconds: number
+}
+
+export interface DailyTimelineResult {
+  blocks: TimelineBlock[]
+  totalAttendedSeconds: number
+  totalAwaySeconds: number
+  totalBreakSeconds: number
+  sessionsCount: number
+}
+
+/**
+ * Computes positions for sessions that occurred on the specified day within a day window (default 04:00 to 22:00).
+ */
+export function computeDailyTimeline(
+  targetDateString: string, // YYYY-MM-DD
+  sessions: SessionRow[],
+  dayStartHour = 4,
+  dayEndHour = 22,
+): DailyTimelineResult {
+  const windowHours = Math.max(1, dayEndHour - dayStartHour)
+  const windowSeconds = windowHours * 3600
+
+  const blocks: TimelineBlock[] = []
+  let totalAttendedSeconds = 0
+  let totalAwaySeconds = 0
+  let totalBreakSeconds = 0
+
+  for (const s of sessions) {
+    if (!s.started_at) continue
+    const start = new Date(s.started_at)
+    if (isNaN(start.getTime())) continue
+
+    const sDate = start.toISOString().slice(0, 10)
+    if (sDate !== targetDateString) continue
+
+    // Calculate start seconds relative to dayStartHour
+    const startOfDay = new Date(start)
+    startOfDay.setUTCHours(dayStartHour, 0, 0, 0)
+    const offsetSeconds = (start.getTime() - startOfDay.getTime()) / 1000
+
+    const end = s.ended_at ? new Date(s.ended_at) : new Date(start.getTime() + 1800_000)
+    const durationSeconds = Math.max(300, (end.getTime() - start.getTime()) / 1000)
+
+    const leftPercent = Math.max(0, Math.min(100, (offsetSeconds / windowSeconds) * 100))
+    const widthPercent = Math.max(1.5, Math.min(100 - leftPercent, (durationSeconds / windowSeconds) * 100))
+
+    let attended = 0
+    let away = 0
+    let breakSec = 0
+
+    if (s.events && Array.isArray(s.events)) {
+      for (const e of s.events) {
+        if (typeof e.seconds === 'number' && e.seconds > 0) {
+          if (e.kind === 'attention') attended += e.seconds
+          else if (e.kind === 'away') away += e.seconds
+          else if (e.kind === 'break') breakSec += e.seconds
+        }
+      }
+    } else {
+      attended = durationSeconds
+    }
+
+    totalAttendedSeconds += attended
+    totalAwaySeconds += away
+    totalBreakSeconds += breakSec
+
+    blocks.push({
+      id: s.id,
+      intention: s.intention || 'No intention given',
+      startedAt: s.started_at,
+      endedAt: s.ended_at || null,
+      leftPercent,
+      widthPercent,
+      attendedSeconds: attended,
+      awaySeconds: away,
+      breakSeconds: breakSec,
+    })
+  }
+
+  return {
+    blocks,
+    totalAttendedSeconds,
+    totalAwaySeconds,
+    totalBreakSeconds,
+    sessionsCount: blocks.length,
+  }
+}
+
+export interface DayBreakdown {
+  day: number
+  dateString: string
+  attendedSeconds: number
+  awaySeconds: number
+  breakSeconds: number
+  totalSeconds: number
+  attendedHeightPercent: number
+  awayHeightPercent: number
+  breakHeightPercent: number
+  totalHeightPercent: number
+  sessionCount: number
+}
+
+export interface MonthlyBreakdownResult {
+  days: DayBreakdown[]
+  totalAttendedSeconds: number
+  totalAwaySeconds: number
+  totalBreakSeconds: number
+  totalSeconds: number
+  maxDaySeconds: number
+}
+
+/**
+ * Computes daily breakdown for a given month and year across sessions.
+ * Scale ceiling defaults to 8 hours (28,800 seconds).
+ */
+export function computeMonthlyBreakdown(
+  year: number,
+  month: number, // 1-12
+  sessions: SessionRow[],
+  ceilingSeconds = 28800, // 8h
+): MonthlyBreakdownResult {
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const days: DayBreakdown[] = []
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const padDay = i < 10 ? `0${i}` : `${i}`
+    const padMonth = month < 10 ? `0${month}` : `${month}`
+    days.push({
+      day: i,
+      dateString: `${year}-${padMonth}-${padDay}`,
+      attendedSeconds: 0,
+      awaySeconds: 0,
+      breakSeconds: 0,
+      totalSeconds: 0,
+      attendedHeightPercent: 0,
+      awayHeightPercent: 0,
+      breakHeightPercent: 0,
+      totalHeightPercent: 0,
+      sessionCount: 0,
+    })
+  }
+
+  let totalAttendedSeconds = 0
+  let totalAwaySeconds = 0
+  let totalBreakSeconds = 0
+
+  for (const s of sessions) {
+    if (!s.started_at) continue
+    const d = new Date(s.started_at)
+    if (isNaN(d.getTime())) continue
+
+    const sYear = d.getUTCFullYear()
+    const sMonth = d.getUTCMonth() + 1
+    if (sYear !== year || sMonth !== month) continue
+
+    const dayIdx = d.getUTCDate() - 1
+    if (dayIdx < 0 || dayIdx >= daysInMonth) continue
+
+    let attended = 0
+    let away = 0
+    let breakSec = 0
+
+    if (s.events && Array.isArray(s.events)) {
+      for (const e of s.events) {
+        if (typeof e.seconds === 'number' && e.seconds > 0) {
+          if (e.kind === 'attention') attended += e.seconds
+          else if (e.kind === 'away') away += e.seconds
+          else if (e.kind === 'break') breakSec += e.seconds
+        }
+      }
+    } else if (s.ended_at) {
+      const end = new Date(s.ended_at)
+      attended = Math.max(0, (end.getTime() - d.getTime()) / 1000)
+    }
+
+    days[dayIdx].attendedSeconds += attended
+    days[dayIdx].awaySeconds += away
+    days[dayIdx].breakSeconds += breakSec
+    days[dayIdx].sessionCount += 1
+
+    totalAttendedSeconds += attended
+    totalAwaySeconds += away
+    totalBreakSeconds += breakSec
+  }
+
+  let maxDaySeconds = 0
+  for (const day of days) {
+    day.totalSeconds = day.attendedSeconds + day.awaySeconds + day.breakSeconds
+    if (day.totalSeconds > maxDaySeconds) maxDaySeconds = day.totalSeconds
+
+    if (day.totalSeconds > 0) {
+      day.totalHeightPercent = Math.min(100, Math.max(3, (day.totalSeconds / ceilingSeconds) * 100))
+      day.attendedHeightPercent = (day.attendedSeconds / day.totalSeconds) * day.totalHeightPercent
+      day.awayHeightPercent = (day.awaySeconds / day.totalSeconds) * day.totalHeightPercent
+      day.breakHeightPercent = (day.breakSeconds / day.totalSeconds) * day.totalHeightPercent
+    }
+  }
+
+  return {
+    days,
+    totalAttendedSeconds,
+    totalAwaySeconds,
+    totalBreakSeconds,
+    totalSeconds: totalAttendedSeconds + totalAwaySeconds + totalBreakSeconds,
+    maxDaySeconds,
+  }
+}
+

@@ -17,7 +17,7 @@ it is for and why it must be rebuildable, `docs/` for canonical truth.
 ## Invariants that are design decisions
 
 - `Yes` and `Not yet` are identical in colour, weight, size, and motion.
-- No total-hours figure, no percentage, no score, on any surface.
+- Quantities render on the dashboard: attended time, counts, shares, and change against the previous period (ADR-0068). Nothing renders a composite productivity score, and no figure carries a colour that grades it.
 - The popup animates nothing. It is opened dozens of times a day.
 - Nothing good happens on screen during a session. Positive feedback lives in the review.
   **No exception since ADR-0057** — the return-pulse died with the drift signal.

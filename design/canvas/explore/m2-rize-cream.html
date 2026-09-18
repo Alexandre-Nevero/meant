@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>M2 — Rize Grammar, Cream Material</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500;600&family=Sometype+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --m-ground: #F3F1EE;
+      --m-ground-sunk: #E9E6E2;
+      --m-ink: #14120F;
+      --m-ink-2: #57534E;
+      --m-ink-3: #8B8681;
+      --m-rule: #E2DFDB;
+      --m-edge: #C7C2BB;
+      --m-clay: #C75B39;
+      --m-clay-2: #D68A6E;
+      --m-clay-3: #E2B29E;
+      --m-away: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);
+      --m-display: Fraunces, Georgia, serif;
+      --m-body: 'Public Sans', system-ui, sans-serif;
+      --m-figure: 'Sometype Mono', monospace;
+      --m-r-panel: 20px;
+      --m-r-chip: 999px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-family: var(--m-body);
+      -webkit-font-smoothing: antialiased;
+      padding: 48px 64px;
+    }
+    .layout {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    /* Page Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .page-title {
+      margin: 0;
+      font-family: var(--m-display);
+      font-weight: 600;
+      font-size: 36px;
+      letter-spacing: -0.02em;
+    }
+    .segmented-pills {
+      display: flex;
+      background: var(--m-ground-sunk);
+      border-radius: var(--m-r-chip);
+      padding: 3px;
+      gap: 2px;
+      border: 0.5px solid var(--m-rule);
+    }
+    .pill {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: var(--m-r-chip);
+      font-family: var(--m-body);
+      font-size: 13px;
+      color: var(--m-ink-3);
+      cursor: pointer;
+    }
+    .pill.active {
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-weight: 500;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    /* Period Bar */
+    .period-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 0.5px solid var(--m-rule);
+      padding-bottom: 16px;
+    }
+    .period-heading {
+      margin: 0;
+      font-family: var(--m-display);
+      font-size: 24px;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+    }
+    .period-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .period-capsule {
+      display: flex;
+      background: var(--m-ground-sunk);
+      border-radius: var(--m-r-chip);
+      padding: 3px;
+      border: 0.5px solid var(--m-rule);
+    }
+    .period-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 12px;
+      border-radius: var(--m-r-chip);
+      font-family: var(--m-body);
+      font-size: 13px;
+      color: var(--m-ink-3);
+      cursor: pointer;
+    }
+    .period-btn.active {
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-weight: 500;
+    }
+    .nav-arrows {
+      display: flex;
+      gap: 4px;
+    }
+    .nav-arrow {
+      border: 0.5px solid var(--m-rule);
+      background: var(--m-ground-sunk);
+      width: 32px;
+      height: 32px;
+      border-radius: var(--m-r-chip);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--m-ink-2);
+    }
+    /* Panels */
+    .panel {
+      background: var(--m-ground-sunk);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-head {
+      height: 40px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+      border-bottom: 0.5px solid var(--m-rule);
+    }
+    .panel-body {
+      padding: 24px;
+      background: var(--m-ground);
+      flex: 1;
+    }
+    /* Hero Chart */
+    .hero-chart-wrap {
+      display: flex;
+      height: 240px;
+      gap: 16px;
+    }
+    .y-axis {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-family: var(--m-figure);
+      font-size: 11px;
+      color: var(--m-ink-3);
+      padding-bottom: 20px;
+      text-align: right;
+      width: 24px;
+    }
+    .chart-canvas {
+      flex: 1;
+      position: relative;
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      padding-bottom: 20px;
+    }
+    .gridline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-top: 0.5px dashed var(--m-rule);
+      pointer-events: none;
+    }
+    .hero-bar {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column-reverse;
+      border-radius: 3px;
+      overflow: hidden;
+      z-index: 1;
+    }
+    /* 3-Panel Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px;
+    }
+    /* SITES list */
+    .sites-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .site-row {
+      display: grid;
+      grid-template-columns: 36px 1fr 64px 60px;
+      gap: 12px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .site-share {
+      font-family: var(--m-figure);
+      color: var(--m-ink-3);
+    }
+    .site-domain {
+      font-family: var(--m-body);
+      color: var(--m-ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .site-track {
+      height: 6px;
+      background: var(--m-ground-sunk);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .site-fill {
+      height: 100%;
+      background: var(--m-clay);
+      border-radius: 3px;
+    }
+    .site-dur {
+      font-family: var(--m-figure);
+      text-align: right;
+      color: var(--m-ink-2);
+    }
+    /* WHERE THE MONTH WENT */
+    .breakdown-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .breakdown-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .ring-box {
+      width: 54px;
+      height: 54px;
+      position: relative;
+    }
+    .ring-box svg {
+      transform: rotate(-90deg);
+    }
+    .breakdown-info {
+      flex: 1;
+    }
+    .breakdown-title {
+      font-family: var(--m-display);
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.1;
+      margin: 0;
+    }
+    .breakdown-sub {
+      font-family: var(--m-figure);
+      font-size: 13px;
+      color: var(--m-ink-3);
+      margin-top: 2px;
+    }
+    .breakdown-delta {
+      font-family: var(--m-figure);
+      font-size: 12px;
+      text-align: right;
+      color: var(--m-ink-3);
+      line-height: 1.4;
+    }
+    /* ATTENDED big stat */
+    .stat-blocks {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .big-stat-val {
+      font-family: var(--m-display);
+      font-weight: 600;
+      font-size: 38px;
+      letter-spacing: -0.02em;
+      margin: 0;
+      line-height: 1.1;
+    }
+    .big-stat-label {
+      font-size: 13px;
+      color: var(--m-ink-3);
+      margin-top: 2px;
+    }
+    .stat-delta {
+      font-family: var(--m-figure);
+      font-size: 12px;
+      color: var(--m-ink-2);
+      margin-top: 6px;
+    }
+    /* Record */
+    .day-divider {
+      padding: 12px 0 6px;
+      font-family: var(--m-body);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+      border-bottom: 0.5px solid var(--m-rule);
+    }
+    .record-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 180px 96px 72px;
+      gap: 24px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 0.5px solid var(--m-rule);
+    }
+    .record-row:last-child {
+      border-bottom: none;
+    }
+    .row-band {
+      display: flex;
+      gap: 3px;
+      height: 10px;
+    }
+    .band-seg { border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <!-- 1. Page Header -->
+    <div class="page-header">
+      <div class="title-row">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="segmented-pills">
+          <button class="pill active">Overview</button>
+          <button class="pill">Attention</button>
+          <button class="pill">Sites</button>
+          <button class="pill">Sessions</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Period Row -->
+    <div class="period-bar">
+      <h2 class="period-heading">September 2026</h2>
+      <div class="period-controls">
+        <div class="period-capsule">
+          <button class="period-btn">Day</button>
+          <button class="period-btn">Week</button>
+          <button class="period-btn active">Month</button>
+        </div>
+        <div class="nav-arrows">
+          <button class="nav-arrow">&lsaquo;</button>
+          <button class="nav-arrow">&#128197;</button>
+          <button class="nav-arrow">&rsaquo;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Hero Breakdown Panel -->
+    <div class="panel">
+      <div class="panel-head">Breakdown</div>
+      <div class="panel-body">
+        <div class="hero-chart-wrap">
+          <div class="y-axis">
+            <span>8h</span>
+            <span>6h</span>
+            <span>4h</span>
+            <span>2h</span>
+            <span>0</span>
+          </div>
+          <div class="chart-canvas" id="hero-chart">
+            <div class="gridline" style="bottom: 80%;"></div>
+            <div class="gridline" style="bottom: 60%;"></div>
+            <div class="gridline" style="bottom: 40%;"></div>
+            <div class="gridline" style="bottom: 20%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Three-Panel Grid -->
+    <div class="stats-grid">
+      <!-- SITES -->
+      <div class="panel">
+        <div class="panel-head">Sites</div>
+        <div class="panel-body">
+          <div class="sites-list" id="sites-list"></div>
+        </div>
+      </div>
+
+      <!-- WHERE THE MONTH WENT -->
+      <div class="panel">
+        <div class="panel-head">Where the month went</div>
+        <div class="panel-body">
+          <div class="breakdown-list">
+            <!-- Attention -->
+            <div class="breakdown-row">
+              <div class="ring-box">
+                <svg width="54" height="54">
+                  <circle cx="27" cy="27" r="22" stroke="var(--m-rule)" stroke-width="4" fill="none" />
+                  <circle cx="27" cy="27" r="22" stroke="var(--m-clay)" stroke-width="4" fill="none"
+                    stroke-dasharray="138" stroke-dashoffset="35" stroke-linecap="round" />
+                </svg>
+              </div>
+              <div class="breakdown-info">
+                <p class="breakdown-title">75% Attention</p>
+                <div class="breakdown-sub">41 hr 20 min</div>
+              </div>
+              <div class="breakdown-delta">
+                <div>Last: 68%</div>
+                <div style="color: var(--m-clay);">Change: &uarr; 7%</div>
+              </div>
+            </div>
+
+            <!-- Away -->
+            <div class="breakdown-row">
+              <div class="ring-box">
+                <svg width="54" height="54">
+                  <circle cx="27" cy="27" r="22" stroke="var(--m-rule)" stroke-width="4" fill="none" />
+                  <circle cx="27" cy="27" r="22" stroke="var(--m-clay-2)" stroke-width="4" fill="none"
+                    stroke-dasharray="138" stroke-dashoffset="115" stroke-linecap="round" />
+                </svg>
+              </div>
+              <div class="breakdown-info">
+                <p class="breakdown-title">11% Away</p>
+                <div class="breakdown-sub">6 hr 12 min</div>
+              </div>
+              <div class="breakdown-delta">
+                <div>Last: 14%</div>
+                <div style="color: var(--m-ink-2);">&darr; 3%</div>
+              </div>
+            </div>
+
+            <!-- Breaks -->
+            <div class="breakdown-row">
+              <div class="ring-box">
+                <svg width="54" height="54">
+                  <circle cx="27" cy="27" r="22" stroke="var(--m-rule)" stroke-width="4" fill="none" />
+                  <circle cx="27" cy="27" r="22" stroke="var(--m-clay-3)" stroke-width="4" fill="none"
+                    stroke-dasharray="138" stroke-dashoffset="128" stroke-linecap="round" />
+                </svg>
+              </div>
+              <div class="breakdown-info">
+                <p class="breakdown-title">4% Breaks</p>
+                <div class="breakdown-sub">2 hr 05 min</div>
+              </div>
+              <div class="breakdown-delta">
+                <div>Last: 5%</div>
+                <div style="color: var(--m-ink-2);">&darr; 1%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATTENDED -->
+      <div class="panel">
+        <div class="panel-head">Attended</div>
+        <div class="panel-body">
+          <div class="stat-blocks">
+            <div>
+              <p class="big-stat-val">41 hr 20 min</p>
+              <div class="big-stat-label">Total focus recorded</div>
+              <div class="stat-delta">Last month: 36 hr 02 min &middot; &uarr; 5 hr 18 min</div>
+            </div>
+            <div style="border-top: 0.5px solid var(--m-rule); padding-top: 18px;">
+              <p class="big-stat-val" style="font-size: 28px;">1 hr 48 min</p>
+              <div class="big-stat-label">Average per session</div>
+              <div class="stat-delta">Last month: 1 hr 53 min &middot; &darr; 5 min</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. One Inference Sentence (ADR-0066) -->
+    <div class="panel">
+      <div class="panel-head">What the record suggests</div>
+      <div class="panel-body" style="padding: 18px 24px;">
+        <p style="margin: 0; font-size: 15px; color: var(--m-ink-2); line-height: 1.5;">
+          The sessions you finished averaged thirty-four minutes on docs.google.com. The ones you did not averaged nine.
+        </p>
+      </div>
+    </div>
+
+    <!-- 6. Sessions Record with Day Headers -->
+    <div class="panel">
+      <div class="panel-head">Sessions</div>
+      <div class="panel-body" id="sessions-container" style="padding: 12px 24px;"></div>
+    </div>
+  </div>
+
+  <script src="./fixture.js"></script>
+  <script>
+    const { days, rows, domains } = window.FIXTURE;
+
+    // Render Hero Chart
+    const heroChart = document.getElementById('hero-chart');
+    const maxSec = 28800; // 8 hours
+    days.forEach(d => {
+      const [work, neutral, distract, away] = d;
+      const total = work + neutral + distract + away;
+      const bar = document.createElement('div');
+      bar.className = 'hero-bar';
+      if (total > 0) {
+        bar.style.height = `${Math.min((total / maxSec) * 100, 100)}%`;
+        if (work > 0) {
+          const s = document.createElement('div');
+          s.style.flex = work;
+          s.style.background = 'var(--m-clay)';
+          bar.appendChild(s);
+        }
+        if (neutral > 0) {
+          const s = document.createElement('div');
+          s.style.flex = neutral;
+          s.style.background = 'var(--m-clay-2)';
+          bar.appendChild(s);
+        }
+        if (distract > 0) {
+          const s = document.createElement('div');
+          s.style.flex = distract;
+          s.style.background = 'var(--m-clay-3)';
+          bar.appendChild(s);
+        }
+        if (away > 0) {
+          const s = document.createElement('div');
+          s.style.flex = away;
+          s.style.background = 'var(--m-away)';
+          s.style.border = '0.5px solid var(--m-edge)';
+          bar.appendChild(s);
+        }
+      } else {
+        bar.style.height = '4px';
+        bar.style.background = 'var(--m-rule)';
+      }
+      heroChart.appendChild(bar);
+    });
+
+    // Render Sites
+    const sitesList = document.getElementById('sites-list');
+    const totalSiteSec = domains.reduce((a, b) => a + b.seconds, 0);
+    domains.forEach(site => {
+      const share = Math.round((site.seconds / totalSiteSec) * 100);
+      const row = document.createElement('div');
+      row.className = 'site-row';
+      row.innerHTML = `
+        <span class="site-share">${share}%</span>
+        <span class="site-domain">${site.domain}</span>
+        <div class="site-track"><div class="site-fill" style="width: ${share * 2.5}%;"></div></div>
+        <span class="site-dur">${window.hm(site.seconds)}</span>
+      `;
+      sitesList.appendChild(row);
+    });
+
+    // Render Sessions grouped by day
+    const sessContainer = document.getElementById('sessions-container');
+    const grouped = {};
+    rows.forEach(r => {
+      const datePart = r.started.split(',')[0];
+      if (!grouped[datePart]) grouped[datePart] = [];
+      grouped[datePart].push(r);
+    });
+
+    for (const [day, dayRows] of Object.entries(grouped)) {
+      const div = document.createElement('div');
+      div.className = 'day-divider';
+      div.textContent = day === 'Sep 18' ? 'Thursday, September 18' : day === 'Sep 17' ? 'Wednesday, September 17' : 'Tuesday, September 16';
+      sessContainer.appendChild(div);
+
+      dayRows.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'record-row';
+        row.innerHTML = `
+          <p style="margin: 0; font-family: var(--m-display); font-size: 18px; color: ${r.intention === 'No intention given' ? 'var(--m-ink-3)' : 'var(--m-ink)'};">${r.intention}</p>
+          <div class="row-band">
+            <div class="band-seg" style="flex: ${r.a}; background: var(--m-clay);"></div>
+            <div class="band-seg" style="flex: ${r.b}; background: var(--m-clay-2);"></div>
+            <div class="band-seg" style="flex: ${r.c}; border-radius: 5px; background: var(--m-away); border: 1px solid var(--m-edge);"></div>
+          </div>
+          <p style="margin: 0; font-size: 14px; text-align: right;">${r.outcome}</p>
+          <p style="margin: 0; font-family: var(--m-figure); font-size: 13px; text-align: right; color: var(--m-ink-2);">${r.minutes}m</p>
+        `;
+        sessContainer.appendChild(row);
+      });
+    }
+  </script>
+</body>
+</html>

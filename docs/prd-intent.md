@@ -316,7 +316,7 @@ As a self-employed worker, I want to state what I intend to finish before I star
 
 **US-05 — Ledger (PRD-F5)**
 - Given at least one completed session, when I open the dashboard, then I see each session with its intention, its attention band, and its outcome, plus a count of answered and finished sessions this month spelled as words. **(Corrected 2026-09-11 against `app/dashboard/page.tsx`: duration and top domain are not rendered, and "a completion rate" would be the percentage §3.1 bans.)**
-- Given any state of the data, when I open the dashboard, then no total-hours figure and no percentage-focused score appears anywhere.
+- Given any state of the data, when I open the dashboard, quantities render: attended time, counts, shares, and change against the previous period (ADR-0068). Nothing renders a composite productivity score, and no figure carries a colour that grades it.
 
 **US-06 — Pair (PRD-F6)**
 - Given I am signed in, when I open the pairing screen, then a short code is displayed with a stated expiry.
