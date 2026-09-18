@@ -13,7 +13,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["blocked.html"],
+      "resources": ["blocked.html", "assets/*"],
       "matches": ["<all_urls>"]
     }
   ],

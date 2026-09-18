@@ -71,9 +71,9 @@ test.describe('floating companion', () => {
     await page2.goto('https://example.org')
     await page2.waitForTimeout(400) // let the wake animation settle
     const box2 = (await page2.locator(HOST_SELECTOR).boundingBox())!
-    // Tolerance increased to 10px to account for position recalculation with new SIZE (36px vs old 28px)
-    expect(Math.abs(box2.x - newBox.x)).toBeLessThan(10)
-    expect(Math.abs(box2.y - newBox.y)).toBeLessThan(10)
+    // Tolerance adjusted to 15px to account for position recalculation with new SIZE (52px Codex Pet vs old 28px/36px)
+    expect(Math.abs(box2.x - newBox.x)).toBeLessThan(15)
+    expect(Math.abs(box2.y - newBox.y)).toBeLessThan(15)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
