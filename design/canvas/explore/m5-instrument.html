@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>M5 — Instrument Panel</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500;600&family=Sometype+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --m-ground: #F3F1EE;
+      --m-ground-sunk: #E9E6E2;
+      --m-ink: #14120F;
+      --m-ink-2: #57534E;
+      --m-ink-3: #8B8681;
+      --m-rule: #E2DFDB;
+      --m-edge: #C7C2BB;
+      --m-clay: #C75B39;
+      --m-clay-2: #D68A6E;
+      --m-clay-3: #E2B29E;
+      --m-away: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);
+      --m-display: Fraunces, Georgia, serif;
+      --m-body: 'Public Sans', system-ui, sans-serif;
+      --m-figure: 'Sometype Mono', monospace;
+      --m-r-panel: 14px;
+      --m-r-chip: 999px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-family: var(--m-body);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      min-height: 100vh;
+    }
+    /* 1. Left Icon Rail (64px) */
+    .icon-rail {
+      width: 64px;
+      background: var(--m-ground-sunk);
+      border-right: 0.5px solid var(--m-rule);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 0;
+      gap: 28px;
+    }
+    .rail-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--m-ink-3);
+    }
+    .rail-icon.active {
+      color: var(--m-ink);
+      background: var(--m-ground);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    /* Main Area */
+    .main-content {
+      flex: 1;
+      padding: 40px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1380px;
+    }
+    /* Header */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .page-title {
+      margin: 0;
+      font-family: var(--m-display);
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .period-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .period-capsule {
+      display: flex;
+      background: var(--m-ground-sunk);
+      border-radius: var(--m-r-chip);
+      padding: 3px;
+      border: 0.5px solid var(--m-rule);
+    }
+    .period-btn {
+      border: none;
+      background: transparent;
+      padding: 5px 12px;
+      border-radius: var(--m-r-chip);
+      font-family: var(--m-body);
+      font-size: 13px;
+      color: var(--m-ink-3);
+      cursor: pointer;
+    }
+    .period-btn.active {
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-weight: 500;
+    }
+    /* 3. Timeline Strip (24hr) */
+    .timeline-panel {
+      background: var(--m-ground-sunk);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .timeline-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+    }
+    .timeline-canvas {
+      height: 48px;
+      background: var(--m-ground);
+      border: 0.5px solid var(--m-rule);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .timeline-block {
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      border-radius: 4px;
+      background: var(--m-clay);
+      display: flex;
+      overflow: hidden;
+    }
+    .timeline-away {
+      background: var(--m-away);
+      border-left: 0.5px solid var(--m-edge);
+      border-right: 0.5px solid var(--m-edge);
+    }
+    .timeline-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--m-figure);
+      font-size: 10px;
+      color: var(--m-ink-3);
+      padding: 0 4px;
+    }
+    /* 4. Stat Grid (4-col) */
+    .stat-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .stat-card {
+      background: var(--m-ground-sunk);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+    }
+    .stat-val {
+      font-family: var(--m-figure);
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: var(--m-ink);
+      line-height: 1.1;
+    }
+    .stat-sub {
+      font-family: var(--m-figure);
+      font-size: 11px;
+      color: var(--m-ink-2);
+    }
+    .stat-progress {
+      height: 3px;
+      background: var(--m-rule);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .stat-progress-fill {
+      height: 100%;
+      background: var(--m-clay);
+    }
+    /* 5. Three Panels Beneath */
+    .tri-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 16px;
+    }
+    .panel-box {
+      background: var(--m-ground-sunk);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+      margin: 0;
+    }
+    /* SITES list */
+    .sites-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .site-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    /* BY HOUR histogram */
+    .histogram-wrap {
+      height: 110px;
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      padding-top: 10px;
+    }
+    .histo-bar {
+      flex: 1;
+      display: flex;
+      flex-direction: column-reverse;
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    /* CLAIMS panel (breaks ADR-0066) */
+    .claims-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .claim-item {
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--m-ink);
+      padding: 10px 12px;
+      background: var(--m-ground);
+      border-radius: 6px;
+      border-left: 2px solid var(--m-clay);
+    }
+    /* 6. Record compact table */
+    .record-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--m-ground-sunk);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      overflow: hidden;
+    }
+    .record-table td {
+      padding: 10px 16px;
+      border-bottom: 0.5px solid var(--m-rule);
+      font-size: 14px;
+    }
+    .record-table tr:last-child td {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- 1. Left Icon Rail -->
+  <div class="icon-rail">
+    <!-- MEANT mark -->
+    <div style="width: 28px; height: 13px; border: 1.5px solid var(--m-ink); border-radius: 4px;"></div>
+    <!-- Rail Icons (SVG) -->
+    <div class="rail-icon active" title="Dashboard">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+      </svg>
+    </div>
+    <div class="rail-icon" title="Timeline">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="9" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    </div>
+    <div class="rail-icon" title="Sites">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3.6 9h16.8M3.6 15h16.8" />
+      </svg>
+    </div>
+    <div class="rail-icon" title="Settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Header -->
+    <div class="header-bar">
+      <h1 class="page-title">September 2026</h1>
+      <div class="period-controls">
+        <div class="period-capsule">
+          <button class="period-btn">Day</button>
+          <button class="period-btn">Week</button>
+          <button class="period-btn active">Month</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Timeline Strip (120px) -->
+    <div class="timeline-panel">
+      <div class="timeline-head">
+        <span>Daily Timeline</span>
+        <span>Today &middot; Sep 18</span>
+      </div>
+      <div class="timeline-canvas" id="timeline-canvas">
+        <!-- Sessions positioned by time -->
+        <div class="timeline-block" style="left: 33%; width: 4.8%;"></div>
+        <div class="timeline-block" style="left: 38%; width: 14%;">
+          <div style="flex: 4; background: var(--m-clay);"></div>
+          <div class="timeline-away" style="flex: 2;"></div>
+          <div style="flex: 1; background: var(--m-clay-2);"></div>
+        </div>
+      </div>
+      <div class="timeline-ticks">
+        <span>03:00</span>
+        <span>06:00</span>
+        <span>09:00</span>
+        <span>12:00</span>
+        <span>15:00</span>
+        <span>18:00</span>
+        <span>21:00</span>
+      </div>
+    </div>
+
+    <!-- 4. Four-Column Stat Grid -->
+    <div class="stat-grid-4">
+      <div class="stat-card">
+        <div class="stat-label">Attended</div>
+        <div class="stat-val">41 hr 20m</div>
+        <div class="stat-sub">&uarr; 5 hr 18 min</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sessions</div>
+        <div class="stat-val">23</div>
+        <div class="stat-sub">&uarr; 4 vs last mo</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Finished</div>
+        <div class="stat-val">14 <span style="font-size: 14px; font-weight: 400; color: var(--m-ink-3);">/ 19</span></div>
+        <div class="stat-progress">
+          <div class="stat-progress-fill" style="width: 73%;"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Blocked reaches</div>
+        <div class="stat-val">31</div>
+        <div class="stat-progress">
+          <div style="height: 100%; width: 55%; background: var(--m-away);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Three Panels Beneath -->
+    <div class="tri-grid">
+      <!-- SITES -->
+      <div class="panel-box">
+        <h3 class="panel-title">Sites</h3>
+        <div class="sites-col" id="sites-col"></div>
+      </div>
+
+      <!-- BY HOUR Histogram -->
+      <div class="panel-box">
+        <h3 class="panel-title">By Hour (Local)</h3>
+        <div class="histogram-wrap" id="byhour-histogram"></div>
+      </div>
+
+      <!-- CLAIMS (Breaks ADR-0066 deliberately) -->
+      <div class="panel-box">
+        <h3 class="panel-title">Inferences (Multi-claim test)</h3>
+        <div class="claims-list">
+          <div class="claim-item">
+            <strong>Domain contrast:</strong> Finished sessions averaged thirty-four minutes on docs.google.com; unfinished averaged nine.
+          </div>
+          <div class="claim-item">
+            <strong>Time-of-day contrast:</strong> Of the sessions you started in the morning, seven finished and two did not.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Compact Table Record -->
+    <div>
+      <table class="record-table">
+        <tbody id="record-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="./fixture.js"></script>
+  <script>
+    const { rows, domains, byHour } = window.FIXTURE;
+
+    // Render Sites
+    const sitesCol = document.getElementById('sites-col');
+    domains.slice(0, 5).forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'site-item';
+      item.innerHTML = `
+        <span>${s.domain}</span>
+        <span style="font-family: var(--m-figure); color: var(--m-ink-2);">${window.hm(s.seconds)}</span>
+      `;
+      sitesCol.appendChild(item);
+    });
+
+    // Render byHour Histogram
+    const histo = document.getElementById('byhour-histogram');
+    const maxHour = Math.max(...byHour.map(h => h[0] + h[1]), 1);
+    byHour.forEach(h => {
+      const [fin, notFin] = h;
+      const total = fin + notFin;
+      const bar = document.createElement('div');
+      bar.className = 'histo-bar';
+      if (total > 0) {
+        bar.style.height = `${(total / maxHour) * 100}%`;
+        if (fin > 0) {
+          const s = document.createElement('div');
+          s.style.flex = fin;
+          s.style.background = 'var(--m-clay)';
+          bar.appendChild(s);
+        }
+        if (notFin > 0) {
+          const s = document.createElement('div');
+          s.style.flex = notFin;
+          s.style.background = 'var(--m-clay-3)';
+          bar.appendChild(s);
+        }
+      } else {
+        bar.style.height = '2px';
+        bar.style.background = 'var(--m-rule)';
+      }
+      histo.appendChild(bar);
+    });
+
+    // Render Table Rows
+    const tbody = document.getElementById('record-tbody');
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-family: var(--m-figure); font-size: 13px; color: var(--m-ink-3); width: 110px;">${r.started}</td>
+        <td style="font-weight: 500;">${r.intention}</td>
+        <td style="width: 140px;">
+          <div style="display: flex; gap: 2px; height: 8px;">
+            <div style="flex: ${r.a}; background: var(--m-clay); border-radius: 4px;"></div>
+            <div style="flex: ${r.b}; background: var(--m-clay-2); border-radius: 4px;"></div>
+            <div style="flex: ${r.c}; background: var(--m-away); border-radius: 4px; border: 0.5px solid var(--m-edge);"></div>
+          </div>
+        </td>
+        <td style="font-family: var(--m-figure); font-size: 13px; text-align: right; width: 60px;">${r.minutes}m</td>
+        <td style="text-align: right; width: 90px; color: var(--m-ink-2);">${r.outcome}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  </script>
+</body>
+</html>

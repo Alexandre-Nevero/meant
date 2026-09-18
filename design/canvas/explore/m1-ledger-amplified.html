@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>M1 — The Ledger, Amplified</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500&family=Sometype+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --m-ground: #F3F1EE;
+      --m-ground-sunk: #E9E6E2;
+      --m-ink: #14120F;
+      --m-ink-2: #57534E;
+      --m-ink-3: #8B8681;
+      --m-rule: #E2DFDB;
+      --m-edge: #C7C2BB;
+      --m-clay: #C75B39;
+      --m-clay-2: #D68A6E;
+      --m-clay-3: #E2B29E;
+      --m-away: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);
+      --m-display: Fraunces, Georgia, serif;
+      --m-body: 'Public Sans', system-ui, sans-serif;
+      --m-figure: 'Sometype Mono', monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-family: var(--m-body);
+      -webkit-font-smoothing: antialiased;
+      padding: 72px 80px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+    .headline {
+      margin: 0;
+      font-family: var(--m-display);
+      font-weight: 600;
+      font-size: 56px;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+    .meta-line {
+      padding-top: 16px;
+      border-top: 0.5px solid var(--m-rule);
+      font-family: var(--m-figure);
+      font-size: 17px;
+      color: var(--m-ink-2);
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+    }
+    .strip-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bar-strip {
+      height: 96px;
+      display: flex;
+      gap: 4px;
+      align-items: flex-end;
+      background: var(--m-ground-sunk);
+      padding: 8px;
+      border-radius: 6px;
+    }
+    .day-bar {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column-reverse;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .bar-segment {
+      width: 100%;
+    }
+    .strip-labels {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--m-figure);
+      font-size: 12px;
+      color: var(--m-ink-3);
+    }
+    .record {
+      display: flex;
+      flex-direction: column;
+      border-top: 0.5px solid var(--m-rule);
+    }
+    .record-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 180px 96px 72px;
+      gap: 28px;
+      align-items: center;
+      padding: 18px 0;
+      border-bottom: 0.5px solid var(--m-rule);
+    }
+    .row-intention {
+      margin: 0;
+      font-family: var(--m-display);
+      font-size: 20px;
+      line-height: 1.3;
+      color: var(--m-ink);
+    }
+    .row-intention.empty {
+      color: var(--m-ink-3);
+    }
+    .row-band {
+      display: flex;
+      gap: 3px;
+      height: 10px;
+    }
+    .band-seg {
+      border-radius: 5px;
+    }
+    .row-outcome {
+      margin: 0;
+      font-size: 15px;
+      text-align: right;
+      color: var(--m-ink);
+    }
+    .row-duration {
+      margin: 0;
+      font-family: var(--m-figure);
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      color: var(--m-ink-2);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div>
+      <h1 class="headline">Twenty-three this month. Fourteen finished.</h1>
+      <div class="meta-line" id="meta-line">41 hr 20 min attended · 6 hr 12 min away · 31 blocked reaches</div>
+    </div>
+
+    <div class="strip-container">
+      <div class="bar-strip" id="bar-strip"></div>
+      <div class="strip-labels">
+        <span>Sep 1</span>
+        <span>Sep 30</span>
+      </div>
+    </div>
+
+    <div class="record" id="record-rows"></div>
+  </div>
+
+  <script src="./fixture.js"></script>
+  <script>
+    const { days, rows, attentionSeconds, awaySeconds, blockHits } = window.FIXTURE;
+
+    // Render bar strip
+    const maxDaySeconds = Math.max(...days.map(d => d[0] + d[1] + d[2] + d[3]), 1);
+    const stripEl = document.getElementById('bar-strip');
+    days.forEach(d => {
+      const [work, neutral, distract, away] = d;
+      const total = work + neutral + distract + away;
+      const bar = document.createElement('div');
+      bar.className = 'day-bar';
+      if (total > 0) {
+        const hPct = (total / maxDaySeconds) * 100;
+        bar.style.height = `${Math.max(hPct, 8)}%`;
+        
+        // work
+        if (work > 0) {
+          const s = document.createElement('div');
+          s.className = 'bar-segment';
+          s.style.flex = work;
+          s.style.background = 'var(--m-clay)';
+          bar.appendChild(s);
+        }
+        // neutral
+        if (neutral > 0) {
+          const s = document.createElement('div');
+          s.className = 'bar-segment';
+          s.style.flex = neutral;
+          s.style.background = 'var(--m-clay-2)';
+          bar.appendChild(s);
+        }
+        // distract
+        if (distract > 0) {
+          const s = document.createElement('div');
+          s.className = 'bar-segment';
+          s.style.flex = distract;
+          s.style.background = 'var(--m-clay-3)';
+          bar.appendChild(s);
+        }
+        // away
+        if (away > 0) {
+          const s = document.createElement('div');
+          s.className = 'bar-segment';
+          s.style.flex = away;
+          s.style.background = 'var(--m-away)';
+          s.style.border = '0.5px solid var(--m-edge)';
+          bar.appendChild(s);
+        }
+      } else {
+        bar.style.height = '4px';
+        bar.style.background = 'var(--m-rule)';
+      }
+      stripEl.appendChild(bar);
+    });
+
+    // Render record
+    const recordEl = document.getElementById('record-rows');
+    rows.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'record-row';
+
+      const int = document.createElement('p');
+      int.className = `row-intention ${r.intention === 'No intention given' ? 'empty' : ''}`;
+      int.textContent = r.intention;
+
+      const band = document.createElement('div');
+      band.className = 'row-band';
+      band.innerHTML = `
+        <div class="band-seg" style="flex: ${r.a}; background: var(--m-clay);"></div>
+        <div class="band-seg" style="flex: ${r.b}; background: var(--m-clay-2);"></div>
+        <div class="band-seg" style="flex: ${r.c}; border-radius: 5px; background: var(--m-away); border: 1px solid var(--m-edge);"></div>
+      `;
+
+      const out = document.createElement('p');
+      out.className = 'row-outcome';
+      out.textContent = r.outcome;
+
+      const dur = document.createElement('p');
+      dur.className = 'row-duration';
+      dur.textContent = `${r.minutes}m`;
+
+      row.appendChild(int);
+      row.appendChild(band);
+      row.appendChild(out);
+      row.appendChild(dur);
+      recordEl.appendChild(row);
+    });
+  </script>
+</body>
+</html>

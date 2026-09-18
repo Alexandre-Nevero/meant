@@ -116,10 +116,10 @@ export default async function Home() {
       </section>
 
       <section className="m-landing-prose">
-        <h2 className="m-landing-h2">No total hours. Anywhere.</h2>
+        <h2 className="m-landing-h2">No productivity score. Anywhere.</h2>
         <p>
-          Time is evidence inside one session&rsquo;s review. It is never a headline, never a
-          streak, never a score. The number that accumulates is how many things you said you
+          Time is evidence of where your attention went. It is never a score, never a
+          streak, never a grade. The number that accumulates is how many things you said you
           would finish, and did.
         </p>
       </section>

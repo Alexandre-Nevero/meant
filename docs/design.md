@@ -206,8 +206,8 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 | `data-surface` | Where | Real width | Ticks? | Notes |
 |---|---|---|---|---|
 | `landing` | `app/page.tsx` | 1440 desktop fold | — | Marketing layout classes (`.m-landing-*`) are structural only, not part of the 13-class contract |
-| `review` | `app/review/[id]/page.tsx` | 1000px box, 840px content, gap 40px (**corrected 2026-09-16** — this cell said 880px; `globals.css:110` is `max-width: 1000px` with 80px side padding, the same shell as the ledger; the column runs at `gap: 40px`, not the flat 24px it shipped with — rows sit in their own `.m-review-rows` group at `gap: 0`, and the question+answers stage in `.m-review-ask` with `margin-top: auto`, #45) | — | The one page with an *authored* motion moment (staggered rise, 50ms steps) |
-| `ledger` | `app/dashboard/page.tsx` | 1000px column | — | Each row's band is real per-session data via `lib/band.ts`, not decoration. **Two structural groups added 2026-09-17:** `.m-ledger-actions`, a shortcut to the sessions still waiting on an answer (at most three links, no evidence floor — it is description, ADR-0050; its sentences step down with the record below 700px, never above it), and `.m-ledger-pattern`, the surface's **one** inference sentence. **ADR-0066: at most one claim about the user renders at a time** — the one resting on more answered sessions, ties to the domain contrast. Both contrasts are computed; a new statistic competes for that slot rather than adding a line |
+| `ledger` | `app/ledger/page.tsx` | 1000px column | — | Daily operational focus surface: 04:00–22:00 timeline hero, today's sessions list with band data, anchored Tomato companion actor (ADR-0069) |
+| `dashboard` | `app/dashboard/page.tsx` | 1200px column | — | Monthly macro reporting surface: 30-day stacked bar breakdown (0h–8h axis), 3-column stats grid (Top Sites, Concentric Donut, Performance & Fidelity), and single inference sentence (ADR-0066, ADR-0068, ADR-0069) |
 | `pair` | `app/pair/page.tsx` | centered, 320px card | **No** — single scheduled `setTimeout` flips to "expired," not a countdown | |
 | `popup` | `extension/popup.html` | fixed 360px | **No**, anywhere, ever | Opened dozens of times a day — see §7 |
 | `block` | `extension/blocked.html` | full page | **No** | Static "N minutes left," read once |
@@ -223,7 +223,7 @@ extension, where there's no such constraint, it sits directly on `<body>`.
 *(`CLAUDE.md`, `docs/design-toolkit.md` §9–10, PRD §3.1)*
 
 1. `Yes` and `Not yet` are identical in color, weight, size, and motion — structural (§5).
-2. No total-hours figure, no percentage, no score, on any surface.
+2. Quantities render on the dashboard: attended time, counts, shares, and change against the previous period (ADR-0068). Nothing renders a composite productivity score, and no figure carries a colour that grades it.
 3. The popup animates nothing — not even a button press. `[data-surface="popup"] .m-btn {
    transition: none; }` overrides the shared press-scale rule that every other surface gets.
 4. Nothing good happens on screen during a session. **Absolute since 2026-09-15 (ADR-0057)** —
@@ -323,7 +323,7 @@ pass, not an accidental one.
 ## 9. Refuse
 
 *(`docs/design-toolkit.md` §9, plus the `impeccable` craft floor's generic defaults that
-apply here)* — a productivity score of any kind, a total-hours headline anywhere, green for
+apply here)* — a composite productivity score of any kind, green for
 `Yes`, streaks/badges/flames/rings, a Pomodoro dial, confetti, a second accent color, a card
 with a left-border accent, emoji as iconography, a chat input on any surface during a
 session, gradients on the band, a countdown that ticks, a kicker/eyebrow above a heading, a

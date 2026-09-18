@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import { Fraunces, Public_Sans, Sometype_Mono } from 'next/font/google'
 import './globals.css'
 
@@ -40,11 +41,18 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const cookieStore = await cookies()
+  const theme = cookieStore.get('meant_theme')?.value === 'dark' ? 'dark' : undefined
+
   return (
-    <html lang="en" className={`${fraunces.variable} ${publicSans.variable} ${sometypeMono.variable}`}>
+    <html
+      lang="en"
+      data-theme={theme}
+      className={`${fraunces.variable} ${publicSans.variable} ${sometypeMono.variable}`}
+    >
       <body className="m-app">{children}</body>
     </html>
   )

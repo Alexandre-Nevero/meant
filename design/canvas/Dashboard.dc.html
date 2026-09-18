@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500;600&family=Sometype+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; background: #FAF8F5; }
+    * { box-sizing: border-box; }
+    a { color: #14120F; text-decoration: none; }
+  </style>
+</helmet>
+<div style="width: 1200px; min-height: 1100px; margin: 0 auto; padding: 40px 48px 80px; font-family: 'Public Sans', system-ui, sans-serif; color: #14120F; display: flex; flex-direction: column; gap: 24px; position: relative;">
+
+  <!-- Period Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: baseline; gap: 20px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 28px; font-weight: 600; letter-spacing: -0.01em;">September 2026</h1>
+      <div style="display: flex; background: #E9E6E2; border-radius: 999px; padding: 3px; gap: 2px; border: 0.5px solid #E2DFDB;">
+        <span style="font-size: 12px; font-weight: 500; color: #8B8681; padding: 4px 12px;">Day</span>
+        <span style="font-size: 12px; font-weight: 500; color: #8B8681; padding: 4px 12px;">Week</span>
+        <span style="font-size: 12px; font-weight: 600; color: #14120F; background: #FAF9F7; border-radius: 999px; padding: 4px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">Month</span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="border: 0.5px solid #E2DFDB; background: #FAF9F7; padding: 4px 10px; border-radius: 999px; font-size: 12px; color: #14120F;">&lsaquo;</span>
+      <span style="border: 0.5px solid #E2DFDB; background: #FAF9F7; padding: 4px 10px; border-radius: 999px; font-size: 12px; color: #14120F;">&rsaquo;</span>
+    </div>
+  </div>
+
+  <!-- Hero: Monthly Breakdown Chart -->
+  <section style="background: #FAF9F7; border: 0.5px solid #E2DFDB; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20, 18, 15, 0.03);">
+    <div style="display: flex; justify-content: space-between; padding: 12px 20px; font-family: 'Public Sans', sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #8B8681; border-bottom: 0.5px solid #E2DFDB; background: #E9E6E2;">
+      <span>Breakdown</span>
+      <span>41 hr 20 min total &middot; Sep 1 - Sep 30</span>
+    </div>
+    <div style="padding: 24px 28px 20px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="position: relative; height: 160px; display: flex; align-items: flex-end; padding-left: 36px;">
+        <!-- Y-Axis -->
+        <div style="position: absolute; left: 0; top: 0; bottom: 20px; width: 30px; display: flex; flex-direction: column; justify-content: space-between; font-family: 'Sometype Mono', monospace; font-size: 11px; color: #8B8681; text-align: right;">
+          <span>8h</span><span>6h</span><span>4h</span><span>2h</span><span>0h</span>
+        </div>
+        <!-- Gridlines -->
+        <div style="position: absolute; left: 36px; right: 0; top: 0; bottom: 20px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none;">
+          <div style="border-bottom: 0.5px solid #E2DFDB; width: 100%;"></div>
+          <div style="border-bottom: 0.5px solid #E2DFDB; width: 100%;"></div>
+          <div style="border-bottom: 0.5px solid #E2DFDB; width: 100%;"></div>
+          <div style="border-bottom: 0.5px solid #E2DFDB; width: 100%;"></div>
+          <div style="border-bottom: 0.5px solid #E2DFDB; width: 100%;"></div>
+        </div>
+        <!-- Bars Track -->
+        <div style="width: 100%; height: 140px; display: flex; gap: 4px; align-items: flex-end; position: relative; z-index: 1;">
+          <sc-for list="{{chartBars}}" as="bar" hint-placeholder-count="30">
+            <div style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end;">
+              <div style="width: 100%; height: {{bar.totalHeight}}%; display: flex; flex-direction: column-reverse; border-radius: 2px 2px 0 0; overflow: hidden;">
+                <div style="height: {{bar.workPct}}%; background: #C75B39;"></div>
+                <div style="height: {{bar.distractPct}}%; background: #E2B29E;"></div>
+                <div style="height: {{bar.awayPct}}%; background: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <!-- X-Axis Labels -->
+      <div style="display: flex; justify-content: space-between; padding-left: 36px; font-family: 'Sometype Mono', monospace; font-size: 11px; color: #8B8681;">
+        <span>Sep 1</span><span>Sep 8</span><span>Sep 15</span><span>Sep 22</span><span>Sep 30</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3-Column Stats Grid -->
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+    
+    <!-- Top Sites -->
+    <section style="background: #FAF9F7; border: 0.5px solid #E2DFDB; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20, 18, 15, 0.03);">
+      <div style="display: flex; justify-content: space-between; padding: 12px 20px; font-family: 'Public Sans', sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #8B8681; border-bottom: 0.5px solid #E2DFDB; background: #E9E6E2;">
+        <span>Top Sites</span>
+        <span>Share of focus</span>
+      </div>
+      <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 10px;">
+        <sc-for list="{{topSites}}" as="site" hint-placeholder-count="5">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+              <span style="font-family: 'Sometype Mono', monospace; font-size: 11px; color: #8B8681; width: 28px;">{{site.share}}%</span>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">{{site.domain}}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 48px; height: 6px; background: #E9E6E2; border-radius: 3px; overflow: hidden;">
+                <div style="width: {{site.share}}%; height: 100%; background: #C75B39;"></div>
+              </div>
+              <span style="font-family: 'Sometype Mono', monospace; font-size: 12px; color: #57534E; width: 44px; text-align: right;">{{site.duration}}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- Concentric Donut / Where the Month Went -->
+    <section style="background: #FAF9F7; border: 0.5px solid #E2DFDB; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20, 18, 15, 0.03);">
+      <div style="display: flex; justify-content: space-between; padding: 12px 20px; font-family: 'Public Sans', sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #8B8681; border-bottom: 0.5px solid #E2DFDB; background: #E9E6E2;">
+        <span>Where the Month Went</span>
+        <span>Relative time</span>
+      </div>
+      <div style="padding: 20px; display: flex; align-items: center; gap: 24px;">
+        <div style="position: relative; width: 110px; height: 110px; flex-shrink: 0;">
+          <svg viewBox="0 0 120 120" style="width: 100%; height: 100%; transform: rotate(-90deg);">
+            <!-- Outer: Attended (75%) -->
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#E9E6E2" stroke-width="8" />
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#C75B39" stroke-width="8" stroke-dasharray="235.6 314.16" stroke-linecap="round" />
+            <!-- Middle: Away (15%) -->
+            <circle cx="60" cy="60" r="38" fill="none" stroke="#E9E6E2" stroke-width="8" />
+            <circle cx="60" cy="60" r="38" fill="none" stroke="#8B8681" stroke-width="8" stroke-dasharray="35.8 238.76" stroke-linecap="round" />
+            <!-- Inner: Breaks (10%) -->
+            <circle cx="60" cy="60" r="26" fill="none" stroke="#E9E6E2" stroke-width="8" />
+            <circle cx="60" cy="60" r="26" fill="none" stroke="#E2B29E" stroke-width="8" stroke-dasharray="16.3 163.36" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #C75B39;"></span>
+              <span style="font-size: 13px; font-weight: 500;">Attended</span>
+            </div>
+            <span style="font-family: 'Sometype Mono', monospace; font-size: 13px; font-weight: 600;">75%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #8B8681;"></span>
+              <span style="font-size: 13px; font-weight: 500;">Away</span>
+            </div>
+            <span style="font-family: 'Sometype Mono', monospace; font-size: 13px; font-weight: 600;">15%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #E2B29E;"></span>
+              <span style="font-size: 13px; font-weight: 500;">Breaks</span>
+            </div>
+            <span style="font-family: 'Sometype Mono', monospace; font-size: 13px; font-weight: 600;">10%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Performance & Fidelity -->
+    <section style="background: #FAF9F7; border: 0.5px solid #E2DFDB; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20, 18, 15, 0.03);">
+      <div style="display: flex; justify-content: space-between; padding: 12px 20px; font-family: 'Public Sans', sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #8B8681; border-bottom: 0.5px solid #E2DFDB; background: #E9E6E2;">
+        <span>Performance &amp; Fidelity</span>
+        <span>Monthly totals</span>
+      </div>
+      <div style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; height: calc(100% - 45px); gap: 12px;">
+        <div>
+          <div style="font-family: Fraunces, Georgia, serif; font-size: 32px; font-weight: 600; line-height: 1.1;">41 hr 20 min</div>
+          <div style="font-size: 12px; color: #8B8681; margin-top: 2px;">Avg. 1 hr 48 min per session &middot; <span style="font-family: 'Sometype Mono', monospace; color: #57534E;">&uarr; 5 hr 18 min</span></div>
+        </div>
+        <div style="border-top: 0.5px solid #E2DFDB; padding-top: 10px; display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-size: 13px; color: #57534E;">Finished Intention Rate</span>
+          <span style="font-family: 'Sometype Mono', monospace; font-size: 14px; font-weight: 600;">14 of 19 answered</span>
+        </div>
+        <div style="border-top: 0.5px solid #E2DFDB; padding-top: 10px; display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-size: 13px; color: #57534E;">Blocked Distraction Reaches</span>
+          <span style="font-family: 'Sometype Mono', monospace; font-size: 14px; font-weight: 600;">31 reaches</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- One Inference Sentence -->
+  <div style="background: #E9E6E2; border-radius: 12px; padding: 16px 20px; font-size: 14px; color: #57534E; border: 0.5px solid #E2DFDB;">
+    <span style="font-weight: 600; color: #14120F;">Observation &middot; </span>
+    When docs.google.com was open, sessions were twice as likely to finish with &ldquo;Yes&rdquo; than sessions visiting twitter.com.
+  </div>
+
+  <!-- Grouped Sessions List -->
+  <section style="background: #FAF9F7; border: 0.5px solid #E2DFDB; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20, 18, 15, 0.03);">
+    <div style="display: flex; justify-content: space-between; padding: 12px 20px; font-family: 'Public Sans', sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #8B8681; border-bottom: 0.5px solid #E2DFDB; background: #E9E6E2;">
+      <span>Sessions Record</span>
+      <span>23 sessions this month</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column;">
+      <sc-for list="{{recentSessions}}" as="row" hint-placeholder-count="5">
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 180px 96px 64px; gap: 20px; align-items: center; padding: 14px 20px; border-bottom: 0.5px solid #E2DFDB;">
+          <div style="font-size: 14px; font-weight: 500; color: #14120F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{row.intention}}</div>
+          <div style="height: 10px; display: flex; gap: 2px; border-radius: 4px; overflow: hidden; background: #E9E6E2; border: 0.5px solid #E2DFDB;">
+            <div style="flex: {{row.a}}; background: #C75B39;"></div>
+            <div style="flex: {{row.b}}; background: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px); border-left: 0.5px solid #C7C2BB;"></div>
+          </div>
+          <div style="display: inline-flex; align-items: center; gap: 6px; font-family: 'Sometype Mono', monospace; font-size: 12px;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #C75B39;"></span>
+            <span>{{row.outcome}}</span>
+          </div>
+          <div style="font-family: 'Sometype Mono', monospace; font-size: 12px; text-align: right; color: #57534E;">{{row.duration}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- Anchored Tomato Companion Actor -->
+  <div style="position: fixed; bottom: 32px; right: 40px; width: 64px; height: 64px; filter: drop-shadow(0 6px 12px rgba(20, 18, 15, 0.12));">
+    <img src="/assets/the-tomato-transparent.png" alt="MEANT Companion" style="width: 100%; height: 100%; object-fit: contain;">
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1200,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const bars = [];
+    for (let i = 0; i < 30; i++) {
+      const isWeekend = (i % 7 === 3 || i % 7 === 4);
+      if (isWeekend) {
+        bars.push({ totalHeight: 0, workPct: 0, distractPct: 0, awayPct: 0 });
+      } else {
+        const height = 40 + ((i * 17) % 55);
+        bars.push({ totalHeight: height, workPct: 70, distractPct: 15, awayPct: 15 });
+      }
+    }
+    return {
+      chartBars: bars,
+      topSites: [
+        { share: 38, domain: 'docs.google.com', duration: '9h 12m' },
+        { share: 24, domain: 'claude.ai', duration: '7h 41m' },
+        { share: 18, domain: 'github.com', duration: '5h 03m' },
+        { share: 12, domain: 'figma.com', duration: '3h 28m' },
+        { share: 8, domain: 'linear.app', duration: '51m' }
+      ],
+      recentSessions: [
+        { intention: 'finish the client proposal', outcome: 'Yes', duration: '1h 10m', a: 90, b: 10 },
+        { intention: 'reply to the vendor thread', outcome: 'Yes', duration: '18m', a: 90, b: 10 },
+        { intention: 'inbox zero attempt', outcome: 'Not yet', duration: '35m', a: 60, b: 40 },
+        { intention: 'architecture RFC writeup', outcome: 'Yes', duration: '1h 15m', a: 92, b: 8 },
+        { intention: 'database migration verification', outcome: 'Yes', duration: '53m', a: 85, b: 15 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

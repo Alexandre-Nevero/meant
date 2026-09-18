@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>M4 — Editorial Broadsheet</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500;600&family=Sometype+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --m-ground: #F3F1EE;
+      --m-ground-sunk: #E9E6E2;
+      --m-ink: #14120F;
+      --m-ink-2: #57534E;
+      --m-ink-3: #8B8681;
+      --m-rule: #E2DFDB;
+      --m-edge: #C7C2BB;
+      --m-clay: #C75B39;
+      --m-clay-2: #D68A6E;
+      --m-clay-3: #E2B29E;
+      --m-away: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);
+      --m-display: Fraunces, Georgia, serif;
+      --m-body: 'Public Sans', system-ui, sans-serif;
+      --m-figure: 'Sometype Mono', monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-family: var(--m-body);
+      -webkit-font-smoothing: antialiased;
+      padding: 64px 80px;
+    }
+    .broadsheet {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+    /* Period Selector links */
+    .period-links {
+      display: flex;
+      justify-content: flex-end;
+      gap: 20px;
+      font-family: var(--m-figure);
+      font-size: 13px;
+      color: var(--m-ink-3);
+    }
+    .period-link {
+      color: var(--m-ink-3);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .period-link.active {
+      color: var(--m-ink);
+      font-weight: 500;
+      text-decoration: underline;
+    }
+    /* 1. Masthead Numeral Row */
+    .masthead-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 0.5px solid var(--m-rule);
+      border-bottom: 0.5px solid var(--m-rule);
+    }
+    .masthead-cell {
+      padding: 24px 20px;
+      border-right: 0.5px solid var(--m-rule);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .masthead-cell:last-child {
+      border-right: none;
+    }
+    .masthead-val {
+      font-family: var(--m-figure);
+      font-size: 56px;
+      font-weight: 500;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
+    }
+    .masthead-unit {
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--m-ink-2);
+      margin-left: 4px;
+    }
+    .masthead-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+    }
+    /* 2. Full-width heavy rule and Headline */
+    .headline-bar {
+      border-top: 1.5px solid var(--m-ink);
+      padding-top: 24px;
+    }
+    .headline-text {
+      margin: 0;
+      font-family: var(--m-display);
+      font-weight: 600;
+      font-size: 44px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+    /* 3. Two-Column Body 5fr / 3fr */
+    .body-columns {
+      display: grid;
+      grid-template-columns: 5fr 3fr;
+      gap: 64px;
+      align-items: start;
+    }
+    /* Left Column */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+    .chart-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chart-strip {
+      height: 180px;
+      display: flex;
+      gap: 4px;
+      align-items: flex-end;
+      background: var(--m-ground-sunk);
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .chart-bar {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column-reverse;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .chart-labels {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--m-figure);
+      font-size: 11px;
+      color: var(--m-ink-3);
+    }
+    .day-header {
+      font-family: var(--m-body);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+      padding: 16px 0 8px;
+      border-bottom: 0.5px solid var(--m-rule);
+    }
+    .broadsheet-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 140px 80px 60px;
+      gap: 20px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 0.5px solid var(--m-rule);
+    }
+    .broadsheet-band {
+      display: flex;
+      gap: 3px;
+      height: 9px;
+    }
+    /* Right Column */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+    .sites-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .sites-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+      padding: 0 0 10px;
+      border-bottom: 1.5px solid var(--m-ink);
+    }
+    .sites-table td {
+      padding: 12px 0;
+      border-bottom: 0.5px solid var(--m-rule);
+      font-size: 14px;
+    }
+    .distract-row {
+      border-left: 2px solid var(--m-clay-3);
+      padding-left: 8px !important;
+    }
+    .pull-quote {
+      margin: 0;
+      padding: 16px 20px;
+      border-left: 1.5px solid var(--m-ink);
+      font-family: var(--m-display);
+      font-size: 17px;
+      line-height: 1.5;
+      color: var(--m-ink);
+      background: var(--m-ground-sunk);
+    }
+  </style>
+</head>
+<body>
+  <div class="broadsheet">
+    <div class="period-links">
+      <span class="period-link">August</span>
+      <span class="period-link active">September</span>
+      <span class="period-link">Year</span>
+    </div>
+
+    <!-- 1. Masthead Numerals -->
+    <div class="masthead-grid">
+      <div class="masthead-cell">
+        <div class="masthead-val">41:20<span class="masthead-unit">h</span></div>
+        <div class="masthead-label">Attended</div>
+      </div>
+      <div class="masthead-cell">
+        <div class="masthead-val">23</div>
+        <div class="masthead-label">Sessions</div>
+      </div>
+      <div class="masthead-cell">
+        <div class="masthead-val">14</div>
+        <div class="masthead-label">Finished</div>
+      </div>
+      <div class="masthead-cell">
+        <div class="masthead-val">31</div>
+        <div class="masthead-label">Blocked reaches</div>
+      </div>
+    </div>
+
+    <!-- 2. Full-Width Rule & Word Headline -->
+    <div class="headline-bar">
+      <h1 class="headline-text">Twenty-three this month. Fourteen finished.</h1>
+    </div>
+
+    <!-- 3. Two-Column Layout (5fr / 3fr) -->
+    <div class="body-columns">
+      <!-- Left Column: Chart & Day-Grouped Ledger -->
+      <div class="left-col">
+        <div class="chart-box">
+          <div class="chart-strip" id="chart-strip"></div>
+          <div class="chart-labels">
+            <span>Sep 1</span>
+            <span>Sep 15</span>
+            <span>Sep 30</span>
+          </div>
+        </div>
+
+        <div id="broadsheet-ledger"></div>
+      </div>
+
+      <!-- Right Column: Ranked Sites & Pull-Quote Claim -->
+      <div class="right-col">
+        <div>
+          <table class="sites-table">
+            <thead>
+              <tr>
+                <th>Site</th>
+                <th style="text-align: right;">Time</th>
+              </tr>
+            </thead>
+            <tbody id="sites-tbody"></tbody>
+          </table>
+        </div>
+
+        <div>
+          <blockquote class="pull-quote">
+            &ldquo;The sessions you finished averaged thirty-four minutes on docs.google.com. The ones you did not averaged nine.&rdquo;
+          </blockquote>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./fixture.js"></script>
+  <script>
+    const { days, rows, domains } = window.FIXTURE;
+
+    // Render stacked chart
+    const maxSec = Math.max(...days.map(d => d[0] + d[1] + d[2] + d[3]), 1);
+    const strip = document.getElementById('chart-strip');
+    days.forEach(d => {
+      const [work, neutral, distract, away] = d;
+      const total = work + neutral + distract + away;
+      const bar = document.createElement('div');
+      bar.className = 'chart-bar';
+      if (total > 0) {
+        bar.style.height = `${(total / maxSec) * 100}%`;
+        if (work > 0) {
+          const s = document.createElement('div');
+          s.style.flex = work;
+          s.style.background = 'var(--m-clay)';
+          bar.appendChild(s);
+        }
+        if (neutral > 0) {
+          const s = document.createElement('div');
+          s.style.flex = neutral;
+          s.style.background = 'var(--m-clay-2)';
+          bar.appendChild(s);
+        }
+        if (distract > 0) {
+          const s = document.createElement('div');
+          s.style.flex = distract;
+          s.style.background = 'var(--m-clay-3)';
+          bar.appendChild(s);
+        }
+        if (away > 0) {
+          const s = document.createElement('div');
+          s.style.flex = away;
+          s.style.background = 'var(--m-away)';
+          s.style.border = '0.5px solid var(--m-edge)';
+          bar.appendChild(s);
+        }
+      } else {
+        bar.style.height = '4px';
+        bar.style.background = 'var(--m-rule)';
+      }
+      strip.appendChild(bar);
+    });
+
+    // Render grouped ledger
+    const ledger = document.getElementById('broadsheet-ledger');
+    const grouped = {};
+    rows.forEach(r => {
+      const datePart = r.started.split(',')[0];
+      if (!grouped[datePart]) grouped[datePart] = [];
+      grouped[datePart].push(r);
+    });
+
+    for (const [day, dayRows] of Object.entries(grouped)) {
+      const h = document.createElement('div');
+      h.className = 'day-header';
+      h.textContent = day === 'Sep 18' ? 'Thursday, September 18' : day === 'Sep 17' ? 'Wednesday, September 17' : 'Tuesday, September 16';
+      ledger.appendChild(h);
+
+      dayRows.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'broadsheet-row';
+        row.innerHTML = `
+          <div style="font-family: var(--m-display); font-size: 17px; color: ${r.intention === 'No intention given' ? 'var(--m-ink-3)' : 'var(--m-ink)'};">${r.intention}</div>
+          <div class="broadsheet-band">
+            <div style="flex: ${r.a}; border-radius: 4px; background: var(--m-clay);"></div>
+            <div style="flex: ${r.b}; border-radius: 4px; background: var(--m-clay-2);"></div>
+            <div style="flex: ${r.c}; border-radius: 4px; background: var(--m-away); border: 1px solid var(--m-edge);"></div>
+          </div>
+          <div style="font-size: 14px; text-align: right;">${r.outcome}</div>
+          <div style="font-family: var(--m-figure); font-size: 13px; text-align: right; color: var(--m-ink-2);">${r.minutes}m</div>
+        `;
+        ledger.appendChild(row);
+      });
+    }
+
+    // Render sites table
+    const tbody = document.getElementById('sites-tbody');
+    domains.slice(0, 8).forEach(s => {
+      const tr = document.createElement('tr');
+      const isDistract = s.label === 'distract';
+      tr.innerHTML = `
+        <td class="${isDistract ? 'distract-row' : ''}">${s.domain}</td>
+        <td style="font-family: var(--m-figure); text-align: right; color: var(--m-ink-2);">${window.hm(s.seconds)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  </script>
+</body>
+</html>

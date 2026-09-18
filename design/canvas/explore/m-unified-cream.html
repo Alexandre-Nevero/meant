@@ -1,0 +1,1076 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>M-Unified — Revised MEANT Dashboard (Cream & Emil Polish)</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500;600&family=Sometype+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --m-ground: #F3F1EE;
+      --m-ground-sunk: #E9E6E2;
+      --m-ground-card: #FAF9F7;
+      --m-ink: #14120F;
+      --m-ink-2: #57534E;
+      --m-ink-3: #8B8681;
+      --m-rule: #E2DFDB;
+      --m-edge: #C7C2BB;
+      --m-clay: #C75B39;
+      --m-clay-2: #D68A6E;
+      --m-clay-3: #E2B29E;
+      --m-clay-tint: rgba(199, 91, 57, 0.08);
+      --m-away: repeating-linear-gradient(135deg, #8B8681 0 2px, transparent 2px 6px);
+      --m-display: Fraunces, Georgia, serif;
+      --m-body: 'Public Sans', system-ui, sans-serif;
+      --m-figure: 'Sometype Mono', monospace;
+      --m-r-panel: 16px;
+      --m-r-chip: 999px;
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-family: var(--m-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Emil Kowalski active states & transitions */
+    button, a {
+      font-family: inherit;
+      transition: transform 160ms var(--ease-out), background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out;
+    }
+    button:active, a:active {
+      transform: scale(0.97);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button, a, .timeline-block, .pill, .period-btn {
+        transition: none !important;
+        transform: none !important;
+      }
+    }
+
+    /* 1. App Shell Navigation */
+    .m-shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      height: 64px;
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 0.5px solid var(--m-rule);
+    }
+    .m-shell-left {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+    .m-shell-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--m-ink);
+    }
+    .m-mark {
+      width: 26px;
+      height: 12px;
+      display: inline-flex;
+      position: relative;
+    }
+    .m-mark::before, .m-mark::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 12px;
+      border-radius: 6px;
+      border: 1.5px solid var(--m-clay);
+    }
+    .m-mark::before { left: 0; background: var(--m-clay); }
+    .m-mark::after { right: 0; }
+    .m-shell-wordmark {
+      font-family: var(--m-display);
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: 0.03em;
+    }
+    .m-shell-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .m-nav-item {
+      padding: 6px 14px;
+      border-radius: var(--m-r-chip);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--m-ink-2);
+      text-decoration: none;
+    }
+    .m-nav-item:hover {
+      color: var(--m-ink);
+      background: var(--m-ground-sunk);
+    }
+    .m-nav-item.active {
+      color: var(--m-ink);
+      background: var(--m-ground-sunk);
+      font-weight: 600;
+    }
+    .m-shell-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .companion-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--m-ground-sunk);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-chip);
+      font-family: var(--m-figure);
+      font-size: 11px;
+      color: var(--m-ink-2);
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #3B82F6;
+    }
+    .status-dot.active {
+      background: var(--m-clay);
+      box-shadow: 0 0 0 2px rgba(199, 91, 57, 0.2);
+    }
+    .m-shell-signout {
+      background: none;
+      border: 0;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--m-ink-3);
+      cursor: pointer;
+    }
+    .m-shell-signout:hover {
+      color: var(--m-ink);
+    }
+
+    /* Main Container */
+    .layout {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 36px 48px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Period Toolbar (Rize Aligned) */
+    .period-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 4px;
+    }
+    .period-left {
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
+    }
+    .period-title {
+      font-family: var(--m-display);
+      font-size: 28px;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+    .view-pills {
+      display: flex;
+      background: var(--m-ground-sunk);
+      border-radius: var(--m-r-chip);
+      padding: 3px;
+      gap: 2px;
+      border: 0.5px solid var(--m-rule);
+    }
+    .pill {
+      border: none;
+      background: transparent;
+      padding: 5px 12px;
+      border-radius: var(--m-r-chip);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--m-ink-3);
+      cursor: pointer;
+    }
+    .pill:hover { color: var(--m-ink); }
+    .pill.active {
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .period-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .period-capsule {
+      display: flex;
+      background: var(--m-ground-sunk);
+      border-radius: var(--m-r-chip);
+      padding: 3px;
+      border: 0.5px solid var(--m-rule);
+    }
+    .period-btn {
+      border: none;
+      background: transparent;
+      padding: 5px 12px;
+      border-radius: var(--m-r-chip);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--m-ink-3);
+      cursor: pointer;
+    }
+    .period-btn:hover { color: var(--m-ink); }
+    .period-btn.active {
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .nav-arrows {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav-arrow {
+      border: 0.5px solid var(--m-rule);
+      background: var(--m-ground-sunk);
+      padding: 0 10px;
+      height: 30px;
+      border-radius: var(--m-r-chip);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--m-ink-2);
+      gap: 6px;
+    }
+    .nav-arrow:hover {
+      background: var(--m-ground);
+      color: var(--m-ink);
+    }
+
+    /* Common Panel Shell */
+    .panel {
+      background: var(--m-ground-card);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      box-shadow: 0 1px 3px rgba(20, 18, 15, 0.03);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-head {
+      height: 38px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+      border-bottom: 0.5px solid var(--m-rule);
+      background: var(--m-ground-sunk);
+    }
+    .panel-body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 2. Hero: Daily Timeline */
+    .timeline-panel {
+      background: var(--m-ground-card);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      box-shadow: 0 1px 3px rgba(20, 18, 15, 0.03);
+      overflow: hidden;
+    }
+    .timeline-body {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .timeline-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .timeline-summary {
+      font-family: var(--m-display);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--m-ink);
+    }
+    .timeline-stats-pills {
+      display: flex;
+      gap: 12px;
+      font-family: var(--m-figure);
+      font-size: 12px;
+      color: var(--m-ink-2);
+    }
+    .timeline-stats-pills span strong {
+      color: var(--m-ink);
+      font-weight: 600;
+    }
+    .timeline-track-wrap {
+      position: relative;
+      background: var(--m-ground-sunk);
+      border: 0.5px solid var(--m-rule);
+      border-radius: 8px;
+      height: 46px;
+      overflow: hidden;
+    }
+    .timeline-block {
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      border-radius: 5px;
+      display: flex;
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .timeline-block:hover {
+      filter: brightness(0.97);
+    }
+    .block-seg-attended {
+      background: var(--m-clay);
+    }
+    .block-seg-away {
+      background: var(--m-away);
+      border-left: 0.5px solid var(--m-edge);
+      border-right: 0.5px solid var(--m-edge);
+    }
+    .block-seg-break {
+      background: var(--m-clay-2);
+    }
+    .timeline-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--m-figure);
+      font-size: 11px;
+      color: var(--m-ink-3);
+      padding: 0 6px;
+    }
+
+    /* 3. Three Column Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    /* Sites List */
+    .sites-list {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      gap: 12px;
+    }
+    .site-row {
+      display: grid;
+      grid-template-columns: 32px 1fr 64px 62px;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .site-pct {
+      font-family: var(--m-figure);
+      font-size: 12px;
+      color: var(--m-ink-3);
+    }
+    .site-domain {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+    .site-bar-track {
+      height: 6px;
+      background: var(--m-ground-sunk);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .site-bar-fill {
+      height: 100%;
+      background: var(--m-clay);
+      border-radius: 3px;
+    }
+    .site-time {
+      font-family: var(--m-figure);
+      font-size: 12px;
+      text-align: right;
+      color: var(--m-ink-2);
+    }
+
+    /* Concentric Donut / Pie-in-Pie Chart */
+    .donut-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+      gap: 16px;
+    }
+    .donut-visual {
+      position: relative;
+      width: 170px;
+      height: 170px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .donut-svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      transform: rotate(-90deg);
+    }
+    .donut-center-info {
+      position: relative;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+    .donut-center-val {
+      font-family: var(--m-display);
+      font-weight: 600;
+      font-size: 20px;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      color: var(--m-ink);
+    }
+    .donut-center-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--m-ink-3);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .donut-legend {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .legend-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .legend-label-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .legend-val {
+      font-family: var(--m-figure);
+      font-weight: 500;
+    }
+    .legend-delta {
+      font-family: var(--m-figure);
+      font-size: 11px;
+      color: var(--m-ink-3);
+    }
+    .delta-up { color: #15803D; }
+    .delta-down { color: var(--m-clay); }
+
+    /* Attended Card: Tight, Intentional, ZERO Dead Space */
+    .attended-card-body {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      gap: 12px;
+    }
+    .metric-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .metric-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .metric-val {
+      font-family: var(--m-display);
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin: 0;
+    }
+    .metric-sub {
+      font-size: 12px;
+      color: var(--m-ink-3);
+      margin-top: 2px;
+    }
+    .metric-delta {
+      font-family: var(--m-figure);
+      font-size: 11px;
+      color: var(--m-ink-2);
+    }
+    .metric-divider {
+      height: 0.5px;
+      background: var(--m-rule);
+      margin: 2px 0;
+    }
+
+    /* 4. Single Inference Sentence (ADR-0066) */
+    .inference-callout {
+      padding: 14px 20px;
+      background: var(--m-ground-sunk);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--m-ink-2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .inference-callout strong {
+      color: var(--m-ink);
+      font-weight: 600;
+    }
+
+    /* 5. Sessions Ledger Record */
+    .record-panel {
+      background: var(--m-ground-card);
+      border: 0.5px solid var(--m-rule);
+      border-radius: var(--m-r-panel);
+      box-shadow: 0 1px 3px rgba(20, 18, 15, 0.03);
+      overflow: hidden;
+    }
+    .day-divider {
+      padding: 10px 20px 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--m-ink-3);
+      border-bottom: 0.5px solid var(--m-rule);
+      background: var(--m-ground-sunk);
+    }
+    .record-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 180px 96px 72px;
+      gap: 20px;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 0.5px solid var(--m-rule);
+      transition: background-color 160ms ease-out;
+    }
+    .record-row:hover {
+      background: var(--m-ground);
+    }
+    .record-row:last-child {
+      border-bottom: none;
+    }
+    .row-intention {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .row-band {
+      display: flex;
+      gap: 2px;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .band-seg {
+      height: 100%;
+    }
+    .row-outcome {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--m-figure);
+      font-size: 12px;
+    }
+    .outcome-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .outcome-dot.yes { background: #15803D; }
+    .outcome-dot.not-yet { background: var(--m-clay); }
+    .outcome-dot.unanswered { background: var(--m-ink-3); }
+    .row-dur {
+      font-family: var(--m-figure);
+      font-size: 12px;
+      text-align: right;
+      color: var(--m-ink-2);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 900px) {
+      .m-shell {
+        padding: 0 20px;
+      }
+      .m-shell-left {
+        gap: 16px;
+      }
+      .layout {
+        padding: 20px 20px 48px;
+        gap: 20px;
+      }
+      .period-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .period-left {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        width: 100%;
+      }
+      .period-controls {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .timeline-meta-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .timeline-stats-pills {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .timeline-ticks span:nth-child(even) {
+        display: none;
+      }
+      .record-row {
+        grid-template-columns: minmax(0, 1fr) 100px 70px;
+        gap: 12px;
+      }
+      .row-band {
+        display: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .m-shell-nav a[href="#settings"] {
+        display: none;
+      }
+      .companion-status-badge {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. App Shell Header (Rooted in MEANT + Aligned with Rize clarity) -->
+  <header class="m-shell">
+    <div class="m-shell-left">
+      <a class="m-shell-brand" href="#dashboard">
+        <span class="m-mark" data-state="ended"></span>
+        <span class="m-shell-wordmark">MEANT</span>
+      </a>
+      <nav class="m-shell-nav" aria-label="Main Navigation">
+        <a class="m-nav-item active" href="#dashboard">Sessions</a>
+        <a class="m-nav-item" href="#sites">Sites</a>
+        <a class="m-nav-item" href="#settings">Settings</a>
+      </nav>
+    </div>
+
+    <div class="m-shell-right">
+      <div class="companion-status-badge" title="Companion extension is active">
+        <span class="status-dot active"></span>
+        <span>Companion paired</span>
+      </div>
+      <button class="m-shell-signout" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- 2. Period Toolbar -->
+    <section class="period-bar">
+      <div class="period-left">
+        <h1 class="period-title">September 2026</h1>
+        <div class="view-pills">
+          <button class="pill active">Overview</button>
+          <button class="pill">Timeline</button>
+          <button class="pill">Sites</button>
+          <button class="pill">Sessions</button>
+        </div>
+      </div>
+
+      <div class="period-controls">
+        <div class="period-capsule">
+          <button class="period-btn">Day</button>
+          <button class="period-btn">Week</button>
+          <button class="period-btn active">Month</button>
+        </div>
+        <div class="nav-arrows">
+          <button class="nav-arrow">&lsaquo;</button>
+          <button class="nav-arrow"><span>Today</span></button>
+          <button class="nav-arrow">&rsaquo;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. HERO: Daily Timeline (Replaces 30-day month bar strip) -->
+    <section class="timeline-panel">
+      <div class="panel-head">
+        <span>Daily Timeline</span>
+        <span>Today &middot; Friday, Sep 18</span>
+      </div>
+      <div class="timeline-body">
+        <div class="timeline-meta-row">
+          <div class="timeline-summary">Today: 1 hr 26 min focus</div>
+          <div class="timeline-stats-pills">
+            <span><strong>2</strong> sessions logged</span>
+            <span>&bull;</span>
+            <span><strong>55 min</strong> attended</span>
+            <span>&bull;</span>
+            <span><strong>24 min</strong> away</span>
+            <span>&bull;</span>
+            <span><strong>7 min</strong> breaks</span>
+          </div>
+        </div>
+
+        <div class="timeline-track-wrap">
+          <!-- Session 1: 08:04 to 08:22 (18 min) -->
+          <div class="timeline-block" style="left: 28.2%; width: 2.5%;" title="08:04 - 08:22 · reply to the vendor thread">
+            <div class="block-seg-attended" style="flex: 14;"></div>
+            <div class="block-seg-away" style="flex: 3;"></div>
+            <div class="block-seg-break" style="flex: 1;"></div>
+          </div>
+
+          <!-- Session 2: 09:12 to 10:20 (68 min) -->
+          <div class="timeline-block" style="left: 33.6%; width: 9.4%;" title="09:12 - 10:20 · finish the client proposal">
+            <div class="block-seg-attended" style="flex: 41;"></div>
+            <div class="block-seg-away" style="flex: 21;"></div>
+            <div class="block-seg-break" style="flex: 6;"></div>
+          </div>
+
+          <!-- Session 3: 14:15 to 15:30 (75 min) -->
+          <div class="timeline-block" style="left: 59.3%; width: 10.4%;" title="14:15 - 15:30 · review marketing copy">
+            <div class="block-seg-attended" style="flex: 58;"></div>
+            <div class="block-seg-away" style="flex: 12;"></div>
+            <div class="block-seg-break" style="flex: 5;"></div>
+          </div>
+        </div>
+
+        <div class="timeline-ticks">
+          <span>04:00</span>
+          <span>06:00</span>
+          <span>08:00</span>
+          <span>10:00</span>
+          <span>12:00</span>
+          <span>14:00</span>
+          <span>16:00</span>
+          <span>18:00</span>
+          <span>20:00</span>
+          <span>22:00</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Three-Column Metric Grid -->
+    <section class="stats-grid">
+
+      <!-- Column 1: Ranked Sites List -->
+      <div class="panel">
+        <div class="panel-head">
+          <span>Top Sites</span>
+          <span>41h Total</span>
+        </div>
+        <div class="panel-body">
+          <div class="sites-list">
+            <div class="site-row">
+              <span class="site-pct">22%</span>
+              <span class="site-domain" title="docs.google.com">docs.google.com</span>
+              <div class="site-bar-track"><div class="site-bar-fill" style="width: 100%;"></div></div>
+              <span class="site-time">9h 12m</span>
+            </div>
+            <div class="site-row">
+              <span class="site-pct">19%</span>
+              <span class="site-domain" title="claude.ai">claude.ai</span>
+              <div class="site-bar-track"><div class="site-bar-fill" style="width: 83%;"></div></div>
+              <span class="site-time">7h 41m</span>
+            </div>
+            <div class="site-row">
+              <span class="site-pct">12%</span>
+              <span class="site-domain" title="github.com">github.com</span>
+              <div class="site-bar-track"><div class="site-bar-fill" style="width: 55%;"></div></div>
+              <span class="site-time">5h 03m</span>
+            </div>
+            <div class="site-row">
+              <span class="site-pct">8%</span>
+              <span class="site-domain" title="figma.com">figma.com</span>
+              <div class="site-bar-track"><div class="site-bar-fill" style="width: 38%;"></div></div>
+              <span class="site-time">3h 28m</span>
+            </div>
+            <div class="site-row">
+              <span class="site-pct">5%</span>
+              <span class="site-domain" title="mail.google.com">mail.google.com</span>
+              <div class="site-bar-track"><div class="site-bar-fill" style="width: 24%;"></div></div>
+              <span class="site-time">2h 15m</span>
+            </div>
+            <div class="site-row">
+              <span class="site-pct">4%</span>
+              <span class="site-domain" title="linear.app">linear.app</span>
+              <div class="site-bar-track"><div class="site-bar-fill" style="width: 18%;"></div></div>
+              <span class="site-time">1h 45m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: Concentric Nested Donut / Pie Chart (Aligned with user ref) -->
+      <div class="panel">
+        <div class="panel-head">
+          <span>Attention Breakdown</span>
+          <span>Month</span>
+        </div>
+        <div class="panel-body">
+          <div class="donut-container">
+            <div class="donut-visual">
+              <svg class="donut-svg" viewBox="0 0 180 180">
+                <!-- Background track for outer ring -->
+                <circle cx="90" cy="90" r="74" fill="none" stroke="var(--m-ground-sunk)" stroke-width="12" />
+                
+                <!-- Outer Ring Segments (Total C = 2 * PI * 74 = 465) -->
+                <!-- Attention: 75% = 348.75 -->
+                <circle cx="90" cy="90" r="74" fill="none" stroke="var(--m-clay)" stroke-width="12"
+                  stroke-dasharray="348.75 465" stroke-dashoffset="0" stroke-linecap="round" />
+                <!-- Away: 11% = 51.15 -->
+                <circle cx="90" cy="90" r="74" fill="none" stroke="var(--m-ink-3)" stroke-width="12"
+                  stroke-dasharray="51.15 465" stroke-dashoffset="-354" stroke-linecap="round" />
+                <!-- Breaks: 4% = 18.6 -->
+                <circle cx="90" cy="90" r="74" fill="none" stroke="var(--m-clay-2)" stroke-width="12"
+                  stroke-dasharray="18.6 465" stroke-dashoffset="-410" stroke-linecap="round" />
+
+                <!-- Inner Ring (Nested Pie) - Precision Segments (R = 56, C = 351.86) -->
+                <circle cx="90" cy="90" r="56" fill="none" stroke="var(--m-ground-sunk)" stroke-width="8" />
+                
+                <!-- Segmented inner arcs (Deep work / Research / Logistics / Other) -->
+                <circle cx="90" cy="90" r="56" fill="none" stroke="var(--m-clay)" stroke-width="8"
+                  stroke-dasharray="160 352" stroke-dashoffset="0" />
+                <circle cx="90" cy="90" r="56" fill="none" stroke="var(--m-clay-2)" stroke-width="8"
+                  stroke-dasharray="80 352" stroke-dashoffset="-164" />
+                <circle cx="90" cy="90" r="56" fill="none" stroke="var(--m-clay-3)" stroke-width="8"
+                  stroke-dasharray="45 352" stroke-dashoffset="-248" />
+                <circle cx="90" cy="90" r="56" fill="none" stroke="var(--m-edge)" stroke-width="8"
+                  stroke-dasharray="35 352" stroke-dashoffset="-297" />
+              </svg>
+
+              <div class="donut-center-info">
+                <span class="donut-center-val">41h 20m</span>
+                <span class="donut-center-label">Attention</span>
+              </div>
+            </div>
+
+            <!-- Legend with deltas -->
+            <div class="donut-legend">
+              <div class="legend-row">
+                <div class="legend-label-group">
+                  <span class="legend-dot" style="background: var(--m-clay);"></span>
+                  <span>75% Attention</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <span class="legend-val">41h 20m</span>
+                  <span class="legend-delta delta-up">&uarr; 7%</span>
+                </div>
+              </div>
+              <div class="legend-row">
+                <div class="legend-label-group">
+                  <span class="legend-dot" style="background: var(--m-ink-3);"></span>
+                  <span>11% Away</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <span class="legend-val">6h 12m</span>
+                  <span class="legend-delta delta-down">&darr; 3%</span>
+                </div>
+              </div>
+              <div class="legend-row">
+                <div class="legend-label-group">
+                  <span class="legend-dot" style="background: var(--m-clay-2);"></span>
+                  <span>4% Breaks</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <span class="legend-val">2h 05m</span>
+                  <span class="legend-delta delta-down">&darr; 1%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Attended & Intentions (TIGHT, ZERO BLANK DEAD SPACE) -->
+      <div class="panel">
+        <div class="panel-head">
+          <span>Performance & Fidelity</span>
+          <span>30 Days</span>
+        </div>
+        <div class="panel-body">
+          <div class="attended-card-body">
+            
+            <div class="metric-group">
+              <div class="metric-top-row">
+                <h3 class="metric-val">41 hr 20 min</h3>
+                <span class="metric-delta delta-up">&uarr; 5h 18m</span>
+              </div>
+              <span class="metric-sub">Total focus recorded &middot; Last month 36h 02m</span>
+            </div>
+
+            <div class="metric-divider"></div>
+
+            <div class="metric-group">
+              <div class="metric-top-row">
+                <h3 class="metric-val">1 hr 48 min</h3>
+                <span class="metric-delta delta-down">&darr; 5m</span>
+              </div>
+              <span class="metric-sub">Average per session &middot; Last month 1h 53m</span>
+            </div>
+
+            <div class="metric-divider"></div>
+
+            <div class="metric-group">
+              <div class="metric-top-row">
+                <h3 class="metric-val">23 sessions</h3>
+                <span class="metric-delta delta-up">&uarr; 4 sessions</span>
+              </div>
+              <span class="metric-sub">Completed intentions logged &middot; Last month 19</span>
+            </div>
+
+            <div class="metric-divider"></div>
+
+            <div class="metric-group">
+              <div class="metric-top-row">
+                <h3 class="metric-val">74% finished</h3>
+                <span class="metric-delta">14 Yes &middot; 5 Not yet</span>
+              </div>
+              <span class="metric-sub">Outcome fidelity &middot; 4 unanswered</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 5. Single Inference Sentence (ADR-0066) -->
+    <section class="inference-callout">
+      <span class="m-mark" data-state="ended"></span>
+      <div>
+        <strong>Monthly pattern:</strong> You attend 75% of your work sessions, typically spending 41 hr 20 min on-task, with Google Docs and Claude commanding 41% of your focus.
+      </div>
+    </section>
+
+    <!-- 6. Sessions Ledger Record -->
+    <section class="record-panel">
+      <div class="panel-head">
+        <span>Session Record</span>
+        <span>Recent Activity</span>
+      </div>
+
+      <div class="day-divider">Today &middot; September 18, 2026</div>
+
+      <div class="record-row">
+        <div class="row-intention">finish the client proposal</div>
+        <div class="row-band">
+          <div class="band-seg" style="flex: 41; background: var(--m-clay);"></div>
+          <div class="band-seg" style="flex: 21; background: var(--m-away);"></div>
+          <div class="band-seg" style="flex: 6; background: var(--m-clay-2);"></div>
+        </div>
+        <div class="row-outcome">
+          <span class="outcome-dot not-yet"></span>
+          <span>Not yet</span>
+        </div>
+        <div class="row-dur">1h 08m</div>
+      </div>
+
+      <div class="record-row">
+        <div class="row-intention">reply to the vendor thread</div>
+        <div class="row-band">
+          <div class="band-seg" style="flex: 14; background: var(--m-clay);"></div>
+          <div class="band-seg" style="flex: 3; background: var(--m-away);"></div>
+          <div class="band-seg" style="flex: 1; background: var(--m-clay-2);"></div>
+        </div>
+        <div class="row-outcome">
+          <span class="outcome-dot yes"></span>
+          <span>Yes</span>
+        </div>
+        <div class="row-dur">18m</div>
+      </div>
+
+      <div class="day-divider">Yesterday &middot; September 17, 2026</div>
+
+      <div class="record-row">
+        <div class="row-intention">read the Q3 brief properly</div>
+        <div class="row-band">
+          <div class="band-seg" style="flex: 26; background: var(--m-clay);"></div>
+          <div class="band-seg" style="flex: 5; background: var(--m-away);"></div>
+          <div class="band-seg" style="flex: 2; background: var(--m-clay-2);"></div>
+        </div>
+        <div class="row-outcome">
+          <span class="outcome-dot yes"></span>
+          <span>Yes</span>
+        </div>
+        <div class="row-dur">33m</div>
+      </div>
+
+      <div class="record-row">
+        <div class="row-intention" style="color: var(--m-ink-3); font-style: italic;">No intention given</div>
+        <div class="row-band">
+          <div class="band-seg" style="flex: 8; background: var(--m-clay);"></div>
+          <div class="band-seg" style="flex: 6; background: var(--m-away);"></div>
+          <div class="band-seg" style="flex: 8; background: var(--m-clay-3);"></div>
+        </div>
+        <div class="row-outcome">
+          <span class="outcome-dot unanswered"></span>
+          <span>Unanswered</span>
+        </div>
+        <div class="row-dur">22m</div>
+      </div>
+    </section>
+
+  </main>
+
+</body>
+</html>
