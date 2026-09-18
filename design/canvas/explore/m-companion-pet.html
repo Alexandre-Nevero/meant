@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MEANT — The Tomato Companion & Band Wake Specification</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500;600&family=Sometype+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --m-ground: #F9F8F6;
+      --m-ground-sheet: #FFFFFF;
+      --m-ink: #14120F;
+      --m-ink-2: #57534E;
+      --m-ink-3: #8B8681;
+      --m-rule: #EAE7E2;
+      --m-rule-dark: #14120F;
+      --m-clay: #C75B39;
+      --m-clay-light: #E07D5D;
+      --m-clay-glow: rgba(199, 91, 57, 0.45);
+      --m-display: Fraunces, Georgia, serif;
+      --m-body: 'Public Sans', system-ui, sans-serif;
+      --m-figure: 'Sometype Mono', monospace;
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--m-ground);
+      color: var(--m-ink);
+      font-family: var(--m-body);
+      -webkit-font-smoothing: antialiased;
+      padding: 60px 40px 100px;
+    }
+    .sheet {
+      max-width: 1040px;
+      margin: 0 auto;
+      background: var(--m-ground-sheet);
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(20, 18, 15, 0.04), 0 16px 48px rgba(20, 18, 15, 0.06);
+      padding: 80px 88px;
+      display: flex;
+      flex-direction: column;
+      gap: 72px;
+      border: 0.5px solid var(--m-rule);
+    }
+
+    /* Section 01: The Tomato */
+    .section-01 {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 48px;
+    }
+    .text-block-01 {
+      flex: 1;
+      max-width: 440px;
+    }
+    .num-label {
+      font-family: var(--m-figure);
+      font-size: 14px;
+      letter-spacing: 0.25em;
+      color: var(--m-ink-3);
+      margin: 0 0 14px 0;
+    }
+    .title-01 {
+      font-family: var(--m-display);
+      font-size: 44px;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin: 0 0 18px 0;
+    }
+    .tagline-01 {
+      font-size: 19px;
+      font-weight: 400;
+      color: var(--m-ink-2);
+      margin: 0 0 24px 0;
+      line-height: 1.4;
+    }
+    .desc-01 {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--m-ink);
+      margin: 0;
+    }
+    .artwork-hero-box {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .artwork-hero-img {
+      width: 290px;
+      height: 290px;
+      object-fit: contain;
+      filter: drop-shadow(0 14px 28px rgba(20, 18, 15, 0.08));
+    }
+
+    /* Divider Rule */
+    .rule {
+      height: 0.5px;
+      background: var(--m-rule);
+      width: 100%;
+    }
+
+    /* Section 02: Progress Band System */
+    .section-02 {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .section-title-sm {
+      font-family: var(--m-body);
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0 0 6px 0;
+    }
+    .section-desc-sm {
+      font-size: 14px;
+      color: var(--m-ink-2);
+      line-height: 1.5;
+      margin: 0;
+      max-width: 620px;
+    }
+    .progress-strip-img {
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+    }
+
+    /* Section 03: Band Wake */
+    .section-03 {
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+    .band-wake-hero-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 48px;
+    }
+    .sequence-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      border-top: 0.5px solid var(--m-rule);
+      padding-top: 36px;
+    }
+    .seq-step {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .seq-img-wrap {
+      width: 100%;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--m-ground);
+      border-radius: 10px;
+      border: 0.5px solid var(--m-rule);
+    }
+    .seq-img {
+      max-width: 170px;
+      max-height: 170px;
+      object-fit: contain;
+    }
+    .seq-title {
+      font-family: var(--m-body);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--m-ink);
+      margin: 0 0 4px 0;
+    }
+    .seq-desc {
+      font-size: 13px;
+      color: var(--m-ink-2);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* SECTION 04: LIVE INTERACTIVE HOVER PLAYGROUND */
+    .section-interactive {
+      background: #FAF8F5;
+      border: 1px solid #DFD9CF;
+      border-radius: 12px;
+      padding: 44px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .playground-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .badge-live {
+      font-family: var(--m-figure);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: var(--m-clay);
+      color: #FFF;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+    .interactive-stage {
+      height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: radial-gradient(circle at center, #FFFFFF 0%, #FAF8F5 70%);
+      border-radius: 10px;
+      border: 0.5px dashed var(--m-rule);
+    }
+
+    /* The Animated Companion Creature */
+    .companion-actor {
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 260ms var(--ease-out);
+    }
+    .companion-body-wrap {
+      position: relative;
+      width: 130px;
+      height: 130px;
+      transition: transform 260ms var(--ease-out), filter 260ms var(--ease-out);
+      filter: drop-shadow(0 6px 12px rgba(20, 18, 15, 0.12));
+    }
+    .companion-img-base {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* SVG Band Ripple Overlay for Clockwise Cascade */
+    .band-overlay-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .ripple-segment {
+      opacity: 0;
+      transition: opacity 140ms ease-out, filter 140ms ease-out;
+    }
+
+    /* Speech Bubble / Intention Tooltip (Image 4 Alignment) */
+    .intention-speech-bubble {
+      position: absolute;
+      left: calc(100% + 14px);
+      top: 14px;
+      background: #FFFFFF;
+      border: 1px solid #D8D2C7;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-family: var(--m-body);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--m-ink);
+      white-space: nowrap;
+      box-shadow: 0 4px 14px rgba(20, 18, 15, 0.08);
+      opacity: 0;
+      transform: translateX(-6px) scale(0.96);
+      pointer-events: none;
+      transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+    }
+    /* Tail of the speech bubble pointing to the tomato */
+    .intention-speech-bubble::before {
+      content: '';
+      position: absolute;
+      right: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      border-width: 6px 8px 6px 0;
+      border-style: solid;
+      border-color: transparent #D8D2C7 transparent transparent;
+    }
+    .intention-speech-bubble::after {
+      content: '';
+      position: absolute;
+      right: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      border-width: 5px 7px 5px 0;
+      border-style: solid;
+      border-color: transparent #FFFFFF transparent transparent;
+    }
+
+    /* HOVER STATE TRIGGERS (Emil Kowalski Physics) */
+    .companion-actor:hover .companion-body-wrap {
+      transform: translateY(-7px);
+      filter: drop-shadow(0 16px 24px rgba(20, 18, 15, 0.08));
+    }
+    .companion-actor:hover .intention-speech-bubble {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      transition-delay: 80ms;
+    }
+
+    /* Ripple Animation on Hover */
+    .companion-actor:hover .ripple-seg-1 {
+      animation: ripplePulse 320ms ease-out 0ms forwards;
+    }
+    .companion-actor:hover .ripple-seg-2 {
+      animation: ripplePulse 320ms ease-out 80ms forwards;
+    }
+    .companion-actor:hover .ripple-seg-3 {
+      animation: ripplePulse 320ms ease-out 160ms forwards;
+    }
+    .companion-actor:hover .ripple-seg-4 {
+      animation: ripplePulse 320ms ease-out 240ms forwards;
+    }
+
+    @keyframes ripplePulse {
+      0% { opacity: 0; filter: brightness(1); }
+      40% { opacity: 0.95; filter: brightness(1.4) drop-shadow(0 0 6px rgba(224, 125, 93, 0.8)); }
+      100% { opacity: 0; filter: brightness(1); }
+    }
+
+    /* Section 05: In Context Footer */
+    .section-context {
+      border-top: 0.5px solid var(--m-rule);
+      padding-top: 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .context-img {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 0.5px solid var(--m-rule);
+      box-shadow: 0 4px 16px rgba(20, 18, 15, 0.05);
+    }
+
+    /* Page Footer */
+    .sheet-footer {
+      border-top: 1px solid var(--m-ink);
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--m-figure);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--m-ink-3);
+    }
+    .brand-mark {
+      font-family: var(--m-display);
+      font-weight: 600;
+      color: var(--m-ink);
+      font-size: 13px;
+      letter-spacing: 0.2em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sheet">
+
+    <!-- 01 THE TOMATO -->
+    <section class="section-01">
+      <div class="text-block-01">
+        <p class="num-label">0 1</p>
+        <h1 class="title-01">The Tomato</h1>
+        <p class="tagline-01">A soft, familiar silhouette.</p>
+        <p class="desc-01">
+          A minimal tomato shape with a leaf, wrapped by the session band.
+          Warm, friendly, and memorable without being a literal Pomodoro.
+        </p>
+      </div>
+
+      <div class="artwork-hero-box">
+        <img class="artwork-hero-img" src="./assets/the-tomato-hero.png" alt="The Tomato Illustration" />
+      </div>
+    </section>
+
+    <div class="rule"></div>
+
+    <!-- 02 PROGRESS BAND SYSTEM -->
+    <section class="section-02">
+      <div>
+        <h2 class="section-title-sm">Progress Band System</h2>
+        <p class="section-desc-sm">
+          The outline fills with segmented clay tints as the session goes on. The remainder stays dashed, just like the MEANT band.
+        </p>
+      </div>
+
+      <div>
+        <img class="progress-strip-img" src="./assets/progress-band-system.png" alt="Progress Band System 0% to 100%" />
+      </div>
+    </section>
+
+    <div class="rule"></div>
+
+    <!-- 03 BAND WAKE SPECIFICATION -->
+    <section class="section-03">
+      <div class="band-wake-hero-row">
+        <div class="text-block-01">
+          <p class="num-label">0 3</p>
+          <h1 class="title-01">Band Wake</h1>
+          <p class="tagline-01">A small movement. A quiet nudge.</p>
+          <p class="desc-01">
+            On hover, the session band softly wakes up, with a gentle clockwise ripple of clay segments. The companion lifts ever so slightly and shows a small intention to remind you what you're here for.<br><br>
+            Familiar, calm, and alive &mdash; without breaking focus.
+          </p>
+        </div>
+
+        <div class="artwork-hero-box">
+          <img class="artwork-hero-img" src="./assets/hero-band-wake.png" alt="Band Wake Hero" />
+        </div>
+      </div>
+
+      <!-- 3 Steps Sequence Grid -->
+      <div class="sequence-grid">
+        <div class="seq-step">
+          <div class="seq-img-wrap">
+            <img class="seq-img" src="./assets/step-01-idle.png" alt="01 Idle" />
+          </div>
+          <div>
+            <h3 class="seq-title">01 &nbsp; Idle</h3>
+            <p class="seq-desc">Calm and still. The band shows current progress.</p>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-img-wrap">
+            <img class="seq-img" src="./assets/step-02-ripple.png" alt="02 Hover Ripple" />
+          </div>
+          <div>
+            <h3 class="seq-title">02 &nbsp; Hover &middot; Ripple</h3>
+            <p class="seq-desc">Clay segments wake up in a gentle clockwise ripple, one after another.</p>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-img-wrap">
+            <img class="seq-img" src="./assets/step-03-settle.png" alt="03 Hover Settle" />
+          </div>
+          <div>
+            <h3 class="seq-title">03 &nbsp; Hover &middot; Settle</h3>
+            <p class="seq-desc">The ripple completes and the band returns to rest. A small intention tooltip appears. The companion rests with a tiny, buoyant lift.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 LIVE INTERACTIVE HOVER PLAYGROUND -->
+    <section class="section-interactive">
+      <div class="playground-header">
+        <div>
+          <h2 class="section-title-sm" style="font-size: 18px;">Live Interactive Hover Simulation</h2>
+          <p class="section-desc-sm" style="font-size: 13px;">
+            Hover cursor over the tomato below. Notice the buoyant lift, shadow softening, sequential clockwise ripple through clay segments, and intention tooltip appearance.
+          </p>
+        </div>
+        <span class="badge-live">Interactive Preview</span>
+      </div>
+
+      <div class="interactive-stage">
+        <div class="companion-actor">
+          
+          <div class="companion-body-wrap">
+            <img class="companion-img-base" src="./assets/the-tomato-transparent.png" alt="Interactive Tomato" />
+            
+            <!-- Clockwise ripple glow highlight segments -->
+            <svg class="band-overlay-svg" viewBox="0 0 200 200">
+              <!-- Segment 1 (Leftmost clay) -->
+              <path class="ripple-segment ripple-seg-1" d="M 32 118 A 74 20 0 0 0 54 125" fill="none" stroke="#FFA380" stroke-width="10" stroke-linecap="round" />
+              <!-- Segment 2 (Center-left clay) -->
+              <path class="ripple-segment ripple-seg-2" d="M 58 126 A 74 20 0 0 0 84 133" fill="none" stroke="#FFA380" stroke-width="10" stroke-linecap="round" />
+              <!-- Segment 3 (Center-right clay) -->
+              <path class="ripple-segment ripple-seg-3" d="M 88 134 A 74 20 0 0 0 114 136" fill="none" stroke="#FFA380" stroke-width="10" stroke-linecap="round" />
+              <!-- Segment 4 (Rightmost clay) -->
+              <path class="ripple-segment ripple-seg-4" d="M 118 136 A 74 20 0 0 0 144 134" fill="none" stroke="#FFA380" stroke-width="10" stroke-linecap="round" />
+            </svg>
+          </div>
+
+          <!-- Restrained Intention Pill (No motivational copy, pure intention) -->
+          <div class="intention-speech-bubble">
+            finish the client proposal
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 IN CONTEXT FOOTER -->
+    <section class="section-context">
+      <div>
+        <h2 class="section-title-sm">In Context</h2>
+        <p class="section-desc-sm">
+          A quiet, delightful moment when you hover over the companion in your workspace.
+        </p>
+      </div>
+
+      <img class="context-img" src="./assets/context-preview.png" alt="In Context Workspace Preview" />
+    </section>
+
+    <!-- SHEET FOOTER -->
+    <footer class="sheet-footer">
+      <span class="brand-mark">M E A N T &mdash; A softer internet, together.</span>
+      <span>FOCUS &nbsp;/&nbsp; KINDNESS &nbsp;/&nbsp; PROGRESS</span>
+    </footer>
+
+  </div>
+
+</body>
+</html>

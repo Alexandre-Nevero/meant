@@ -13,9 +13,14 @@ if (document.documentElement.querySelector('[data-meant-companion]')) {
 
 // The companion, floating on the page instead of docked in a side panel — present
 // only while a session is running, draggable, and gone the instant the session ends.
-// Visual language: the "Orbit" reference (a minimal orbital dot, states told by ring
-// presence/style, never by color) — deliberately adopted over the prior 3.1 companion
-// spec (docs/dead-ends.md and PRODUCT.md record the reversal and why).
+// Visual language: The Tomato Companion Pet (Codex Pet Style) wrapped in the orbital band,
+// combining the warmth of the character with the calm discipline of the MEANT witness.
+//
+// On hover: Emil Kowalski physics — lifts upward, softens shadow, gentle clockwise ripple
+// through the clay band segments, and displays a small pill containing the user's current
+// intention (strictly neutral, never motivational copy).
+//
+// One tap: records ADR-0058's "this isn't the work" label.
 //
 // Runs on <all_urls> (content_scripts), so it's a Shadow DOM: an arbitrary host page's
 // own CSS must never leak in, and this widget's styles must never leak out onto the
@@ -24,14 +29,6 @@ if (document.documentElement.querySelector('[data-meant-companion]')) {
 // --m-ink/--m-clay/--m-ground — this codebase's rule is tokens-first, one palette,
 // never a component's own hex value, even when matching an external reference.
 
-// Wrapped in an IIFE so every top-level `const`/`let` below is function-scoped, not a
-// global lexical binding: chrome.scripting.executeScript() re-injecting this exact file
-// into a tab that already ran it (the reinjectCompanion() recovery path, when the tab's
-// isolated world outlives an extension reload and never navigated away) would otherwise
-// hit "Identifier has already been declared" — a parse-time SyntaxError for the WHOLE
-// file, which fails silently (no rejected promise) and means even the DOM guard above
-// never runs on that second injection. Confirmed empirically. The guard above still
-// stays a plain top-level statement (no binding to collide) so it always runs first.
 ;(function () {
 const DEFAULT_POSITION = { right: 24, bottom: 24 }
 const SIZE = 52
@@ -39,6 +36,7 @@ const SIZE = 52
 let hostEl = null
 let shadow = null
 let dot = null
+let companionImg = null
 let dragState = null
 let returnTimer = null
 let downAt = null
@@ -83,8 +81,61 @@ function css() {
       justify-content: center;
       cursor: grab;
       touch-action: none;
+      transition: transform 380ms var(--m-ease), filter 380ms var(--m-ease);
     }
-    .dot-wrap[data-dragging="true"] { cursor: grabbing; }
+    .dot-wrap[data-dragging="true"] {
+      cursor: grabbing;
+      transform: scale(0.96);
+    }
+    .dot-wrap:hover {
+      transform: translateY(-4px);
+      filter: drop-shadow(0 12px 20px rgba(20, 18, 15, 0.08));
+    }
+
+    .companion-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .band-overlay-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .ripple-seg {
+      opacity: 0;
+      transition: opacity 140ms ease-out, filter 140ms ease-out;
+    }
+
+    /* Staggered sequential clockwise ripple on hover */
+    .dot-wrap:hover .ripple-seg-1 {
+      animation: bandWakeRipple 320ms cubic-bezier(0.25, 1, 0.5, 1) 0ms forwards;
+    }
+    .dot-wrap:hover .ripple-seg-2 {
+      animation: bandWakeRipple 320ms cubic-bezier(0.25, 1, 0.5, 1) 80ms forwards;
+    }
+    .dot-wrap:hover .ripple-seg-3 {
+      animation: bandWakeRipple 320ms cubic-bezier(0.25, 1, 0.5, 1) 160ms forwards;
+    }
+    .dot-wrap:hover .ripple-seg-4 {
+      animation: bandWakeRipple 320ms cubic-bezier(0.25, 1, 0.5, 1) 240ms forwards;
+    }
+
+    @keyframes bandWakeRipple {
+      0% { opacity: 0; filter: brightness(1); }
+      40% { opacity: 0.95; filter: brightness(1.4) drop-shadow(0 0 6px rgba(224, 125, 93, 0.8)); }
+      100% { opacity: 0; filter: brightness(1); }
+    }
 
     /* .ring — presence tells the state. Never a colour change (an orbit that changes hue
      * reads as a status light, not a witness). ADR-0057 deleted the drift signal, so while a
@@ -98,6 +149,7 @@ function css() {
       border: 1.5px solid var(--m-clay);
       opacity: 0;
       transition: opacity 220ms var(--m-ease);
+      z-index: 3;
     }
     .dot-wrap[data-state="focus"] .ring { opacity: 0.55; }
 
@@ -127,6 +179,7 @@ function css() {
       border-radius: 50%;
       background: var(--m-clay);
       animation: breathe 1.6s ease-in-out infinite;
+      z-index: 4;
     }
     @keyframes breathe {
       0%, 100% { transform: scale(1); opacity: 0.92; }
@@ -138,48 +191,57 @@ function css() {
      * which reflects nothing about the actual page behind it. Do not tokenize these. */
     [data-companion-hover-pill] {
       position: absolute;
-      left: 50%;
       bottom: calc(100% + 8px);
+      left: 50%;
       transform: translateX(-50%);
       opacity: 0;
       pointer-events: none;
-      transition: opacity 150ms var(--m-ease);
+      transition: opacity 140ms var(--m-ease);
       margin: 0;
-      padding: 10px 16px 10px 14px;
-      max-width: 240px;
+      padding: 6px 12px;
+      max-width: 260px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       overflow: hidden;
-      border-radius: 999px;
-      border: 1px solid #C7C2BB;
-      background: #F3F1EE;
+      border-radius: 6px;
+      border: 1px solid #C8C2BA;
+      background: #FAF8F5;
       color: #14120F;
-      font-family: 'Fraunces', Georgia, serif;
-      font-size: 14px;
-      box-shadow: 0 2px 8px rgba(20, 18, 15, 0.15);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(20, 18, 15, 0.08);
+      white-space: nowrap;
     }
     [data-companion-hover-pill]::before {
       content: '';
-      flex: none;
-      width: 8px;
-      height: 8px;
+      position: static;
+      display: inline-block;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: #C75B39; /* --m-clay, fixed for the same reason as the pill's other colors */
+      background-color: var(--m-clay);
+      flex-shrink: 0;
     }
     [data-companion-hover-pill] span {
+      display: inline-block;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+      max-width: 220px;
     }
 
+    /* Reduced-motion overrides (PRD-A11Y-01 / I4) */
     @media (prefers-reduced-motion: reduce) {
-      * { animation: none !important; transition: none !important; }
-      /* Reduced motion means fewer and gentler animations, not none at all — and the tap's
-       * ONLY confirmation was an animation, so this block used to leave the control looking
-       * dead. A discrete state change instead: the ring goes fully opaque and thickens for
-       * the receipt window, then returns. Nothing moves, nothing fades. */
+      :host { animation: none; }
+      .ring { transition: none; }
+      .dot { animation: none; }
+      .dot-wrap { transition: none !important; }
+      .dot-wrap:hover { transform: none !important; }
+      .ripple-seg { animation: none !important; }
       .dot-wrap[data-returning="true"] .ring {
+        animation: none;
         opacity: 1;
         border-width: var(--m-stroke-loud);
       }
@@ -306,12 +368,29 @@ async function ensureMounted() {
   const style = document.createElement('style')
   style.textContent = css()
   dot = document.createElement('div')
-  dot.className = 'dot-wrap'
+  dot.className = 'dot-wrap companion-wrap'
+
+  companionImg = document.createElement('img')
+  companionImg.className = 'companion-img'
+  companionImg.src = chrome.runtime.getURL('assets/the-tomato-transparent.png')
+  companionImg.alt = 'MEANT Tomato Companion'
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('class', 'band-overlay-svg')
+  svg.setAttribute('viewBox', '0 0 200 200')
+  svg.setAttribute('aria-hidden', 'true')
+  svg.innerHTML = `
+    <path class="ripple-seg ripple-seg-1" d="M 32 118 A 74 20 0 0 0 54 125" fill="none" stroke="#FFA380" stroke-width="10" stroke-linecap="round" />
+    <path class="ripple-seg ripple-seg-2" d="M 58 126 A 74 20 0 0 0 84 133" fill="none" stroke="#FFA380" stroke-width="10" stroke-linecap="round" />
+    <path class="ripple-seg ripple-seg-3" d="M 88 134 A 74 20 0 0 0 114 136" fill="none" stroke="#FFA380" stroke-width="10" stroke-linecap="round" />
+    <path class="ripple-seg ripple-seg-4" d="M 118 136 A 74 20 0 0 0 144 134" fill="none" stroke="#FFA380" stroke-width="10" stroke-linecap="round" />
+  `
+
   const ring = document.createElement('div')
   ring.className = 'ring'
   const core = document.createElement('div')
   core.className = 'dot'
-  dot.append(ring, core)
+  dot.append(companionImg, svg, ring, core)
   hoverPill = document.createElement('p')
   hoverPill.dataset.companionHoverPill = 'true'
   shadow.append(style, dot, hoverPill)
@@ -363,6 +442,7 @@ function unmount() {
   shadow = null
   dot = null
   hoverPill = null
+  companionImg = null
   clearTimeout(returnTimer)
   clearTimeout(hoverTimer)
 }
