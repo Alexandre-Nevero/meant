@@ -12,7 +12,7 @@ export type Prediction = { sessionId: string; host: string; label: Label; confid
 export type Truth = { sessionId: string; host: string; label: Label }
 // `actual` and `recall` are computed over KEPT rows only (confidence >= threshold, in this
 // taxonomy) — recall-among-covered, not recall over the whole truth set. A row dropped by the
-// threshold or excluded by the taxonomy filter above is absent from both numerator and
+// threshold or excluded by score()'s taxonomy filter is absent from both numerator and
 // denominator, never counted as a miss. Always report `coverage` alongside recall — a low
 // coverage can hide a materially lower true recall, and reporting recall alone invites exactly
 // that misread ("catches all of it" when several instances were simply never scored).
@@ -37,7 +37,7 @@ export function score(predictions: Prediction[], truth: Truth[], threshold: numb
   // set to the run's own taxonomy scores each run only on the rows it could possibly get
   // right — `binaryDriftPrecision` below remains the one metric safe to compare AS-IS across
   // taxonomies, exactly as the comment on it already says.
-  const scoredTruth = taxonomy.length === LABELS.length ? truth : truth.filter((t) => taxonomy.includes(t.label))
+  const scoredTruth = truth.filter((t) => taxonomy.includes(t.label))
   const answers = new Map(scoredTruth.map((t) => [key(t), t.label]))
   const kept = predictions.filter((p) => p.confidence >= threshold && answers.has(key(p)))
 
@@ -55,12 +55,19 @@ export function score(predictions: Prediction[], truth: Truth[], threshold: numb
     }
   })
 
-  // The only question all three candidate taxonomies can answer. Everything that is not
-  // drift collapses together, so a 4-label run and a 2-label run are comparable.
+  // The only question all three candidate taxonomies can answer, and it must be scored
+  // against the FULL, unfiltered truth — not `scoredTruth` above. Drift/not-drift is
+  // well-defined for every row regardless of which taxonomy a run was given, and a run that
+  // predicts `drift` on a row outside its own vocabulary (e.g. a `supportive` row, for a
+  // two-label run) is a real false positive on this question even though that row is excluded
+  // from `accuracy`/`byLabel` above. Filtering it out here would silently launder exactly the
+  // false positives that make this metric worth computing in the first place.
+  const fullAnswers = new Map(truth.map((t) => [key(t), t.label]))
+  const keptForDrift = predictions.filter((p) => p.confidence >= threshold && fullAnswers.has(key(p)))
   const asDrift = (l: Label | undefined) => l === 'drift'
-  const predictedDrift = kept.filter((p) => asDrift(p.label))
+  const predictedDrift = keptForDrift.filter((p) => asDrift(p.label))
   const binaryDriftPrecision = ratio(
-    predictedDrift.filter((p) => asDrift(answers.get(key(p)))).length,
+    predictedDrift.filter((p) => asDrift(fullAnswers.get(key(p)))).length,
     predictedDrift.length,
   )
 

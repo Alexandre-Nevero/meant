@@ -86,26 +86,35 @@ vs 0.429) and concluded the four-label taxonomy was doing better than a
 collapsed one. That comparison scored all three runs against the
 **unfiltered four-label truth** — so the three-label run had 8 of its 27
 kept rows carrying a `supportive` truth answer it was never offered the
-word for, and the two-label run had 20 of its 35. Both were mechanically
-unwinnable, not model failures. Once `score.ts` was fixed to restrict each
-run's truth set to its own taxonomy (the fix this review triggered), the
-same dev data reads:
+word for, and the two-label run had 20 of its 35 carrying a `supportive`
+*or* `neutral` answer it was never offered. Both were mechanically
+unwinnable, not model failures. `score.ts` was fixed to restrict each run's
+own accuracy to truth rows within its own taxonomy (dropping the
+now-unwinnable rows from that run's denominator entirely, not counting them
+against it), while keeping `binaryDriftPrecision` scored against the full,
+unfiltered truth set regardless of taxonomy — a first pass at that fix
+accidentally dropped rows from `binaryDriftPrecision` too, which would have
+hidden real false positives; caught and corrected before this was reported.
+The corrected dev numbers:
 
-| dev run | kept rows | accuracy (own taxonomy) |
-|---|---|---|
-| four/20b | 41 | 0.659 |
-| three/20b | 27 | 0.684 |
-| two/20b | 35 | **1.000** |
+| dev run | winnable rows (own taxonomy) | kept | accuracy (own taxonomy) | binaryDriftPrecision (full truth, all taxonomies) |
+|---|---|---|---|---|
+| four/20b | 41 | 41 | 0.659 | 0.545 |
+| three/20b | 29 | 19 | 0.684 | 0.364 |
+| two/20b | 17 | 15 | **1.000** | 0.286 |
 
 The two-label run got every row it could possibly get right, right — it
-was never a harder problem for the model, it was a smaller one. **Accuracy
+was never a harder problem for the model, it was a smaller one, scored on
+fewer than half as many rows (15 of 17 winnable, out of 41 total). **Accuracy
 is not comparable across taxonomies even with this fix** — each run solves
 a different-difficulty problem by construction, so a within-taxonomy
-perfect score and a four-label imperfect score are not evidence for or
-against either taxonomy relative to the other. The only cross-taxonomy-safe
-metric here is `binaryDriftPrecision` (score.ts says so in its own
-comment), and it does not move in a way that argues for or against
-`supportive`'s presence either.
+perfect score on 15 rows and a four-label 0.659 on 41 rows are not evidence
+for or against either taxonomy relative to the other. `binaryDriftPrecision`
+is the one metric genuinely comparable across taxonomies here (it is scored
+against the same full truth set regardless of vocabulary), and on this data
+it does not favour the smaller taxonomies either: 0.545 (four) vs 0.364
+(three) vs 0.286 (two) — narrower vocabularies predict `drift` less
+precisely on the full question, not more.
 
 **Conclusion for Plan 2 (contingent on a real re-run):** rest this
 question on the held-out `supportive` P/R alone (0.909/0.909) — it is
