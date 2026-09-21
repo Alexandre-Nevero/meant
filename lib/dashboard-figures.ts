@@ -395,3 +395,120 @@ export function computeMonthlyBreakdown(
   }
 }
 
+export interface WeeklyBreakdownResult {
+  days: DayBreakdown[]
+  totalAttendedSeconds: number
+  totalAwaySeconds: number
+  totalBreakSeconds: number
+  totalSeconds: number
+  maxDaySeconds: number
+  startDateString: string
+  endDateString: string
+}
+
+/**
+ * Computes daily breakdown for a 7-day week (Monday to Sunday) containing targetDate.
+ */
+export function computeWeeklyBreakdown(
+  targetDate: Date,
+  sessions: SessionRow[],
+  ceilingSeconds = 28800,
+): WeeklyBreakdownResult {
+  const d = new Date(targetDate)
+  const dayOfWeek = d.getUTCDay() // 0 is Sunday, 1 is Monday...
+  const distanceToMonday = (dayOfWeek + 6) % 7
+  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - distanceToMonday))
+
+  const days: DayBreakdown[] = []
+
+  for (let i = 0; i < 7; i++) {
+    const cur = new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + i))
+    const y = cur.getUTCFullYear()
+    const m = cur.getUTCMonth() + 1
+    const dayNum = cur.getUTCDate()
+    const padM = m < 10 ? `0${m}` : `${m}`
+    const padD = dayNum < 10 ? `0${dayNum}` : `${dayNum}`
+    const dateString = `${y}-${padM}-${padD}`
+
+    days.push({
+      day: i + 1,
+      dateString,
+      attendedSeconds: 0,
+      awaySeconds: 0,
+      breakSeconds: 0,
+      totalSeconds: 0,
+      attendedHeightPercent: 0,
+      awayHeightPercent: 0,
+      breakHeightPercent: 0,
+      totalHeightPercent: 0,
+      sessionCount: 0,
+    })
+  }
+
+  const startDateString = days[0].dateString
+  const endDateString = days[6].dateString
+
+  let totalAttendedSeconds = 0
+  let totalAwaySeconds = 0
+  let totalBreakSeconds = 0
+
+  for (const s of sessions) {
+    if (!s.started_at) continue
+    const d = new Date(s.started_at)
+    if (isNaN(d.getTime())) continue
+    const sDate = d.toISOString().slice(0, 10)
+    const dayIdx = days.findIndex((day) => day.dateString === sDate)
+    if (dayIdx === -1) continue
+
+    let attended = 0
+    let away = 0
+    let breakSec = 0
+
+    if (s.events && Array.isArray(s.events)) {
+      for (const e of s.events) {
+        if (typeof e.seconds === 'number' && e.seconds > 0) {
+          if (e.kind === 'attention') attended += e.seconds
+          else if (e.kind === 'away') away += e.seconds
+          else if (e.kind === 'break') breakSec += e.seconds
+        }
+      }
+    } else if (s.ended_at) {
+      const end = new Date(s.ended_at)
+      attended = Math.max(0, (end.getTime() - d.getTime()) / 1000)
+    }
+
+    days[dayIdx].attendedSeconds += attended
+    days[dayIdx].awaySeconds += away
+    days[dayIdx].breakSeconds += breakSec
+    days[dayIdx].sessionCount += 1
+
+    totalAttendedSeconds += attended
+    totalAwaySeconds += away
+    totalBreakSeconds += breakSec
+  }
+
+  let maxDaySeconds = 0
+  for (const day of days) {
+    day.totalSeconds = day.attendedSeconds + day.awaySeconds + day.breakSeconds
+    if (day.totalSeconds > maxDaySeconds) maxDaySeconds = day.totalSeconds
+
+    if (day.totalSeconds > 0) {
+      day.totalHeightPercent = Math.min(100, Math.max(3, (day.totalSeconds / ceilingSeconds) * 100))
+      day.attendedHeightPercent = (day.attendedSeconds / day.totalSeconds) * day.totalHeightPercent
+      day.awayHeightPercent = (day.awaySeconds / day.totalSeconds) * day.totalHeightPercent
+      day.breakHeightPercent = (day.breakSeconds / day.totalSeconds) * day.totalHeightPercent
+    }
+  }
+
+  return {
+    days,
+    totalAttendedSeconds,
+    totalAwaySeconds,
+    totalBreakSeconds,
+    totalSeconds: totalAttendedSeconds + totalAwaySeconds + totalBreakSeconds,
+    maxDaySeconds,
+    startDateString,
+    endDateString,
+  }
+}
+

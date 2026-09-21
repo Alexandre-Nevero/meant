@@ -8,6 +8,7 @@ import {
   computePerformanceFidelity,
   computeDailyTimeline,
   computeMonthlyBreakdown,
+  computeWeeklyBreakdown,
 } from '../lib/dashboard-figures.ts'
 
 test('formatHm drops the hour when there is none', () => {
@@ -118,5 +119,31 @@ test('computeMonthlyBreakdown groups session attention by day of the month', () 
   assert.equal(breakdown.days[14].attendedSeconds, 3600)
   assert.equal(breakdown.days[1].attendedSeconds, 0)
   assert.equal(breakdown.totalAttendedSeconds, 9000)
+})
+
+test('computeWeeklyBreakdown groups session attention by day of the week', () => {
+  const sessions = [
+    {
+      id: 's1',
+      started_at: '2026-09-15T10:00:00.000Z',
+      ended_at: '2026-09-15T12:00:00.000Z',
+      events: [
+        { kind: 'attention', seconds: 5400 },
+        { kind: 'away', seconds: 1800 },
+      ],
+    },
+    {
+      id: 's2',
+      started_at: '2026-09-16T14:00:00.000Z',
+      ended_at: '2026-09-16T15:00:00.000Z',
+      events: [
+        { kind: 'attention', seconds: 3600 },
+      ],
+    },
+  ]
+  const breakdown = computeWeeklyBreakdown(new Date('2026-09-18T12:00:00Z'), sessions)
+  assert.equal(breakdown.days.length, 7)
+  assert.equal(breakdown.totalAttendedSeconds, 9000)
+  assert.equal(breakdown.totalAwaySeconds, 1800)
 })
 
