@@ -12,7 +12,8 @@ if (document.documentElement.querySelector('[data-meant-companion]')) {
 }
 
 // The companion, floating on the page instead of docked in a side panel — present
-// only while a session is running, draggable, and gone the instant the session ends.
+// whenever the extension is on (ADR-0070), even before a session starts, draggable,
+// and unmounted only when companionEnabled is explicitly set to false (I9 seam).
 // Visual language: The Tomato Companion Pet (Codex Pet Style) wrapped in the orbital band,
 // combining the warmth of the character with the calm discipline of the MEANT witness.
 //
@@ -30,8 +31,39 @@ if (document.documentElement.querySelector('[data-meant-companion]')) {
 // never a component's own hex value, even when matching an external reference.
 
 ;(function () {
+function isMeantWebApp() {
+  if (
+    document.documentElement?.hasAttribute('data-meant-web') ||
+    document.querySelector?.('[data-meant-web]') ||
+    document.body?.classList?.contains('m-app') ||
+    document.querySelector?.('.m-web-companion-actor') ||
+    document.querySelector?.('[data-surface]')
+  ) {
+    return true
+  }
+  try {
+    const host = window.location.hostname.toLowerCase()
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === 'meant.app' ||
+      host.endsWith('.meant.app') ||
+      host.includes('meant-')
+    ) {
+      return true
+    }
+  } catch {}
+  return false
+}
+
+// Never run the floating overlay companion on the MEANT web app itself
+// (the native React companion actor lives there).
+if (isMeantWebApp()) {
+  return
+}
+
 const DEFAULT_POSITION = { right: 24, bottom: 24 }
-const SIZE = 52
+const SIZE = 62
 
 let hostEl = null
 let shadow = null
@@ -51,6 +83,8 @@ function css() {
       --m-clay: #C75B39;
       --m-ease: cubic-bezier(0.23, 1, 0.32, 1);
       --m-dur-press: 160ms;
+      --m-dur-receipt: 420ms;
+      --m-ease-receipt: cubic-bezier(0.16, 1, 0.3, 1);
       --m-stroke-loud: 2px;
       all: initial;
       position: fixed;
@@ -82,6 +116,7 @@ function css() {
       cursor: grab;
       touch-action: none;
       transition: transform 380ms var(--m-ease), filter 380ms var(--m-ease);
+      filter: drop-shadow(0 4px 10px rgba(20, 18, 15, 0.12));
     }
     .dot-wrap[data-dragging="true"] {
       cursor: grabbing;
@@ -89,7 +124,23 @@ function css() {
     }
     .dot-wrap:hover {
       transform: translateY(-4px);
-      filter: drop-shadow(0 12px 20px rgba(20, 18, 15, 0.08));
+      filter: drop-shadow(0 12px 20px rgba(20, 18, 15, 0.16));
+    }
+    .dot-wrap:active {
+      transform: translateY(-2px) scale(0.95);
+      transition: transform 120ms var(--m-ease-receipt);
+    }
+    .dot-wrap[data-returning="true"] {
+      transform: translateY(-2px) scale(0.96);
+      transition: transform 160ms var(--m-ease-receipt);
+    }
+    @media (prefers-color-scheme: dark) {
+      .dot-wrap {
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+      }
+      .dot-wrap:hover {
+        filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.8));
+      }
     }
 
     .companion-img {
@@ -153,37 +204,27 @@ function css() {
     }
     .dot-wrap[data-state="focus"] .ring { opacity: 0.55; }
 
-    /* The receipt for the one-tap label (ADR-0058). It is ADR-0026's return-pulse motion,
-     * freed when the drift signal went — but NOT its duration: 0.6s was chosen when this
-     * meant the witness settling after drift, which is a moment. As feedback for a tap it
-     * belongs in the 100-160ms press band, and 600ms reads as lag. */
+    /* The receipt for the one-tap label (ADR-0058 / ADR-0074).
+     * Smooth organic ripple expansion with soft glowing clay aura and natural dissipation. */
     .dot-wrap[data-returning="true"] .ring {
       opacity: 1;
       border-style: solid;
-      animation: receipt var(--m-dur-press) var(--m-ease);
+      animation: receipt var(--m-dur-receipt) var(--m-ease-receipt);
     }
     @keyframes receipt {
-      0% { transform: scale(1); opacity: 1; }
-      100% { transform: scale(1.6); opacity: 0; }
-    }
-
-    /* .dot — aliveness, sub-perceptual, always on. Fixed --m-clay fill, not --m-ink:
-     * --m-ink used to flip near-black/near-white under prefers-color-scheme, which
-     * reflects the user's OS setting, not the actual page's background — a dark-mode
-     * user on an ordinary light page got a near-invisible near-white dot. --m-clay
-     * (orange in both schemes) has working contrast against both a light and a dark
-     * background, so visibility no longer depends on guessing the host page's colors. */
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--m-clay);
-      animation: breathe 1.6s ease-in-out infinite;
-      z-index: 4;
-    }
-    @keyframes breathe {
-      0%, 100% { transform: scale(1); opacity: 0.92; }
-      50% { transform: scale(1.12); opacity: 1; }
+      0% {
+        transform: scale(0.96);
+        opacity: 0.9;
+        box-shadow: 0 0 0 0 rgba(199, 91, 57, 0.45);
+      }
+      30% {
+        opacity: 0.85;
+      }
+      100% {
+        transform: scale(1.6);
+        opacity: 0;
+        box-shadow: 0 0 16px 2px rgba(199, 91, 57, 0);
+      }
     }
 
     /* Deliberate exception to tokens-first: a contrast-critical pill floating over an
@@ -236,9 +277,10 @@ function css() {
     @media (prefers-reduced-motion: reduce) {
       :host { animation: none; }
       .ring { transition: none; }
-      .dot { animation: none; }
       .dot-wrap { transition: none !important; }
       .dot-wrap:hover { transform: none !important; }
+      .dot-wrap:active { transform: none !important; }
+      .dot-wrap[data-returning="true"] { transform: none !important; }
       .ripple-seg { animation: none !important; }
       .dot-wrap[data-returning="true"] .ring {
         animation: none;
@@ -319,7 +361,7 @@ function wasTap(e) {
 // soon as it has played, or [data-returning] lingers as a visible opacity change long after
 // the motion ended. The static one must be held long enough to be *seen*, since it neither
 // moves nor fades.
-const RECEIPT_ANIMATED_MS = 180
+const RECEIPT_ANIMATED_MS = 420
 const RECEIPT_STATIC_MS = 600
 
 function receiptWindow() {
@@ -338,11 +380,15 @@ function playReceipt() {
 async function endDrag(e) {
   const tap = e && wasTap(e)
   downAt = null
-  if (tap && currentSession) {
+  if (tap) {
     playReceipt()
-    // Fire-and-forget: the service worker may be asleep, and the receipt must not wait on
-    // a round trip. Nothing on screen depends on the response.
-    chrome.runtime.sendMessage({ type: 'not-the-work' }).catch(() => {})
+    if (currentSession) {
+      // Fire-and-forget: the service worker may be asleep, and the receipt must not wait on
+      // a round trip. Nothing on screen depends on the response.
+      chrome.runtime.sendMessage({ type: 'not-the-work' }).catch(() => {})
+    } else {
+      chrome.runtime.sendMessage({ type: 'open-meant' }).catch(() => {})
+    }
   }
   if (!dragState) return
   dragState = null
@@ -358,6 +404,10 @@ async function endDrag(e) {
 }
 
 async function ensureMounted() {
+  if (isMeantWebApp()) {
+    unmount()
+    return
+  }
   if (hostEl) return
   hostEl = document.createElement('div')
   hostEl.dataset.meantCompanion = 'true'
@@ -388,9 +438,7 @@ async function ensureMounted() {
 
   const ring = document.createElement('div')
   ring.className = 'ring'
-  const core = document.createElement('div')
-  core.className = 'dot'
-  dot.append(companionImg, svg, ring, core)
+  dot.append(companionImg, svg, ring)
   hoverPill = document.createElement('p')
   hoverPill.dataset.companionHoverPill = 'true'
   shadow.append(style, dot, hoverPill)
@@ -403,20 +451,50 @@ async function ensureMounted() {
   dot.addEventListener('pointercancel', endDrag)
   dot.addEventListener('pointerenter', showHoverPill)
   dot.addEventListener('pointerleave', hideHoverPill)
+
+  syncPointerEvents()
+  watchWebActor()
+}
+
+function syncPointerEvents() {
+  if (isMeantWebApp()) {
+    unmount()
+    return
+  }
+  if (!hostEl) return
+  const hasWebActor = !!document.querySelector('.m-web-companion-actor')
+  hostEl.style.pointerEvents = hasWebActor ? 'none' : 'auto'
+}
+
+let webActorObserver = null
+function watchWebActor() {
+  if (webActorObserver || typeof MutationObserver === 'undefined') return
+  webActorObserver = new MutationObserver(() => {
+    if (isMeantWebApp()) {
+      unmount()
+    } else {
+      syncPointerEvents()
+    }
+  })
+  if (document.body) {
+    webActorObserver.observe(document.body, { childList: true, subtree: true })
+  }
 }
 
 function showHoverPill() {
-  if (!currentSession?.intention) return
   clearTimeout(hoverTimer)
   hoverTimer = setTimeout(() => {
+    if (!hoverPill) return
+    const text = currentSession?.intention || 'Ready to focus'
     hoverPill.replaceChildren(document.createElement('span'))
-    hoverPill.firstChild.textContent = currentSession.intention
+    hoverPill.firstChild.textContent = text
     hoverPill.style.opacity = '1'
     hoverPill.style.bottom = 'calc(100% + 8px)'
     hoverPill.style.top = ''
     hoverPill.style.left = '50%'
     hoverPill.style.transform = 'translateX(-50%)'
     requestAnimationFrame(() => {
+      if (!hoverPill) return
       const rect = hoverPill.getBoundingClientRect()
       if (rect.top < 0) {
         hoverPill.style.top = 'calc(100% + 8px)'
@@ -445,6 +523,10 @@ function unmount() {
   companionImg = null
   clearTimeout(returnTimer)
   clearTimeout(hoverTimer)
+  if (webActorObserver) {
+    webActorObserver.disconnect()
+    webActorObserver = null
+  }
 }
 
 // ADR-0057 removed the drift signal, so a running session has exactly one visual state: a
@@ -456,27 +538,56 @@ function applyVisualState(next) {
   dot.dataset.state = next
 }
 
-async function applyState(session, companionState) {
-  if (!session) {
+// The companion sits on pages as long as the extension is enabled (ADR-0070),
+// even when no session is running yet. It unmounts only when explicitly turned off
+// via companionEnabled === false (I9 seam).
+async function applyState(session, companionState, companionEnabled) {
+  if (companionEnabled === false) {
     unmount()
     currentSession = null
     return
   }
-  currentSession = session
+
+  currentSession = session ?? null
   await ensureMounted()
-  applyVisualState('focus')
-  dot.title = session.intention || ''
+
+  if (session) {
+    applyVisualState('focus')
+    dot.title = session.intention || 'MEANT'
+  } else {
+    applyVisualState('idle')
+    dot.title = 'MEANT — Ready'
+  }
 }
 
 async function render() {
-  const { session, companionState } = await chrome.storage.local.get(['session', 'companionState'])
-  await applyState(session, companionState)
+  const { session, companionState, companionEnabled } = await chrome.storage.local.get([
+    'session',
+    'companionState',
+    'companionEnabled',
+  ])
+  await applyState(session, companionState, companionEnabled)
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return
-  if (changes.session) return render()
-  if (changes.companionState && dot) applyVisualState('focus')
+  if (changes.session || changes.companionEnabled) return render()
+  if (changes.companionPosition && hostEl && !dragState) {
+    positionHost()
+  }
+  if (changes.companionState && dot) applyVisualState(currentSession ? 'focus' : 'idle')
+})
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && hostEl && !dragState) {
+    positionHost()
+  }
+})
+
+window.addEventListener('resize', () => {
+  if (hostEl && !dragState) {
+    positionHost()
+  }
 })
 
 render()
