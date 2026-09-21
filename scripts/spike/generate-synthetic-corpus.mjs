@@ -14,8 +14,15 @@
 //
 // Runs the real, already-tested `buildCases` from Task 3 on fabricated input, so
 // the corpus this produces exercises the exact same pipeline real data would.
-import { writeFileSync } from 'node:fs'
+import { writeFileSync, existsSync } from 'node:fs'
 import { buildCases } from './corpus.ts'
+
+// Same guard as to-labelling.mjs: never silently clobber a labels.jsonl that might carry
+// real hand-labelled work (this run's own, or a later real one that superseded it).
+if (existsSync('scripts/spike/fixtures/labels.jsonl')) {
+  console.error('scripts/spike/fixtures/labels.jsonl already exists — refusing to overwrite it')
+  process.exit(1)
+}
 
 function uuid(seed) {
   // Deterministic, not crypto-random — reruns produce the same corpus.
@@ -109,6 +116,14 @@ for (const intention of INTENTIONS) {
       { label: 'drift', host: drift.host, paths: drift.paths, seconds: 600 + (sessionIndex % 6) * 180 },
     ]
     // Every 3rd session skips one non-focused visit, so not every session has all four.
+    // NOTE: `1 + (sessionIndex % 3)` inside a branch already gated on `sessionIndex % 3 === 2`
+    // is always `1 + 2 = 3` — this always drops the DRIFT visit specifically, not a rotating
+    // one of the three as the comment above implies. That's why drift ends up at 16 examples
+    // against 23-24 for the other three labels. Left as-is rather than fixed after the fact:
+    // fixing it would change which visits exist per session, invalidating the already-run
+    // Groq predictions (tied to specific session+host pairs) and forcing a costly re-run for
+    // a shift that doesn't change any reported conclusion — drift still clears Task 4's own
+    // >=10-example floor. Fix this for real before the next corpus regeneration.
     const skip = sessionIndex % 3 === 2 ? 1 + (sessionIndex % 3) : -1
     for (let vi = 0; vi < visits.length; vi++) {
       if (vi === skip) continue

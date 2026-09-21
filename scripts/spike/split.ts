@@ -1,6 +1,6 @@
 /** Splits by SESSION, deterministically.
  *
- *  ADR-0071: visits inside one session share an intention and are not independent, so a
+ *  ADR-0073: visits inside one session share an intention and are not independent, so a
  *  visit-level split leaks the answer across the boundary and inflates the held-out number.
  *
  *  Deterministic because a re-run that reshuffles lets a prompt be tuned against a moving

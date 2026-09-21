@@ -52,43 +52,67 @@ Yes, decisively, on the metrics this synthetic run can measure.
 
 | | Baseline (declaration only) | Judge (four/120b) |
 |---|---|---|
-| Accuracy | 0.522 | **0.905** |
+| Accuracy | 0.522 (over all 46 rows) | 0.905 (over 42 covered rows; 0.826 over all 46) |
 | Coverage | 1.000 | 0.913 (11/12 sessions — free-tier rate limit truncated 1 session) |
 | Drift precision | 1.000 | 0.818 |
-| Drift recall | 0.500 | **1.000** |
+| Drift recall | 0.500 (over all 10 real drift rows) | **0.900** (9 of 10 real drift rows, over all 46 — not the 1.000-among-covered figure a first pass at this table reported) |
 
 The baseline's perfect drift precision is a small-denominator artifact: it
 only ever predicts `drift` when a site was pre-declared as a distraction,
 so it catches half of real drift and is silent (as `neutral`) on the rest.
-The judge predicts drift more broadly and catches all of it, at a real but
-non-trivial false-positive cost (2 of 11 predicted-drift were wrong).
-**Per ADR-0060's own rule — a model that cannot beat free arithmetic does
-not ship — accuracy clears that bar by a wide margin on this data;** whether
-drift precision at full recall is an acceptable trade against the
+The judge predicts drift more broadly and catches nearly all of it (9 of
+10), at a real but non-trivial false-positive cost (2 of 11 predicted-drift
+were wrong). **Per ADR-0060's own rule — build the arithmetic before the
+judge, and a model that cannot beat it does not ship — accuracy clears that
+bar by a wide margin on this data, using either denominator;** whether
+drift precision at 0.900 recall is an acceptable trade against the
 baseline's precision-only behaviour is a product decision, not a
 measurement one.
 
 ## 2. Is `supportive` separable?
 
-Yes, on this data, including by the smaller model.
+Yes, on the one comparison this run can actually support — but an earlier
+draft of this section drew a second conclusion from an invalid comparison,
+caught in review. Both are recorded here so the correction is auditable.
 
-- **Held-out test, four/120b:** `supportive` precision 0.909, recall 0.909.
-- **Dev, four/20b vs three/20b:** the four-label run (with `supportive`
-  available) scored **0.659 accuracy**; the three-label run (collapsing
-  `supportive` into `neutral`/`drift`) scored only **0.481** — worse, not
-  better, despite having one fewer label to get right. This is the opposite
-  of what would happen if `supportive` were unproducible noise: removing it
-  should have made the smaller model's job easier, not harder. Its presence
-  actually is not wasted.
-- The two-label run (`focused`/`drift` only) scored worst of all on dev
-  (accuracy 0.429) — collapsing everything non-drift into a forced binary
-  choice made the smaller model over-predict `drift` (21 of 41 predictions,
-  precision 0.286).
+**Valid evidence: held-out test, four/120b.** `supportive` precision
+0.909, recall 0.909. This is a real, within-taxonomy result: the model was
+offered the label and used it correctly on 10 of 11 opportunities. This
+alone supports "producible and separable, on this data."
 
-**Conclusion for Plan 2 (contingent on a real re-run):** the four-label
-taxonomy is not obviously the wrong call — collapsing it did not help even
-the smaller model. This should be re-verified on real, human-labelled data
-before it's treated as settled.
+**Invalid comparison, now withdrawn.** An earlier draft compared raw
+accuracy across the four-, three-, and two-label dev runs (0.659 vs 0.481
+vs 0.429) and concluded the four-label taxonomy was doing better than a
+collapsed one. That comparison scored all three runs against the
+**unfiltered four-label truth** — so the three-label run had 8 of its 27
+kept rows carrying a `supportive` truth answer it was never offered the
+word for, and the two-label run had 20 of its 35. Both were mechanically
+unwinnable, not model failures. Once `score.ts` was fixed to restrict each
+run's truth set to its own taxonomy (the fix this review triggered), the
+same dev data reads:
+
+| dev run | kept rows | accuracy (own taxonomy) |
+|---|---|---|
+| four/20b | 41 | 0.659 |
+| three/20b | 27 | 0.684 |
+| two/20b | 35 | **1.000** |
+
+The two-label run got every row it could possibly get right, right — it
+was never a harder problem for the model, it was a smaller one. **Accuracy
+is not comparable across taxonomies even with this fix** — each run solves
+a different-difficulty problem by construction, so a within-taxonomy
+perfect score and a four-label imperfect score are not evidence for or
+against either taxonomy relative to the other. The only cross-taxonomy-safe
+metric here is `binaryDriftPrecision` (score.ts says so in its own
+comment), and it does not move in a way that argues for or against
+`supportive`'s presence either.
+
+**Conclusion for Plan 2 (contingent on a real re-run):** rest this
+question on the held-out `supportive` P/R alone (0.909/0.909) — it is
+produced and used correctly when offered. Whether a smaller vocabulary
+would have done just as well is genuinely unanswered by this run, not
+answered in either direction. Re-verify on real, human-labelled data before
+treating either claim as settled.
 
 ## 3. What is the confidence floor?
 

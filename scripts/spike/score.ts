@@ -10,6 +10,12 @@
 export type Label = 'focused' | 'supportive' | 'neutral' | 'drift'
 export type Prediction = { sessionId: string; host: string; label: Label; confidence: number }
 export type Truth = { sessionId: string; host: string; label: Label }
+// `actual` and `recall` are computed over KEPT rows only (confidence >= threshold, in this
+// taxonomy) — recall-among-covered, not recall over the whole truth set. A row dropped by the
+// threshold or excluded by the taxonomy filter above is absent from both numerator and
+// denominator, never counted as a miss. Always report `coverage` alongside recall — a low
+// coverage can hide a materially lower true recall, and reporting recall alone invites exactly
+// that misread ("catches all of it" when several instances were simply never scored).
 export type LabelScore = { label: Label; predicted: number; correct: number; precision: number; actual: number; recall: number }
 export type Score = {
   threshold: number
@@ -23,8 +29,16 @@ const LABELS: Label[] = ['focused', 'supportive', 'neutral', 'drift']
 const key = (r: { sessionId: string; host: string }) => `${r.sessionId}\u0000${r.host}`
 const ratio = (n: number, d: number) => (d === 0 ? 0 : n / d)
 
-export function score(predictions: Prediction[], truth: Truth[], threshold: number): Score {
-  const answers = new Map(truth.map((t) => [key(t), t.label]))
+export function score(predictions: Prediction[], truth: Truth[], threshold: number, taxonomy: Label[] = LABELS): Score {
+  // A three- or two-label run cannot win a truth row whose real label isn't in its own
+  // vocabulary (e.g. a `supportive` row scored against a run that was never offered that
+  // word). Scoring it anyway silently caps that run's own accuracy below what it could ever
+  // reach and makes cross-taxonomy accuracy comparisons meaningless. Restricting the truth
+  // set to the run's own taxonomy scores each run only on the rows it could possibly get
+  // right — `binaryDriftPrecision` below remains the one metric safe to compare AS-IS across
+  // taxonomies, exactly as the comment on it already says.
+  const scoredTruth = taxonomy.length === LABELS.length ? truth : truth.filter((t) => taxonomy.includes(t.label))
+  const answers = new Map(scoredTruth.map((t) => [key(t), t.label]))
   const kept = predictions.filter((p) => p.confidence >= threshold && answers.has(key(p)))
 
   const byLabel: LabelScore[] = LABELS.map((label) => {
@@ -52,7 +66,7 @@ export function score(predictions: Prediction[], truth: Truth[], threshold: numb
 
   return {
     threshold,
-    coverage: ratio(kept.length, truth.length),
+    coverage: ratio(kept.length, scoredTruth.length),
     accuracy: ratio(kept.filter((p) => answers.get(key(p)) === p.label).length, kept.length),
     byLabel,
     binaryDriftPrecision,
@@ -61,8 +75,8 @@ export function score(predictions: Prediction[], truth: Truth[], threshold: numb
 
 /** The confidence curve ADR-0073 needs: the floor is a number this produces, not one
  *  anybody picks. */
-export function sweep(predictions: Prediction[], truth: Truth[]): Score[] {
+export function sweep(predictions: Prediction[], truth: Truth[], taxonomy: Label[] = LABELS): Score[] {
   const out: Score[] = []
-  for (let i = 0; i < 20; i++) out.push(score(predictions, truth, i * 0.05))
+  for (let i = 0; i < 20; i++) out.push(score(predictions, truth, i * 0.05, taxonomy))
   return out
 }
