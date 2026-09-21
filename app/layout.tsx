@@ -51,6 +51,7 @@ export default async function RootLayout({
     <html
       lang="en"
       data-theme={theme}
+      data-meant-web="true"
       className={`${fraunces.variable} ${publicSans.variable} ${sometypeMono.variable}`}
     >
       <body className="m-app">{children}</body>

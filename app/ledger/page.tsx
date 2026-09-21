@@ -133,8 +133,18 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
 
             {/* Timeline Track with 04:00 to 22:00 window */}
             <div className="m-timeline-track-wrap" role="region" aria-label="Visual timeline track">
+              {/* Subtle 2-hour interval grid guide lines */}
+              <div className="m-timeline-guides" aria-hidden="true">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                  <div key={i} className="m-timeline-guide" style={{ left: `${(i / 9) * 100}%` }} />
+                ))}
+              </div>
+
               {timeline.blocks.length === 0 ? (
-                <div className="m-timeline-empty-hint">No sessions recorded during this window yet</div>
+                <div className="m-timeline-empty-hint">
+                  <span className="m-timeline-empty-dot" aria-hidden="true" />
+                  <span>No sessions recorded during this window yet</span>
+                </div>
               ) : (
                 timeline.blocks.map(b => {
                   const total = Math.max(1, b.attendedSeconds + b.awaySeconds + b.breakSeconds)
@@ -201,8 +211,11 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
 
           <div className="m-record-list">
             {todaySessions.length === 0 ? (
-              <div className="m-timeline-empty-hint" style={{ padding: '24px' }}>
-                No sessions completed yet today. Start a focus session in the extension.
+              <div className="m-record-empty">
+                <span className="m-record-empty-title">No sessions completed yet today</span>
+                <span className="m-record-empty-sub">
+                  Start a focus session in the extension to log your attention and build your daily ledger.
+                </span>
               </div>
             ) : (
               todaySessions.map(s => {

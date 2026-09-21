@@ -24,22 +24,50 @@ const HOST_SELECTOR = '[data-meant-companion="true"]'
 type VisitLabel = { domain: string; label: string; at: number }
 
 test.describe('floating companion', () => {
-  test('appears on arbitrary pages while a session runs, gone when it ends', async ({ context, extensionId, freshAccount }) => {
+  test('appears on arbitrary pages as long as extension is on, even with no session, and unmounts when disabled', async ({ context, extensionId, freshAccount }) => {
+    // 1. Before any session starts, companion is present on arbitrary pages
+    const pageBeforeSession = await context.newPage()
+    await pageBeforeSession.goto('https://example.com')
+    await expect(pageBeforeSession.locator(HOST_SELECTOR)).toBeVisible()
+    await pageBeforeSession.close()
+
+    // 2. While a session runs, companion remains present on external pages
     const setupPage = await context.newPage()
     await freshAccount(setupPage)
     await pairAndStart(setupPage, extensionId)
 
-    for (const url of ['https://example.com', 'https://example.org', '/dashboard']) {
+    for (const url of ['https://example.com', 'https://example.org', 'https://example.net']) {
       const page = await context.newPage()
       await page.goto(url)
       await expect(page.locator(HOST_SELECTOR)).toBeVisible()
       await page.close()
     }
 
+    // 3. Floating companion never shows on the MEANT web app itself (no double companions)
+    const dashboardPage = await context.newPage()
+    await dashboardPage.goto('/dashboard')
+    await expect(dashboardPage.locator(HOST_SELECTOR)).toHaveCount(0)
+    await expect(dashboardPage.locator('.m-web-companion-actor')).toBeVisible()
+    await dashboardPage.close()
+
+    // 4. After session stops, companion remains present on external pages
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
     const afterStop = await context.newPage()
     await afterStop.goto('https://example.com')
+    await expect(afterStop.locator(HOST_SELECTOR)).toBeVisible()
+
+    // 5. Turning the companion off via companionEnabled: false (I9 seam) unmounts it
+    const [sw] = context.serviceWorkers()
+    await sw.evaluate(async () => {
+      await chrome.storage.local.set({ companionEnabled: false })
+    })
     await expect(afterStop.locator(HOST_SELECTOR)).toHaveCount(0)
+
+    // 5. Turning companionEnabled back on restores it
+    await sw.evaluate(async () => {
+      await chrome.storage.local.set({ companionEnabled: true })
+    })
+    await expect(afterStop.locator(HOST_SELECTOR)).toBeVisible()
   })
 
   test('drag position persists across a fresh page load', async ({ context, extensionId, freshAccount }) => {
@@ -71,11 +99,51 @@ test.describe('floating companion', () => {
     await page2.goto('https://example.org')
     await page2.waitForTimeout(400) // let the wake animation settle
     const box2 = (await page2.locator(HOST_SELECTOR).boundingBox())!
-    // Tolerance adjusted to 15px to account for position recalculation with new SIZE (52px Codex Pet vs old 28px/36px)
+    // Tolerance adjusted to 15px to account for position recalculation with new SIZE (62px Codex Pet vs old 28px/36px)
     expect(Math.abs(box2.x - newBox.x)).toBeLessThan(15)
     expect(Math.abs(box2.y - newBox.y)).toBeLessThan(15)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('dragging the companion in one tab immediately syncs position to other open tabs', async ({ context, extensionId, freshAccount }) => {
+    const setupPage = await context.newPage()
+    await freshAccount(setupPage)
+    await pairAndStart(setupPage, extensionId)
+
+    const tab1 = await context.newPage()
+    await tab1.goto('https://example.com')
+    await tab1.waitForTimeout(400)
+
+    const tab2 = await context.newPage()
+    await tab2.goto('https://example.org')
+    await tab2.waitForTimeout(400)
+
+    const host1 = tab1.locator(HOST_SELECTOR)
+    const box1 = (await host1.boundingBox())!
+    const target = { x: box1.x - 180, y: box1.y - 120 }
+
+    // Drag in tab 1
+    await tab1.mouse.move(box1.x + box1.width / 2, box1.y + box1.height / 2)
+    await tab1.mouse.down()
+    await tab1.mouse.move(target.x, target.y, { steps: 10 })
+    await tab1.mouse.up()
+
+    const draggedBox1 = (await host1.boundingBox())!
+
+    // Tab 2 should immediately receive storage change and reposition
+    const host2 = tab2.locator(HOST_SELECTOR)
+    await expect.poll(async () => {
+      const b = await host2.boundingBox()
+      return b ? Math.abs(b.x - draggedBox1.x) : 999
+    }, { timeout: 3_000 }).toBeLessThan(15)
+
+    const box2 = (await host2.boundingBox())!
+    expect(Math.abs(box2.y - draggedBox1.y)).toBeLessThan(15)
+
+    await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+    await tab1.close()
+    await tab2.close()
   })
 
   test('a dragged position holds its relative place across windows of different sizes', async ({ context, extensionId, freshAccount }) => {
@@ -178,7 +246,7 @@ test.describe('floating companion', () => {
   })
 
   test('dragging the companion does not file a label', async ({ context, extensionId, freshAccount }) => {
-    // The dot is draggable, so without the 4px/500ms tap guard every reposition would also
+    // The companion is draggable, so without the 4px/500ms tap guard every reposition would also
     // report "this isn't the work".
     const setupPage = await context.newPage()
     await freshAccount(setupPage)
@@ -186,14 +254,14 @@ test.describe('floating companion', () => {
 
     const page = await context.newPage()
     await page.goto('https://example.com')
-    const dot = page.locator(HOST_SELECTOR).locator('.dot')
-    await expect(dot).toBeVisible()
+    const dotWrap = page.locator(HOST_SELECTOR).locator('.dot-wrap')
+    await expect(dotWrap).toBeVisible()
 
     // boundingBox() returns null for an element that is not rendered; assert rather than
     // non-null-assert, so a missing companion fails with a useful message instead of a
     // TypeError about reading x of null.
-    const box = await dot.boundingBox()
-    expect(box, 'the companion dot has no bounding box - it did not render').not.toBeNull()
+    const box = await dotWrap.boundingBox()
+    expect(box, 'the companion dot-wrap has no bounding box - it did not render').not.toBeNull()
     const { x, y, width, height } = box!
     await page.mouse.move(x + width / 2, y + height / 2)
     await page.mouse.down()
@@ -233,7 +301,7 @@ test.describe('floating companion', () => {
     await page.close()
   })
 
-  test('the dot core is a fixed contrast-safe color, not one that flips with system dark mode', async ({ context, extensionId, freshAccount }) => {
+  test('the companion accent ring is a fixed contrast-safe color, and the red dot is removed', async ({ context, extensionId, freshAccount }) => {
     const setupPage = await context.newPage()
     await freshAccount(setupPage)
     await pairAndStart(setupPage, extensionId)
@@ -241,12 +309,16 @@ test.describe('floating companion', () => {
     const page = await context.newPage()
     await page.emulateMedia({ colorScheme: 'dark' }) // simulate a user with system dark mode on
     await page.goto('https://example.com')
-    const dot = page.locator(HOST_SELECTOR).locator('.dot')
-    const dotColor = await dot.evaluate((el) => getComputedStyle(el).backgroundColor)
+    const ring = page.locator(HOST_SELECTOR).locator('.ring')
+    const ringColor = await ring.evaluate((el) => getComputedStyle(el).borderColor)
     // rgb(199, 91, 57) is --m-clay (#C75B39) — must render as this in EITHER color scheme,
     // never as --m-ink (which used to flip to near-white under dark mode and vanish on a
     // real light-background page).
-    expect(dotColor).toBe('rgb(199, 91, 57)')
+    expect(ringColor).toBe('rgb(199, 91, 57)')
+
+    // Red dot was removed so the character face is unobstructed
+    const dot = page.locator(HOST_SELECTOR).locator('.dot')
+    await expect(dot).toHaveCount(0)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
@@ -270,13 +342,13 @@ test.describe('floating companion', () => {
     await page.waitForTimeout(400)
     const box = (await host.boundingBox())!
     expect(box.width).toBeGreaterThan(28)
-    expect(box.width).toBe(52)
-    expect(box.height).toBe(52)
+    expect(box.width).toBe(62)
+    expect(box.height).toBe(62)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
 
-  test('the companion is 52px, not the old 36px', async ({ context, extensionId, freshAccount }) => {
+  test('the companion is 62px, not the old 52px', async ({ context, extensionId, freshAccount }) => {
     const setupPage = await context.newPage()
     await freshAccount(setupPage)
     await pairAndStart(setupPage, extensionId)
@@ -285,8 +357,8 @@ test.describe('floating companion', () => {
     await page.goto('https://example.com')
     await page.waitForTimeout(400) // let the wake animation settle
     const box = (await page.locator(HOST_SELECTOR).boundingBox())!
-    expect(box.width).toBe(52)
-    expect(box.height).toBe(52)
+    expect(box.width).toBe(62)
+    expect(box.height).toBe(62)
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
@@ -319,6 +391,24 @@ test.describe('floating companion', () => {
     await expect(pill).toHaveCSS('opacity', '0', { timeout: 1_000 })
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
+  })
+
+  test('hovering the companion without an active session shows Ready to focus', async ({ context }) => {
+    const page = await context.newPage()
+    await page.goto('https://example.com')
+    const host = page.locator(HOST_SELECTOR)
+    await expect(host).toBeVisible()
+    const pill = host.locator('[data-companion-hover-pill="true"]')
+    await expect(pill).toHaveCSS('opacity', '0')
+
+    const dotWrap = host.locator('.dot-wrap')
+    await dotWrap.hover()
+    await expect(pill).toHaveCSS('opacity', '1', { timeout: 1_000 })
+    await expect(pill.locator('span')).toHaveText('Ready to focus')
+
+    await page.mouse.move(0, 0)
+    await expect(pill).toHaveCSS('opacity', '0', { timeout: 1_000 })
+    await page.close()
   })
 
   test('a second injection of companion-overlay.js into a tab that already has it mounted does not create a duplicate host', async ({ context, extensionId, freshAccount }) => {
@@ -416,11 +506,11 @@ test.describe('floating companion', () => {
     )
     expect(sheet).not.toContain('pulse-drift')
     expect(sheet).not.toContain('data-state="drift"')
-    expect(sheet).toContain('animation: receipt var(--m-dur-press) var(--m-ease)')
-    expect(sheet).toContain('--m-dur-press: 160ms')
+    expect(sheet).toContain('animation: receipt var(--m-dur-receipt) var(--m-ease-receipt)')
+    expect(sheet).toContain('--m-dur-receipt: 420ms')
 
     const host = page.locator(HOST_SELECTOR)
-    // The receipt now clears after 180ms, which a round trip can outlive — so watch for the
+    // The receipt now clears after 420ms, which a round trip can outlive — so watch for the
     // attribute rather than reading it after the fact and hoping to win the race.
     await host.evaluate((h: any) => {
       const wrap = h.shadowRoot.querySelector('.dot-wrap')

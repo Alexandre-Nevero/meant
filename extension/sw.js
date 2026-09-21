@@ -1,4 +1,4 @@
-import { post } from './api.js'
+import { post, apiBase } from './api.js'
 import { BLOCKLISTS } from './blocklists.js'
 import { advance, emptySlice, idleMode, IDLE_DETECTION_S } from './lib/attribution.js'
 import { appendVisit, purgeExpired } from './lib/path-log.js'
@@ -369,7 +369,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(await startSession({ ...message, blockedDomains }))
     } else if (message?.type === 'stop') sendResponse(await endSession('stopped'))
     else if (message?.type === 'not-the-work') sendResponse(await recordNotTheWork())
-    else sendResponse({ ok: false })
+    else if (message?.type === 'open-meant') {
+      ;(async () => {
+        if (chrome.action?.openPopup) {
+          try {
+            await chrome.action.openPopup()
+            return
+          } catch {}
+        }
+        const base = await apiBase()
+        await chrome.tabs.create({ url: `${base}/dashboard` }).catch(() => {})
+      })()
+      sendResponse({ ok: true })
+    } else sendResponse({ ok: false })
   })()
   return true
 })
@@ -416,6 +428,24 @@ async function reinjectCompanion() {
     // reject scripting injection outright; skip them rather than let each one throw.
     if (!/^https?:\/\//.test(tab.url)) continue
     try {
+      const parsedUrl = new URL(tab.url)
+      const host = parsedUrl.hostname.toLowerCase()
+      if (
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === 'meant.app' ||
+        host.endsWith('.meant.app') ||
+        host.includes('meant-')
+      ) {
+        // MEANT web app has native companion actor; remove any stray overlay and skip
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => document.querySelector('[data-meant-companion]')?.remove(),
+        })
+        continue
+      }
+    } catch {}
+    try {
       // This function only ever runs from onInstalled/onStartup — i.e. only at the
       // moment a brand-new extension instance is starting. Any [data-meant-companion]
       // host already in a tab's DOM at that exact moment can only be a leftover from a
@@ -443,3 +473,10 @@ async function reinjectCompanion() {
 self.reinjectCompanion = reinjectCompanion
 chrome.runtime.onInstalled.addListener(reinjectCompanion)
 chrome.runtime.onStartup.addListener(reinjectCompanion)
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return
+  if (changes.companionEnabled?.newValue === true) {
+    reinjectCompanion().catch(() => {})
+  }
+})

@@ -52,3 +52,13 @@ test('companionEnabled still gates the companion somewhere — I9 seam must surv
   const sw = code('extension/sw.js')
   assert.ok(sw.includes('companionEnabled'), 'the companion off-switch has no reader left')
 })
+
+test('companion-overlay.js reads companionEnabled so the off-switch unmounts it directly', () => {
+  const overlay = code('extension/companion-overlay.js')
+  assert.ok(overlay.includes('companionEnabled'), 'companion-overlay.js must check companionEnabled')
+})
+
+test('companion remains present when session is absent unless companionEnabled is false', () => {
+  const overlay = code('extension/companion-overlay.js')
+  assert.equal(overlay.includes('if (!session) {\n    unmount()'), false, 'companion must not unmount solely because !session')
+})

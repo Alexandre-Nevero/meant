@@ -191,8 +191,13 @@ which applied those same decisions where the first pass had missed them.
 | **D65** | **MEANT is a cream product; dark is a fallback, not a second look.** `prefers-color-scheme: dark` had made it dark for any user on a dark OS, with no way to say otherwise | 2026-09-16 | ADR-0065 |
 | **D66** | **At most one inference sentence renders at a time** — the claim resting on more answered sessions, ties to the domain contrast. A new statistic competes for the slot rather than adding a line | 2026-09-17 | ADR-0066 |
 | **D67** | **The session row stores the hour (0-23), never a timezone.** A timezone name is location data; bucketing server-side would bucket in UTC and state a regularity that is an artefact of server geography | 2026-09-17 | ADR-0067 |
+| **D68** | **The dashboard states quantities (attended time, counts, shares, period deltas), never composite scores or grading colors** | 2026-09-18 | ADR-0068 |
+| **D69** | **Dual-surface architecture: `/ledger` for day-level timeline, `/dashboard` for high-level monthly review, plus Codex Pet Tomato character** | 2026-09-18 | ADR-0069 |
+| **D70** | **The companion is persistently present whenever the extension is enabled, even before a session begins** | 2026-09-21 | ADR-0070 |
+| **D71** | **The companion overlay is scoped exclusively outside the MEANT web app, syncs position across tabs in real-time, removes the red dot, and fixes dark mode shadows** | 2026-09-21 | ADR-0071 |
 | **D72** | **Inference runs on Groq with Zero Data Retention. Never a tier whose terms permit training on prompts, at any price** | 2026-09-21 | ADR-0072 |
 | **D73** | **A verdict is inference, gated by measured precision on a hand-labelled held-out set. The judge renders nothing until it beats a no-model baseline** | 2026-09-21 | ADR-0073 |
+| **D74** | **The companion is scaled up 20% across all surfaces, and the tap receipt is smoothed into a 420ms fluid circle ripple bloom with character micro-press** | 2026-09-21 | ADR-0074 |
 
 ## 7. Pending spawn proposals
 
