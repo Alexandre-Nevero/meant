@@ -84,9 +84,10 @@ alone supports "producible and separable, on this data."
 accuracy across the four-, three-, and two-label dev runs (0.659 vs 0.481
 vs 0.429) and concluded the four-label taxonomy was doing better than a
 collapsed one. That comparison scored all three runs against the
-**unfiltered four-label truth** — so the three-label run had 8 of its 27
-kept rows carrying a `supportive` truth answer it was never offered the
-word for, and the two-label run had 20 of its 35 carrying a `supportive`
+**unfiltered four-label truth** — so the three-label run had 8 of the 27
+rows it was scored on then carrying a `supportive` truth answer it was
+never offered the word for, and the two-label run had 20 of the 35 it was
+then scored on carrying a `supportive`
 *or* `neutral` answer it was never offered. Both were mechanically
 unwinnable, not model failures. `score.ts` was fixed to restrict each run's
 own accuracy to truth rows within its own taxonomy (dropping the
@@ -110,11 +111,19 @@ is not comparable across taxonomies even with this fix** — each run solves
 a different-difficulty problem by construction, so a within-taxonomy
 perfect score on 15 rows and a four-label 0.659 on 41 rows are not evidence
 for or against either taxonomy relative to the other. `binaryDriftPrecision`
-is the one metric genuinely comparable across taxonomies here (it is scored
-against the same full truth set regardless of vocabulary), and on this data
-it does not favour the smaller taxonomies either: 0.545 (four) vs 0.364
-(three) vs 0.286 (two) — narrower vocabularies predict `drift` less
-precisely on the full question, not more.
+asks the same question regardless of vocabulary — it is scored against the
+same full truth set — but each run still covers a different set of rows
+(41 / 27 / 35 kept-for-drift respectively), so this is "the same question,
+different samples," not a controlled comparison either. On this data it
+does not favour the smaller taxonomies: 0.545 (four) vs 0.364 (three) vs
+0.286 (two). That gradient is plausibly confounded in the two- and
+three-label runs' favour, not against it: with `supportive`/`neutral`
+unavailable, those runs have nowhere to put an ambiguous row except
+`focused` or `drift`, which structurally pushes some of it into `drift`
+false positives — the same kind of construction artifact this section
+exists to withdraw, just pointing the other direction. Read this as "does
+not argue for narrower taxonomies," not as a finding that they perform
+worse.
 
 **Conclusion for Plan 2 (contingent on a real re-run):** rest this
 question on the held-out `supportive` P/R alone (0.909/0.909) — it is
