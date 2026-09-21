@@ -27,3 +27,7 @@ test-results/
 playwright-report/
 # FMD factory — owner-local; do not commit
 .fmd-work/
+
+# Spike fixtures carry real browsing paths (ADR-0059). Never committed, ever.
+scripts/spike/fixtures/*
+!scripts/spike/fixtures/README.md
