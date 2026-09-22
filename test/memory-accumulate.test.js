@@ -123,6 +123,18 @@ test('upgradeTally treats null/undefined (a domain never seen before) as EMPTY_T
   assert.deepEqual(upgradeTally(undefined), EMPTY_TALLY)
 })
 
+test('upgradeTally distinguishes a legitimate zero from an absent field', () => {
+  // work_n/distract_n both present and 0 is a real prior observation (all evidence pointed
+  // elsewhere), not "no row at all" — `== null` must not treat 0 as absent the way `!old.work_n`
+  // would have.
+  const upgraded = upgradeTally({ work_n: 0, distract_n: 0, neutral_n: 4, last_at: 9 })
+  assert.deepEqual(upgraded, {
+    taps: { focused_n: 0, supportive_n: 0, neutral_n: 4, drift_n: 0 },
+    verdicts: { focused_n: 0, supportive_n: 0, neutral_n: 0, drift_n: 0 },
+    last_at: 9,
+  })
+})
+
 test('old evidence upgraded from the flat shape still counts toward classification', () => {
   // 5 old work_n taps upgrade to 5 focused taps — already enough to classify on their own,
   // proving the upgrade path feeds real evidence into classify(), not just a passthrough.

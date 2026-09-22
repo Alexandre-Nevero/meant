@@ -44,20 +44,31 @@ const pairs = (c: Counts): [Label, number][] => [
 /** Upgrades a value read from `memory.value` into the current `Tally` shape.
  *
  *  Caught in review, before this shipped: rows written before ADR-0078 are the tap-era flat
- *  shape (`{work_n, distract_n, neutral_n, last_at}` — 002-drift.sql's own comment). `tally()`
- *  reads `prior.taps`/`prior.verdicts`, which don't exist on that shape, so without this it
- *  silently fell back to EMPTY_COUNTS and the next write permanently discarded a domain's
- *  entire accumulated evidence with no warning — this is exactly the failure ADR-0078's
- *  Consequences section is written to prevent. Every read of `memory.value` must pass through
- *  this before reaching `tally()`.
+ *  shape (`{work_n, distract_n, neutral_n, last_at}` — 002-drift.sql's own comment, corrected
+ *  there in the same commit as this fix). Without this, `tally()` reads `prior.taps`/
+ *  `prior.verdicts`, which don't exist on that shape, and would silently fall back to
+ *  EMPTY_COUNTS — the next write would then permanently discard a domain's entire accumulated
+ *  evidence with no warning. Verified directly against production while fixing this:
+ *  `memory.domain_class` currently has zero rows, so no evidence has actually been lost yet.
+ *  The risk is real regardless — the live app may still run the pre-ADR-0078 code until this
+ *  deploys, and could write a new old-shape row at any point before then — which is why this
+ *  is a permanent read-time upgrade rather than a one-time backfill migration: it re-checks
+ *  the shape on every read, so it also covers a row written after this file's own migration
+ *  already ran. Every read of `memory.value` must pass through this before reaching `tally()`
+ *  — there is one such read today (`app/api/events/route.ts`); the judge's future write path
+ *  will be a second one and must do the same.
  *
  *  Old evidence upgrades into TAPS, never verdicts: only a tap could write this column before
- *  ADR-0078 existed (a tap cannot mean "supportive" — ADR-0058), so `work_n`/`distract_n` map
- *  to `focused_n`/`drift_n`, `neutral_n` is unchanged, `supportive_n` starts at 0. */
+ *  ADR-0078 existed (a tap cannot mean "supportive" — ADR-0058; `006-verdict-taxonomy.sql`
+ *  states the same conclusion independently), so `work_n`/`distract_n` map to
+ *  `focused_n`/`drift_n`, `neutral_n` is unchanged, `supportive_n` starts at 0. Detection keys
+ *  on `work_n`/`distract_n` specifically (not `neutral_n`, which the current shape's own
+ *  `Counts` also happens to name) so a hypothetical future flat shape sharing that one field
+ *  name can never be mistaken for this one. */
 export function upgradeTally(value: unknown): Tally {
   if (value && typeof value === 'object' && 'taps' in (value as object)) return value as Tally
   const old = (value ?? {}) as { work_n?: number; distract_n?: number; neutral_n?: number; last_at?: number }
-  if (old.work_n == null && old.distract_n == null && old.neutral_n == null) return EMPTY_TALLY
+  if (old.work_n == null && old.distract_n == null) return EMPTY_TALLY
   return {
     taps: {
       focused_n: old.work_n ?? 0,
