@@ -12,7 +12,7 @@ import { labelsToEvents } from '../extension/lib/visit-label.js'
 // session stays queued and retries forever with the same poison payload still in it.
 test("the events route accepts every kind the extension can emit", () => {
   const route = readFileSync('app/api/events/route.ts', 'utf8')
-  const emitted = new Set(labelsToEvents([{ domain: 'a.com', label: 'distract', at: 1 }]).map((e) => e.kind))
+  const emitted = new Set(labelsToEvents([{ domain: 'a.com', label: 'drift', at: 1 }]).map((e) => e.kind))
   emitted.add('attention').add('away').add('block_hit')
   const declared = route.match(/const KINDS = \[([^\]]+)\]/)
   assert.ok(declared, 'KINDS not found in the events route')

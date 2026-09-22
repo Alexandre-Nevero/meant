@@ -1,14 +1,14 @@
 import { deviceFromRequest } from '@/lib/device-auth'
 import { sql } from '@/lib/db'
 import { tally, classify, EMPTY_TALLY, type Tally } from '@/lib/memory-accumulate'
-import { MEMORY_MIN_EVIDENCE, MEMORY_MIN_AGREEMENT } from '@/lib/thresholds'
+import { LABELS, normalizeLabel } from '@/lib/label-vocabulary'
+import { MEMORY_MIN_EVIDENCE, MEMORY_MIN_AGREEMENT, MEMORY_MIN_VERDICTS } from '@/lib/thresholds'
 
 // 'label' is the companion's one-tap self-report (ADR-0058). It MUST be here: flush()
 // batches all of a session's queued events into one POST, so a kind this list rejects
 // fails the whole batch — and because nothing is then marked sent, every attention and
 // away event for that session requeues and retries forever with the same payload.
 const KINDS = ['attention', 'away', 'block_hit', 'label']
-const LABELS = ['work', 'distract', 'neutral', 'unknown']
 
 export async function POST(req: Request) {
   const device = await deviceFromRequest(req)
@@ -26,8 +26,10 @@ export async function POST(req: Request) {
       return Response.json({ error: 'domain must be a hostname' }, { status: 400 })
     }
     if (typeof e.at !== 'string') return Response.json({ error: 'bad timestamp' }, { status: 400 })
-    if (e.label != null && !LABELS.includes(e.label)) {
-      return Response.json({ error: 'bad label' }, { status: 400 })
+    if (e.label != null) {
+      const normalized = normalizeLabel(e.label)
+      if (normalized === null) return Response.json({ error: 'bad label' }, { status: 400 })
+      e.label = normalized
     }
   }
 
@@ -69,13 +71,19 @@ async function accumulateMemory(userId: string, events: { kind: string; domain?:
   }
   if (byDomain.size === 0) return
 
-  const opts = { minEvidence: MEMORY_MIN_EVIDENCE, minAgreement: MEMORY_MIN_AGREEMENT }
+  const opts = {
+    minEvidence: MEMORY_MIN_EVIDENCE,
+    minAgreement: MEMORY_MIN_AGREEMENT,
+    minVerdicts: MEMORY_MIN_VERDICTS,
+  }
   for (const [domain, { labels, at }] of byDomain) {
     try {
       const [row] = await sql`
         select value from memory
          where user_id = ${userId} and kind = 'domain_class' and key = ${domain}`
-      const next: Tally = tally(labels, at, (row?.value as Tally) ?? EMPTY_TALLY)
+      // 'tap': this path only ever handles kind === 'label', which is the companion's
+      // one-tap self-report (ADR-0058). The judge writes verdicts through its own path.
+      const next: Tally = tally(labels, at, 'tap', (row?.value as Tally) ?? EMPTY_TALLY)
       const verdict = classify(next, opts)
 
       if (verdict === null) {

@@ -32,12 +32,13 @@ export function labelCurrentVisit(session, domain, at) {
   const labels = session.labels ?? []
   const last = labels[labels.length - 1]
   if (last && last.domain === domain && at - last.at < DUPLICATE_TAP_MS) return session
-  return { ...session, labels: [...labels, { domain, label: 'distract', at }] }
+  return { ...session, labels: [...labels, { domain, label: 'drift', at }] }
 }
 
 /** Shapes stored labels for POST /api/events.
  *
- *  `event.label` already exists with work|distract|neutral|unknown (ADR-0044), and `neutral`
+ *  `event.label` carries focused|supportive|neutral|drift plus unknown (ADR-0076); the
+ *  server also accepts the tap-era values during the extension transition, and `neutral`
  *  is a first-class value rather than a fallback (ADR-0047) — so this needs no migration.
  *  `seconds: 0` because a label is a point in time, not a duration; the attention rows
  *  already carry the time spent on that domain. */

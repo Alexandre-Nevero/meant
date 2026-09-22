@@ -93,7 +93,7 @@ export function rankDomains(rows: EventRow[], limit = 6): DomainRank[] {
   for (const r of rows) {
     if (!r.domain || typeof r.seconds !== 'number' || r.seconds <= 0) continue
     totalAttention += r.seconds
-    const cur = domainMap.get(r.domain) ?? { seconds: 0, label: r.label || 'work' }
+    const cur = domainMap.get(r.domain) ?? { seconds: 0, label: r.label || 'focused' }
     cur.seconds += r.seconds
     domainMap.set(r.domain, cur)
   }
