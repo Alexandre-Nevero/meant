@@ -9,7 +9,7 @@
  *  not on our schedule. So the wire accepts both and normalises on the way in; the database
  *  only ever holds the new values.
  *
- *  Remove `work` and `distract` from ACCEPTED once telemetry shows no client sending them —
+ *  Remove `work` and `distract` from ALIASES once telemetry shows no client sending them —
  *  and not before. */
 export type Label = 'focused' | 'supportive' | 'neutral' | 'drift'
 export type WireLabel = Label | 'unknown'

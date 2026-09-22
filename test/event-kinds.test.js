@@ -22,7 +22,8 @@ test("the events route accepts every kind the extension can emit", () => {
 })
 
 test('the events route persists the label column', () => {
-  // event.label already exists (ADR-0044) with work|distract|neutral|unknown. Accepting the
+  // event.label carries focused|supportive|neutral|drift plus unknown (ADR-0076); the server
+  // also accepts the tap-era work|distract values during the extension transition. Accepting the
   // kind but dropping the column would store a row that says nothing.
   const route = readFileSync('app/api/events/route.ts', 'utf8')
   assert.ok(/insert into event \([^)]*label/.test(route), 'label column is not inserted')

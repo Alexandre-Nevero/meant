@@ -19,8 +19,11 @@ export type Source = 'tap' | 'verdict'
 export type Counts = { focused_n: number; supportive_n: number; neutral_n: number; drift_n: number }
 export type Tally = { taps: Counts; verdicts: Counts; last_at: number }
 
-const EMPTY_COUNTS: Counts = { focused_n: 0, supportive_n: 0, neutral_n: 0, drift_n: 0 }
-export const EMPTY_TALLY: Tally = { taps: EMPTY_COUNTS, verdicts: EMPTY_COUNTS, last_at: 0 }
+// Frozen: every call site treats these as read-only defaults, spreading them into a fresh
+// object before any write. Freezing turns an accidental `t.taps.drift_n++` on a shared default
+// into a thrown error instead of silent cross-tally corruption.
+const EMPTY_COUNTS: Counts = Object.freeze({ focused_n: 0, supportive_n: 0, neutral_n: 0, drift_n: 0 })
+export const EMPTY_TALLY: Tally = Object.freeze({ taps: EMPTY_COUNTS, verdicts: EMPTY_COUNTS, last_at: 0 })
 
 const COLUMN: Record<Label, keyof Counts> = {
   focused: 'focused_n',

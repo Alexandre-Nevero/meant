@@ -1,7 +1,7 @@
 import { deviceFromRequest } from '@/lib/device-auth'
 import { sql } from '@/lib/db'
 import { tally, classify, EMPTY_TALLY, type Tally } from '@/lib/memory-accumulate'
-import { LABELS, normalizeLabel } from '@/lib/label-vocabulary'
+import { normalizeLabel } from '@/lib/label-vocabulary'
 import { MEMORY_MIN_EVIDENCE, MEMORY_MIN_AGREEMENT, MEMORY_MIN_VERDICTS } from '@/lib/thresholds'
 
 // 'label' is the companion's one-tap self-report (ADR-0058). It MUST be here: flush()

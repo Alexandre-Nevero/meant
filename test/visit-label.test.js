@@ -59,7 +59,7 @@ test('a second tap on the same domain in the same second is ignored', () => {
 })
 
 test('labelsToEvents shapes labels for the events endpoint using the existing label column', () => {
-  // event.label already exists with work|distract|neutral|unknown (ADR-0044) and `neutral`
+  // event.label carries focused|supportive|neutral|drift plus unknown (ADR-0076) and `neutral`
   // is first-class (ADR-0047), so this needs NO migration.
   const events = labelsToEvents([{ domain: 'a.com', label: 'drift', at: 1000 }])
   assert.equal(events.length, 1)
