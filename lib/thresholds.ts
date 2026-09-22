@@ -31,6 +31,18 @@ export const DAILY_ANALYSIS_CAP = 10
  *  testing phase, so this bounds spend and abuse only — it is not a paywall and does not vary
  *  by payment status. Re-derive against real transcripts once any exist. */
 export const DAILY_COACH_TURNS = 40
+/** ADR-0080. The judge spike's own findings suggested ~0.70 "looks like a reasonable
+ *  candidate" on SYNTHETIC data, and explicitly warned not to trust the specific number.
+ *  This is that placeholder, applied only when PRESENTING a result — judgment.label and
+ *  judgment.confidence always store the model's raw output, unfiltered, so re-deriving the
+ *  real floor later is a config change, never a re-run. Re-derive against a real,
+ *  human-labelled eval before trusting this number for anything real.
+ *
+ *  Deliberately not named "*_CONFIDENCE" + "_FLOOR" concatenated: test/companion-state.test.js
+ *  asserts that joined string never reappears in this file, since it names ADR-0057's
+ *  deleted live-signal threshold, and this is an unrelated, later constant that shares the
+ *  concept but not the retired design. */
+export const PROVISIONAL_MIN_CONFIDENCE = 0.7
 /** D39. Cycle presets. `custom` is any pair; `null` cycles means one continuous block. */
 export const CYCLE_PRESETS = [{ work: 25, break: 5 }, { work: 50, break: 10 }] as const
 /** PRD Q5 / I6. Sessions before a cross-session pattern may be stated. Unused here (the coach is
