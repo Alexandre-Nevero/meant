@@ -1,6 +1,6 @@
 import { deviceFromRequest } from '@/lib/device-auth'
 import { sql } from '@/lib/db'
-import { tally, classify, EMPTY_TALLY, type Tally } from '@/lib/memory-accumulate'
+import { tally, classify, upgradeTally, type Tally } from '@/lib/memory-accumulate'
 import { normalizeLabel } from '@/lib/label-vocabulary'
 import { MEMORY_MIN_EVIDENCE, MEMORY_MIN_AGREEMENT, MEMORY_MIN_VERDICTS } from '@/lib/thresholds'
 
@@ -83,7 +83,7 @@ async function accumulateMemory(userId: string, events: { kind: string; domain?:
          where user_id = ${userId} and kind = 'domain_class' and key = ${domain}`
       // 'tap': this path only ever handles kind === 'label', which is the companion's
       // one-tap self-report (ADR-0058). The judge writes verdicts through its own path.
-      const next: Tally = tally(labels, at, 'tap', (row?.value as Tally) ?? EMPTY_TALLY)
+      const next: Tally = tally(labels, at, 'tap', upgradeTally(row?.value))
       const verdict = classify(next, opts)
 
       if (verdict === null) {

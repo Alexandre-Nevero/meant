@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { tally, classify, EMPTY_TALLY } from '../lib/memory-accumulate.ts'
+import { tally, classify, upgradeTally, EMPTY_TALLY } from '../lib/memory-accumulate.ts'
 
 // Deliberately literal, unlike the old version of this file, which imported the constants.
 // These tests exercise the FUNCTION's rules; re-tuning MEMORY_MIN_VERDICTS against the eval
@@ -91,4 +91,55 @@ test('a domain that becomes contested loses its classification', () => {
 
 test('EMPTY_TALLY classifies as nothing', () => {
   assert.equal(classify(EMPTY_TALLY, opts), null)
+})
+
+// A real bug caught in review: memory.value rows written before ADR-0078 shipped are the
+// tap-era flat shape ({work_n, distract_n, neutral_n, last_at} — see 002-drift.sql's own
+// comment). tally() reads prior.taps/prior.verdicts, which don't exist on that shape, so it
+// silently fell back to EMPTY_COUNTS and the next write permanently discarded a domain's
+// entire accumulated evidence with no warning. upgradeTally() must be called on every value
+// read from Postgres before it reaches tally(), so old evidence survives the transition.
+test('upgradeTally converts the pre-ADR-0078 flat shape, preserving evidence as taps', () => {
+  const old = { work_n: 5, distract_n: 2, neutral_n: 1, last_at: 777 }
+  const upgraded = upgradeTally(old)
+  assert.deepEqual(upgraded, {
+    taps: { focused_n: 5, supportive_n: 0, neutral_n: 1, drift_n: 2 },
+    verdicts: { focused_n: 0, supportive_n: 0, neutral_n: 0, drift_n: 0 },
+    last_at: 777,
+  })
+})
+
+test('upgradeTally leaves an already-current shape untouched', () => {
+  const current = {
+    taps: { focused_n: 1, supportive_n: 0, neutral_n: 0, drift_n: 0 },
+    verdicts: { focused_n: 0, supportive_n: 0, neutral_n: 0, drift_n: 3 },
+    last_at: 42,
+  }
+  assert.deepEqual(upgradeTally(current), current)
+})
+
+test('upgradeTally treats null/undefined (a domain never seen before) as EMPTY_TALLY', () => {
+  assert.deepEqual(upgradeTally(null), EMPTY_TALLY)
+  assert.deepEqual(upgradeTally(undefined), EMPTY_TALLY)
+})
+
+test('old evidence upgraded from the flat shape still counts toward classification', () => {
+  // 5 old work_n taps upgrade to 5 focused taps — already enough to classify on their own,
+  // proving the upgrade path feeds real evidence into classify(), not just a passthrough.
+  const upgraded = upgradeTally({ work_n: 5, distract_n: 0, neutral_n: 0, last_at: 1 })
+  assert.deepEqual(classify(upgraded, opts), {
+    label: 'focused',
+    confidence: 1,
+    evidence_n: 5,
+    source: 'tap',
+  })
+})
+
+test('a new tap folds onto upgraded old evidence instead of resetting it to zero', () => {
+  // This is the exact failure mode from the bug report: an existing user's old-shape row
+  // must not be silently zeroed the next time they tap the same domain.
+  const oldRow = { work_n: 2, distract_n: 0, neutral_n: 0, last_at: 100 }
+  const next = tally(['focused'], 200, 'tap', upgradeTally(oldRow))
+  assert.equal(next.taps.focused_n, 3) // 2 preserved + 1 new, NOT reset to 1
+  assert.equal(next.last_at, 200)
 })
