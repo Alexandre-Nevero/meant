@@ -43,6 +43,13 @@ export const DAILY_COACH_TURNS = 40
  *  deleted live-signal threshold, and this is an unrelated, later constant that shares the
  *  concept but not the retired design. */
 export const PROVISIONAL_MIN_CONFIDENCE = 0.7
+/** ADR-0080. ADR-0060 sized the judge around "roughly ten sessions" per batch; nothing
+ *  enforced that until an adversarial review of the route found the gap: an unbounded
+ *  sessionIds array means unbounded Groq spend per request (DAILY_ANALYSIS_CAP counts
+ *  requests, not calls) and, separately, a big enough array overflows the btree tuple size
+ *  on analysis_user_sessions_idx (lib/migrations/007-judge.sql). 20 is double the assumed
+ *  batch size — headroom for a real multi-day catch-up — and far under the index ceiling. */
+export const MAX_SESSIONS_PER_ANALYSIS = 20
 /** D39. Cycle presets. `custom` is any pair; `null` cycles means one continuous block. */
 export const CYCLE_PRESETS = [{ work: 25, break: 5 }, { work: 50, break: 10 }] as const
 /** PRD Q5 / I6. Sessions before a cross-session pattern may be stated. Unused here (the coach is
