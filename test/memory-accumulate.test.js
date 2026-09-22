@@ -1,85 +1,157 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { tally, classify, EMPTY_TALLY } from '../lib/memory-accumulate.ts'
-import { MEMORY_MIN_EVIDENCE, MEMORY_MIN_AGREEMENT } from '../lib/thresholds.ts'
+import { tally, classify, upgradeTally, EMPTY_TALLY } from '../lib/memory-accumulate.ts'
 
-const opts = { minEvidence: MEMORY_MIN_EVIDENCE, minAgreement: MEMORY_MIN_AGREEMENT }
+// Deliberately literal, unlike the old version of this file, which imported the constants.
+// These tests exercise the FUNCTION's rules; re-tuning MEMORY_MIN_VERDICTS against the eval
+// (ADR-0078 says it will be) must not silently rewrite what the tests assert.
+const opts = { minEvidence: 3, minAgreement: 0.8, minVerdicts: 8 }
+const taps = (labels, at = 1, prior) => tally(labels, at, 'tap', prior)
+const verdicts = (labels, at = 1, prior) => tally(labels, at, 'verdict', prior)
 
-// ADR-0062. Labels are written per VISIT; memory forms only when one RECURS.
-//
-// This narrows ADR-0037/D30, which said one-sided evidence resolves at n=1. That rule was
-// written for a CORRECTION of a wrong flag — and ADR-0057 deleted the flag, so there are no
-// corrections left. Every label is now volunteered, and a volunteered label means "this
-// visit", not "this site forever". Memorising at n=1 would break PRD §1.2 directly: tap once
-// on instagram.com at 4pm and the product believes Instagram is always drift, including at
-// 11am when it is avoidance — confidently wrong about the exact case it exists for.
-
-test('tally counts per label and matches the schema value shape', () => {
-  // 002-drift.sql:32 — domain_class value is {work_n, distract_n, neutral_n, last_at}
-  const t = tally(['distract', 'distract', 'work'], 1000)
-  assert.equal(t.distract_n, 2)
-  assert.equal(t.work_n, 1)
-  assert.equal(t.neutral_n, 0)
-  assert.equal(t.last_at, 1000)
+test('taps and verdicts accumulate into separate counts', () => {
+  const t = verdicts(['focused'], 2, taps(['drift', 'drift'], 1))
+  assert.equal(t.taps.drift_n, 2)
+  assert.equal(t.verdicts.focused_n, 1)
+  assert.equal(t.taps.focused_n, 0)
+  assert.equal(t.verdicts.drift_n, 0)
 })
 
-test('tally accumulates onto an existing row rather than replacing it', () => {
-  const first = tally(['distract'], 1)
-  const second = tally(['distract'], 2, first)
-  assert.equal(second.distract_n, 2)
-  assert.equal(second.last_at, 2)
+test('last_at is the latest observation across both sources', () => {
+  const t = verdicts(['focused'], 50, taps(['drift'], 900))
+  assert.equal(t.last_at, 900)
 })
 
-test('tally ignores unknown, which is the absence of an observation', () => {
-  const t = tally(['unknown', 'distract'], 1)
-  assert.equal(t.distract_n, 1)
-  assert.equal(Object.values(t).filter((v) => typeof v === 'number').reduce((a, b) => a + b, 0) - t.last_at, 1)
+test('unknown is dropped, not counted as a fourth class', () => {
+  const t = verdicts(['unknown', 'drift'], 1)
+  assert.equal(t.verdicts.drift_n, 1)
+  assert.equal(Object.values(t.verdicts).reduce((a, b) => a + b, 0), 1)
 })
 
-test('three consistent observations classify the domain', () => {
-  assert.deepEqual(classify(tally(['distract', 'distract', 'distract'], 1), opts), {
-    label: 'distract',
+test('supportive is a first-class count', () => {
+  assert.equal(verdicts(['supportive', 'supportive'], 1).verdicts.supportive_n, 2)
+})
+
+test('three agreeing taps classify', () => {
+  assert.deepEqual(classify(taps(['drift', 'drift', 'drift'], 1), opts), {
+    label: 'drift',
     confidence: 1,
     evidence_n: 3,
+    source: 'tap',
   })
 })
 
-test('two consistent observations do NOT classify', () => {
-  assert.equal(classify(tally(['distract', 'distract'], 1), opts), null)
+test('two taps are not enough', () => {
+  assert.equal(classify(taps(['drift', 'drift'], 1), opts), null)
 })
 
-test('one observation does not classify, even though ADR-0037 once said it would', () => {
-  assert.equal(classify(tally(['distract'], 1), opts), null)
+test('taps below 80% agreement do not classify', () => {
+  assert.equal(classify(taps(['drift', 'drift', 'focused', 'focused'], 1), opts), null)
 })
 
-test('a genuinely ambiguous domain stays unclassified rather than resolving to its majority', () => {
-  // PRD §1.2 in data. A site that really does mean both things must not pick a side.
-  assert.equal(classify(tally(['distract', 'distract', 'work', 'work'], 1), opts), null)
-})
-
-test('agreement exactly at the floor classifies', () => {
-  const t = tally(['distract', 'distract', 'distract', 'distract', 'work'], 1)
-  assert.deepEqual(classify(t, opts), { label: 'distract', confidence: 0.8, evidence_n: 5 })
-})
-
-test('neutral is a first-class outcome, not a fallback', () => {
-  // ADR-0047: forcing ambiguous domains into work-or-drift poisons the memory gating the judge.
-  assert.deepEqual(classify(tally(['neutral', 'neutral', 'neutral'], 1), opts), {
-    label: 'neutral',
+test('seven verdicts are not enough; eight are', () => {
+  const seven = verdicts(Array(7).fill('focused'), 1)
+  assert.equal(classify(seven, opts), null)
+  const eight = verdicts(['focused'], 2, seven)
+  assert.deepEqual(classify(eight, opts), {
+    label: 'focused',
     confidence: 1,
-    evidence_n: 3,
+    evidence_n: 8,
+    source: 'verdict',
   })
 })
 
-test('an empty tally classifies nothing', () => {
+test('a single contrary tap vetoes a verdict classification', () => {
+  const t = taps(['drift'], 2, verdicts(Array(8).fill('focused'), 1))
+  assert.equal(classify(t, opts), null)
+})
+
+test('a tap agreeing with the verdicts does not veto them', () => {
+  const t = taps(['focused'], 2, verdicts(Array(8).fill('focused'), 1))
+  assert.equal(classify(t, opts).label, 'focused')
+  assert.equal(classify(t, opts).source, 'verdict')
+})
+
+test('taps win outright once they clear their own bar', () => {
+  const t = taps(['drift', 'drift', 'drift'], 2, verdicts(Array(20).fill('focused'), 1))
+  assert.deepEqual(classify(t, opts), {
+    label: 'drift',
+    confidence: 1,
+    evidence_n: 3,
+    source: 'tap',
+  })
+})
+
+test('a domain that becomes contested loses its classification', () => {
+  const settled = taps(['drift', 'drift', 'drift'], 1)
+  assert.equal(classify(settled, opts).label, 'drift')
+  const contested = taps(['focused', 'focused', 'focused'], 2, settled)
+  assert.equal(classify(contested, opts), null)
+})
+
+test('EMPTY_TALLY classifies as nothing', () => {
   assert.equal(classify(EMPTY_TALLY, opts), null)
 })
 
-test('a domain that BECOMES ambiguous loses its classification', () => {
-  // The write path must delete, not keep a stale row: three distract taps then three work taps
-  // is a site whose meaning changed, and the old verdict is now actively misleading.
-  const settled = tally(['distract', 'distract', 'distract'], 1)
-  assert.ok(classify(settled, opts))
-  const contested = tally(['work', 'work', 'work'], 2, settled)
-  assert.equal(classify(contested, opts), null)
+// A real bug caught in review: memory.value rows written before ADR-0078 shipped are the
+// tap-era flat shape ({work_n, distract_n, neutral_n, last_at} — see 002-drift.sql's own
+// comment). tally() reads prior.taps/prior.verdicts, which don't exist on that shape, so it
+// silently fell back to EMPTY_COUNTS and the next write permanently discarded a domain's
+// entire accumulated evidence with no warning. upgradeTally() must be called on every value
+// read from Postgres before it reaches tally(), so old evidence survives the transition.
+test('upgradeTally converts the pre-ADR-0078 flat shape, preserving evidence as taps', () => {
+  const old = { work_n: 5, distract_n: 2, neutral_n: 1, last_at: 777 }
+  const upgraded = upgradeTally(old)
+  assert.deepEqual(upgraded, {
+    taps: { focused_n: 5, supportive_n: 0, neutral_n: 1, drift_n: 2 },
+    verdicts: { focused_n: 0, supportive_n: 0, neutral_n: 0, drift_n: 0 },
+    last_at: 777,
+  })
+})
+
+test('upgradeTally leaves an already-current shape untouched', () => {
+  const current = {
+    taps: { focused_n: 1, supportive_n: 0, neutral_n: 0, drift_n: 0 },
+    verdicts: { focused_n: 0, supportive_n: 0, neutral_n: 0, drift_n: 3 },
+    last_at: 42,
+  }
+  assert.deepEqual(upgradeTally(current), current)
+})
+
+test('upgradeTally treats null/undefined (a domain never seen before) as EMPTY_TALLY', () => {
+  assert.deepEqual(upgradeTally(null), EMPTY_TALLY)
+  assert.deepEqual(upgradeTally(undefined), EMPTY_TALLY)
+})
+
+test('upgradeTally distinguishes a legitimate zero from an absent field', () => {
+  // work_n/distract_n both present and 0 is a real prior observation (all evidence pointed
+  // elsewhere), not "no row at all" — `== null` must not treat 0 as absent the way `!old.work_n`
+  // would have.
+  const upgraded = upgradeTally({ work_n: 0, distract_n: 0, neutral_n: 4, last_at: 9 })
+  assert.deepEqual(upgraded, {
+    taps: { focused_n: 0, supportive_n: 0, neutral_n: 4, drift_n: 0 },
+    verdicts: { focused_n: 0, supportive_n: 0, neutral_n: 0, drift_n: 0 },
+    last_at: 9,
+  })
+})
+
+test('old evidence upgraded from the flat shape still counts toward classification', () => {
+  // 5 old work_n taps upgrade to 5 focused taps — already enough to classify on their own,
+  // proving the upgrade path feeds real evidence into classify(), not just a passthrough.
+  const upgraded = upgradeTally({ work_n: 5, distract_n: 0, neutral_n: 0, last_at: 1 })
+  assert.deepEqual(classify(upgraded, opts), {
+    label: 'focused',
+    confidence: 1,
+    evidence_n: 5,
+    source: 'tap',
+  })
+})
+
+test('a new tap folds onto upgraded old evidence instead of resetting it to zero', () => {
+  // This is the exact failure mode from the bug report: an existing user's old-shape row
+  // must not be silently zeroed the next time they tap the same domain.
+  const oldRow = { work_n: 2, distract_n: 0, neutral_n: 0, last_at: 100 }
+  const next = tally(['focused'], 200, 'tap', upgradeTally(oldRow))
+  assert.equal(next.taps.focused_n, 3) // 2 preserved + 1 new, NOT reset to 1
+  assert.equal(next.last_at, 200)
 })

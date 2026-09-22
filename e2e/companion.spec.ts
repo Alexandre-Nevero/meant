@@ -238,7 +238,7 @@ test.describe('floating companion', () => {
       },
     )
     expect(labels).toHaveLength(1)
-    expect(labels[0].label).toBe('distract')
+    expect(labels[0].label).toBe('drift')
     expect(labels[0].domain).toBe('example.com')
 
     await setupPage.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))

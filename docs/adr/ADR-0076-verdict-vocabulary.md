@@ -1,0 +1,16 @@
+# ADR-0076 — The verdict vocabulary: `focused` / `supportive` / `neutral` / `drift`
+
+- **Date:** 2026-09-21
+- **Status:** Accepted
+- **Supersedes:** the `serves`/`drifts`/`unclear` wording in PRD-F9 and ADR-0060.
+- **Context:** Three enums described one fact — `event.label` (`work|distract|neutral|unknown`), `judgment.label` (same), and `judgment.verdict` (`serves|drifts|unclear`). None could express the case the judge exists for: `chatgpt.com` open to draft a proposal is not the proposal, and `docs.google.com` open for reference is not the writing. Both collapse to `work` today.
+- **Decision:** The judge emits **`focused`** (directly performs the task), **`supportive`** (helps accomplish it but is not it), **`neutral`** (genuinely neither), **`drift`** (unrelated activity replacing the intended work), plus **`unknown`**, which is not a verdict but the below-confidence floor. `work` becomes `focused`, `distract` becomes `drift`, everywhere.
+
+  Two boundaries held on purpose:
+
+  - **`break` is not a verdict.** `event.kind = 'break'` exists (`002-drift.sql`) and is *declared* by the cycle timer (ADR-0045). A judge able to emit it could contradict the timer, so break events never reach the prompt.
+  - **`neutral` and `unknown` stay distinct**, as ADR-0047 decided and for its reason: *"forcing ambiguous domains into work-or-drift poisons the memory that gates the judge."* `neutral` is a positive finding; `unknown` is the absence of one. Collapsing them feeds the judge's own low-confidence noise into the tally that gates the judge.
+
+  The spike's measured numbers are the reason this is defensible, not merely plausible. On the held-out test split (four-label taxonomy, `openai/gpt-oss-120b`): overall accuracy 0.905 over covered rows (0.826 over all 46), drift precision 0.818 with drift recall 0.900, and — the question this ADR turns on — `supportive` precision 0.909 with recall 0.909 (10 of 11 opportunities used correctly). Per-label precision for `focused` and `neutral` individually is not broken out in the spike; only overall accuracy and the `drift`/`supportive` figures above are reported. An earlier draft of the spike also compared raw accuracy across four-, three-, and two-label runs to argue narrower taxonomies do worse; that comparison was withdrawn as invalid (scored against unfiltered four-label truth, mechanically unwinnable for the narrower runs) and is not relied on here. This decision rests on the `supportive` held-out precision/recall alone, which the spike itself flags as produced and used correctly when offered, contingent on a real, human-labelled re-run before ADR-0073's release gate is satisfied.
+- **Consequences:** One migration while it is free. `supportive` has nothing to migrate: a tap means one thing (ADR-0058) and cannot mean "supportive"; only the judge emits it. `judgment.verdict` is dropped as redundant. Rendering four labels on one figure collides with `PRODUCT.md`'s *"no figure carries a colour that grades it"* — the split is separated by tone inside the existing terracotta family, never by hue, and that is settled on the design canvas in Plan 4, not here.
+- **Source:** owner decision 2026-09-21; `docs/superpowers/specs/2026-09-21-judge-spike-findings.md`.

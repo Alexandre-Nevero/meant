@@ -35,8 +35,8 @@ test('totalsByKind ignores block_hit, which has null seconds', () => {
 
 test('rankDomains sorts by seconds and shares sum to 100 or less', () => {
   const out = rankDomains([
-    { domain: 'a.com', seconds: 300, label: 'work' },
-    { domain: 'b.com', seconds: 700, label: 'distract' },
+    { domain: 'a.com', seconds: 300, label: 'focused' },
+    { domain: 'b.com', seconds: 700, label: 'drift' },
   ])
   assert.equal(out[0].domain, 'b.com')
   assert.equal(out[0].share, 70)

@@ -30,6 +30,10 @@ create table if not exists memory (
   kind        text not null,               -- domain_class | list | pref
   key         text not null,               -- hostname, or 'work_sites' | 'distract_sites'
   value       jsonb not null,              -- domain_class: {work_n, distract_n, neutral_n, last_at}
+                                            -- (historical shape — ADR-0078 replaced this with
+                                            -- {taps: Counts, verdicts: Counts, last_at}; see
+                                            -- lib/memory-accumulate.ts's upgradeTally(), which
+                                            -- reads either shape from this same column)
   evidence_n  int  not null default 1,
   updated_at  timestamptz not null default now(),
   unique (user_id, kind, key)

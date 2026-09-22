@@ -12,7 +12,7 @@ import { labelsToEvents } from '../extension/lib/visit-label.js'
 // session stays queued and retries forever with the same poison payload still in it.
 test("the events route accepts every kind the extension can emit", () => {
   const route = readFileSync('app/api/events/route.ts', 'utf8')
-  const emitted = new Set(labelsToEvents([{ domain: 'a.com', label: 'distract', at: 1 }]).map((e) => e.kind))
+  const emitted = new Set(labelsToEvents([{ domain: 'a.com', label: 'drift', at: 1 }]).map((e) => e.kind))
   emitted.add('attention').add('away').add('block_hit')
   const declared = route.match(/const KINDS = \[([^\]]+)\]/)
   assert.ok(declared, 'KINDS not found in the events route')
@@ -22,7 +22,8 @@ test("the events route accepts every kind the extension can emit", () => {
 })
 
 test('the events route persists the label column', () => {
-  // event.label already exists (ADR-0044) with work|distract|neutral|unknown. Accepting the
+  // event.label carries focused|supportive|neutral|drift plus unknown (ADR-0076); the server
+  // also accepts the tap-era work|distract values during the extension transition. Accepting the
   // kind but dropping the column would store a row that says nothing.
   const route = readFileSync('app/api/events/route.ts', 'utf8')
   assert.ok(/insert into event \([^)]*label/.test(route), 'label column is not inserted')
