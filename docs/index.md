@@ -199,6 +199,9 @@ which applied those same decisions where the first pass had missed them.
 | **D73** | **A verdict is inference, gated by measured precision on a hand-labelled held-out set. The judge renders nothing until it beats a no-model baseline** | 2026-09-21 | ADR-0073 |
 | **D74** | **The companion is scaled up 20% across all surfaces, and the tap receipt is smoothed into a 420ms fluid circle ripple bloom with character micro-press** | 2026-09-21 | ADR-0074 |
 | **D75** | **Premium is suspended for the testing phase — every ADR-0015 paid feature (plan, judge, companion's judgment, memory, coach) is free, with no quota tied to payment status, until a later ADR ends the suspension** | 2026-09-22 | ADR-0075 |
+| **D76** | **The judge's verdict vocabulary is `focused`/`supportive`/`neutral`/`drift`, plus the non-verdict `unknown` floor — `work`/`distract` retired everywhere** | 2026-09-21 | ADR-0076 |
+| **D77** | **An analysis is a stored artifact keyed by the sessions it covers, not a re-runnable query — reopening is free, re-analysis is an explicit user act** | 2026-09-21 | ADR-0077 |
+| **D78** | **The judge may write memory into a tally kept separate from user taps; a single contrary tap still vetoes the judge's classification (amends ADR-0039/D32)** | 2026-09-21 | ADR-0078 |
 
 ## 7. Pending spawn proposals
 
