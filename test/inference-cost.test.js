@@ -60,3 +60,26 @@ test('the constants are stated, not hidden inside a formula', () => {
   assert.equal(SUBSCRIPTION_USD, 12)
   assert.ok(Object.keys(MODEL_PRICES).length >= 3)
 })
+
+test('groq gpt-oss-20b is priced', () => {
+  // 2,700 in / 800 out — ADR-0060's verified batch shape.
+  const cost = costOf({ model: 'openai/gpt-oss-20b', inputTokens: 2700, outputTokens: 800 })
+  assert.ok(Math.abs(cost - 0.00044) < 0.000005, `expected ~$0.00044, got ${cost}`)
+})
+
+test('groq gpt-oss-120b is priced', () => {
+  const cost = costOf({ model: 'openai/gpt-oss-120b', inputTokens: 2700, outputTokens: 800 })
+  assert.ok(Math.abs(cost - 0.000885) < 0.000005, `expected ~$0.000885, got ${cost}`)
+})
+
+test('a month of capped analysis stays far under the M9 ceiling', () => {
+  const monthly = costOf({ model: 'openai/gpt-oss-120b', inputTokens: 2700, outputTokens: 800 }) * 300
+  assert.ok(shareOfSubscription(monthly) < M9_CEILING, `${shareOfSubscription(monthly)} exceeds ${M9_CEILING}`)
+})
+
+test('an unpriced model still throws rather than costing nothing', () => {
+  assert.throws(
+    () => costOf({ model: 'google/gemini-3.5-flash-lite', inputTokens: 1, outputTokens: 1 }),
+    /unknown model for costing/,
+  )
+})

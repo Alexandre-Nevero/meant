@@ -12,11 +12,15 @@
  *  number that decision needs in front of it.
  */
 
-/** USD per million tokens. Verified 2026-09-11. */
+/** USD per million tokens. Anthropic verified 2026-09-11; Groq verified 2026-09-21 from
+ *  console.groq.com/docs/models. ADR-0072 selects Groq; the Anthropic rows stay because the
+ *  eval compares tiers and an unpriced model throws. */
 export const MODEL_PRICES: Record<string, { inPerM: number; outPerM: number }> = {
   'claude-haiku-4-5-20251001': { inPerM: 1, outPerM: 5 },
   'claude-sonnet-5': { inPerM: 2, outPerM: 10 },
   'claude-opus-5': { inPerM: 5, outPerM: 25 },
+  'openai/gpt-oss-20b': { inPerM: 0.075, outPerM: 0.3 },
+  'openai/gpt-oss-120b': { inPerM: 0.15, outPerM: 0.6 },
 }
 
 /** §7.1 prices against Focusmate ($8/mo annual, $12/mo monthly) — the software competing for
