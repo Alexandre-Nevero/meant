@@ -8,8 +8,10 @@ import { DAILY_COACH_TURNS } from '@/lib/thresholds'
 
 export const dynamic = 'force-dynamic'
 
-// ADR-0079. The larger tier over the judge's cheaper default: a conversational surface is
-// judged on quality, and DAILY_COACH_TURNS already bounds the volume this runs at.
+// ADR-0079, corrected by ADR-0080: the judge also uses openai/gpt-oss-120b (the spike's
+// measured winner), not a cheaper tier as first assumed here. The two features cannot
+// collide on DAILY_COACH_TURNS regardless: this query's session_ids = '{}' filter only
+// ever matches coach turns, never a judge analysis (which always covers real sessions).
 const COACH_MODEL = 'openai/gpt-oss-120b'
 
 function parseHistory(value: unknown): ChatTurn[] {
@@ -50,6 +52,7 @@ export async function POST(req: Request) {
       select count(*) from inference_call
        where user_id = ${userId}
          and model = ${COACH_MODEL}
+         and session_ids = '{}'
          and at >= date_trunc('day', now())`) as { count: string }[]
 
     if (Number(turnsToday[0]?.count ?? 0) >= DAILY_COACH_TURNS) {
