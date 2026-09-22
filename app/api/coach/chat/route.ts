@@ -40,58 +40,74 @@ export async function POST(req: Request) {
     return Response.json({ reply: 'The coach is not configured yet — no API key set.', stats: null })
   }
 
-  const turnsToday = (await sql`
-    select count(*) from inference_call
-     where user_id = ${userId}
-       and model = ${COACH_MODEL}
-       and at >= date_trunc('day', now())`) as { count: string }[]
+  // Everything past this point touches the database or the network. Any failure here must
+  // still return the {reply, stats} contract the client relies on — an uncaught throw would
+  // fall through to Next's generic error response, breaking that contract on a path no test
+  // enumerates. Caught errors are never logged by message/body — same rule as the Groq HTTP
+  // branch below (ADR-0072): an error's content can echo query or request data.
+  try {
+    const turnsToday = (await sql`
+      select count(*) from inference_call
+       where user_id = ${userId}
+         and model = ${COACH_MODEL}
+         and at >= date_trunc('day', now())`) as { count: string }[]
 
-  if (Number(turnsToday[0]?.count ?? 0) >= DAILY_COACH_TURNS) {
-    return Response.json({
-      reply: `You've reached today's conversation limit (${DAILY_COACH_TURNS} turns). Your record is unaffected — come back tomorrow.`,
-      stats: null,
+    if (Number(turnsToday[0]?.count ?? 0) >= DAILY_COACH_TURNS) {
+      return Response.json({
+        reply: `You've reached today's conversation limit (${DAILY_COACH_TURNS} turns). Your record is unaffected — come back tomorrow.`,
+        stats: null,
+      })
+    }
+
+    const monthSessions = (await sql`
+      select outcome from session
+       where user_id = ${userId}
+         and started_at >= date_trunc('month', now())`) as { outcome: string | null }[]
+
+    const eventRows = (await sql`
+      select e.kind, e.domain, e.seconds, e.label
+        from event e
+        join session s on s.id = e.session_id
+       where s.user_id = ${userId}
+         and s.started_at >= date_trunc('month', now())`) as unknown as EventRow[]
+
+    const context = buildCoachContext(monthSessions, eventRows)
+    const messages = buildCoachMessages(context, intention, history)
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ model: COACH_MODEL, temperature: 0.4, messages }),
     })
-  }
 
-  const monthSessions = (await sql`
-    select outcome from session
-     where user_id = ${userId}
-       and started_at >= date_trunc('month', now())`) as { outcome: string | null }[]
+    if (!res.ok) {
+      // Never print the body: on some errors it echoes the request (ADR-0072).
+      console.error(`coach: HTTP ${res.status} ${res.statusText}`)
+      return Response.json({ reply: "I couldn't reach the coach just now — try again in a moment.", stats: null })
+    }
 
-  const eventRows = (await sql`
-    select e.kind, e.domain, e.seconds, e.label
-      from event e
-      join session s on s.id = e.session_id
-     where s.user_id = ${userId}
-       and s.started_at >= date_trunc('month', now())`) as unknown as EventRow[]
+    const data = await res.json()
+    const reply: string =
+      data.choices?.[0]?.message?.content?.trim() || "I don't have a reply for that — try rephrasing?"
+    const inputTokens = data.usage?.prompt_tokens ?? 0
+    const outputTokens = data.usage?.completion_tokens ?? 0
 
-  const context = buildCoachContext(monthSessions, eventRows)
-  const messages = buildCoachMessages(context, intention, history)
+    // If this throws, the call was already made (and billed) but never recorded. Accepted:
+    // logging the reply here to retry the insert would violate the never-log-content rule,
+    // and the alternative (record cost before confirming success) risks charging quota for a
+    // call that never returned a reply. Rare either way; caught below either way.
+    await sql`
+      insert into inference_call (user_id, session_ids, model, input_tokens, output_tokens, cost_usd)
+      values (
+        ${userId}, '{}', ${COACH_MODEL}, ${inputTokens}, ${outputTokens},
+        ${costOf({ model: COACH_MODEL, inputTokens, outputTokens })}
+      )`
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model: COACH_MODEL, temperature: 0.4, messages }),
-  })
-
-  if (!res.ok) {
-    // Never print the body: on some errors it echoes the request (ADR-0072).
-    console.error(`coach: HTTP ${res.status} ${res.statusText}`)
+    return Response.json({ reply, stats: context })
+  } catch (err) {
+    // Log only the error's name/type, never its message — a DB or parse error's message can
+    // carry query text or response content, which is exactly what ADR-0072 forbids logging.
+    console.error(`coach: unexpected ${err instanceof Error ? err.name : typeof err}`)
     return Response.json({ reply: "I couldn't reach the coach just now — try again in a moment.", stats: null })
   }
-
-  const data = await res.json()
-  const reply: string =
-    data.choices?.[0]?.message?.content?.trim() || "I don't have a reply for that — try rephrasing?"
-  const inputTokens = data.usage?.prompt_tokens ?? 0
-  const outputTokens = data.usage?.completion_tokens ?? 0
-
-  await sql`
-    insert into inference_call (user_id, session_ids, model, input_tokens, output_tokens, cost_usd)
-    values (
-      ${userId}, '{}', ${COACH_MODEL}, ${inputTokens}, ${outputTokens},
-      ${costOf({ model: COACH_MODEL, inputTokens, outputTokens })}
-    )`
-
-  return Response.json({ reply, stats: context })
 }
