@@ -1,85 +1,94 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { tally, classify, EMPTY_TALLY } from '../lib/memory-accumulate.ts'
-import { MEMORY_MIN_EVIDENCE, MEMORY_MIN_AGREEMENT } from '../lib/thresholds.ts'
 
-const opts = { minEvidence: MEMORY_MIN_EVIDENCE, minAgreement: MEMORY_MIN_AGREEMENT }
+// Deliberately literal, unlike the old version of this file, which imported the constants.
+// These tests exercise the FUNCTION's rules; re-tuning MEMORY_MIN_VERDICTS against the eval
+// (ADR-0078 says it will be) must not silently rewrite what the tests assert.
+const opts = { minEvidence: 3, minAgreement: 0.8, minVerdicts: 8 }
+const taps = (labels, at = 1, prior) => tally(labels, at, 'tap', prior)
+const verdicts = (labels, at = 1, prior) => tally(labels, at, 'verdict', prior)
 
-// ADR-0062. Labels are written per VISIT; memory forms only when one RECURS.
-//
-// This narrows ADR-0037/D30, which said one-sided evidence resolves at n=1. That rule was
-// written for a CORRECTION of a wrong flag — and ADR-0057 deleted the flag, so there are no
-// corrections left. Every label is now volunteered, and a volunteered label means "this
-// visit", not "this site forever". Memorising at n=1 would break PRD §1.2 directly: tap once
-// on instagram.com at 4pm and the product believes Instagram is always drift, including at
-// 11am when it is avoidance — confidently wrong about the exact case it exists for.
-
-test('tally counts per label and matches the schema value shape', () => {
-  // 002-drift.sql:32 — domain_class value is {work_n, distract_n, neutral_n, last_at}
-  const t = tally(['distract', 'distract', 'work'], 1000)
-  assert.equal(t.distract_n, 2)
-  assert.equal(t.work_n, 1)
-  assert.equal(t.neutral_n, 0)
-  assert.equal(t.last_at, 1000)
+test('taps and verdicts accumulate into separate counts', () => {
+  const t = verdicts(['focused'], 2, taps(['drift', 'drift'], 1))
+  assert.equal(t.taps.drift_n, 2)
+  assert.equal(t.verdicts.focused_n, 1)
+  assert.equal(t.taps.focused_n, 0)
+  assert.equal(t.verdicts.drift_n, 0)
 })
 
-test('tally accumulates onto an existing row rather than replacing it', () => {
-  const first = tally(['distract'], 1)
-  const second = tally(['distract'], 2, first)
-  assert.equal(second.distract_n, 2)
-  assert.equal(second.last_at, 2)
+test('last_at is the latest observation across both sources', () => {
+  const t = verdicts(['focused'], 50, taps(['drift'], 900))
+  assert.equal(t.last_at, 900)
 })
 
-test('tally ignores unknown, which is the absence of an observation', () => {
-  const t = tally(['unknown', 'distract'], 1)
-  assert.equal(t.distract_n, 1)
-  assert.equal(Object.values(t).filter((v) => typeof v === 'number').reduce((a, b) => a + b, 0) - t.last_at, 1)
+test('unknown is dropped, not counted as a fourth class', () => {
+  const t = verdicts(['unknown', 'drift'], 1)
+  assert.equal(t.verdicts.drift_n, 1)
+  assert.equal(Object.values(t.verdicts).reduce((a, b) => a + b, 0), 1)
 })
 
-test('three consistent observations classify the domain', () => {
-  assert.deepEqual(classify(tally(['distract', 'distract', 'distract'], 1), opts), {
-    label: 'distract',
+test('supportive is a first-class count', () => {
+  assert.equal(verdicts(['supportive', 'supportive'], 1).verdicts.supportive_n, 2)
+})
+
+test('three agreeing taps classify', () => {
+  assert.deepEqual(classify(taps(['drift', 'drift', 'drift'], 1), opts), {
+    label: 'drift',
     confidence: 1,
     evidence_n: 3,
+    source: 'tap',
   })
 })
 
-test('two consistent observations do NOT classify', () => {
-  assert.equal(classify(tally(['distract', 'distract'], 1), opts), null)
+test('two taps are not enough', () => {
+  assert.equal(classify(taps(['drift', 'drift'], 1), opts), null)
 })
 
-test('one observation does not classify, even though ADR-0037 once said it would', () => {
-  assert.equal(classify(tally(['distract'], 1), opts), null)
+test('taps below 80% agreement do not classify', () => {
+  assert.equal(classify(taps(['drift', 'drift', 'focused', 'focused'], 1), opts), null)
 })
 
-test('a genuinely ambiguous domain stays unclassified rather than resolving to its majority', () => {
-  // PRD §1.2 in data. A site that really does mean both things must not pick a side.
-  assert.equal(classify(tally(['distract', 'distract', 'work', 'work'], 1), opts), null)
-})
-
-test('agreement exactly at the floor classifies', () => {
-  const t = tally(['distract', 'distract', 'distract', 'distract', 'work'], 1)
-  assert.deepEqual(classify(t, opts), { label: 'distract', confidence: 0.8, evidence_n: 5 })
-})
-
-test('neutral is a first-class outcome, not a fallback', () => {
-  // ADR-0047: forcing ambiguous domains into work-or-drift poisons the memory gating the judge.
-  assert.deepEqual(classify(tally(['neutral', 'neutral', 'neutral'], 1), opts), {
-    label: 'neutral',
+test('seven verdicts are not enough; eight are', () => {
+  const seven = verdicts(Array(7).fill('focused'), 1)
+  assert.equal(classify(seven, opts), null)
+  const eight = verdicts(['focused'], 2, seven)
+  assert.deepEqual(classify(eight, opts), {
+    label: 'focused',
     confidence: 1,
-    evidence_n: 3,
+    evidence_n: 8,
+    source: 'verdict',
   })
 })
 
-test('an empty tally classifies nothing', () => {
-  assert.equal(classify(EMPTY_TALLY, opts), null)
+test('a single contrary tap vetoes a verdict classification', () => {
+  const t = taps(['drift'], 2, verdicts(Array(8).fill('focused'), 1))
+  assert.equal(classify(t, opts), null)
 })
 
-test('a domain that BECOMES ambiguous loses its classification', () => {
-  // The write path must delete, not keep a stale row: three distract taps then three work taps
-  // is a site whose meaning changed, and the old verdict is now actively misleading.
-  const settled = tally(['distract', 'distract', 'distract'], 1)
-  assert.ok(classify(settled, opts))
-  const contested = tally(['work', 'work', 'work'], 2, settled)
+test('a tap agreeing with the verdicts does not veto them', () => {
+  const t = taps(['focused'], 2, verdicts(Array(8).fill('focused'), 1))
+  assert.equal(classify(t, opts).label, 'focused')
+  assert.equal(classify(t, opts).source, 'verdict')
+})
+
+test('taps win outright once they clear their own bar', () => {
+  const t = taps(['drift', 'drift', 'drift'], 2, verdicts(Array(20).fill('focused'), 1))
+  assert.deepEqual(classify(t, opts), {
+    label: 'drift',
+    confidence: 1,
+    evidence_n: 3,
+    source: 'tap',
+  })
+})
+
+test('a domain that becomes contested loses its classification', () => {
+  const settled = taps(['drift', 'drift', 'drift'], 1)
+  assert.equal(classify(settled, opts).label, 'drift')
+  const contested = taps(['focused', 'focused', 'focused'], 2, settled)
   assert.equal(classify(contested, opts), null)
+})
+
+test('EMPTY_TALLY classifies as nothing', () => {
+  assert.equal(classify(EMPTY_TALLY, opts), null)
 })

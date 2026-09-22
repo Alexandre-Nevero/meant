@@ -8,6 +8,11 @@ export const GRACE_MS = 60_000
  *  would teach the product that Instagram is always drift. */
 export const MEMORY_MIN_EVIDENCE = 3
 export const MEMORY_MIN_AGREEMENT = 0.8
+/** ADR-0078. Verdicts may classify a domain, but at a higher bar than taps, because a model
+ *  opinion is worth less than a deliberate human act. Eight is a STARTING VALUE, not a
+ *  measured one — the eval re-tunes it, and nothing should treat it as settled until it has.
+ *  A single contrary tap vetoes a verdict classification regardless of this number. */
+export const MEMORY_MIN_VERDICTS = 8
 /** SDD Q6 / V8. Daily per-user judgment cap.
  *  google/gemini-3.5-flash-lite at $0.30/Mtok in, $2.50/Mtok out (verified 2026-09-03).
  *  T-A input ~500 tok, output ~20 tok = $0.0002/judgment. 150/day = $0.90/month = 7.5% of a
