@@ -202,6 +202,7 @@ which applied those same decisions where the first pass had missed them.
 | **D76** | **The judge's verdict vocabulary is `focused`/`supportive`/`neutral`/`drift`, plus the non-verdict `unknown` floor — `work`/`distract` retired everywhere** | 2026-09-21 | ADR-0076 |
 | **D77** | **An analysis is a stored artifact keyed by the sessions it covers, not a re-runnable query — reopening is free, re-analysis is an explicit user act** | 2026-09-21 | ADR-0077 |
 | **D78** | **The judge may write memory into a tally kept separate from user taps; a single contrary tap still vetoes the judge's classification (amends ADR-0039/D32)** | 2026-09-21 | ADR-0078 |
+| **D79** | **The coach calls Groq (openai/gpt-oss-120b), non-streaming, speaking only from real session data — never a fabricated fallback number** | 2026-09-22 | ADR-0079 |
 
 ## 7. Pending spawn proposals
 
