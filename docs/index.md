@@ -198,6 +198,7 @@ which applied those same decisions where the first pass had missed them.
 | **D72** | **Inference runs on Groq with Zero Data Retention. Never a tier whose terms permit training on prompts, at any price** | 2026-09-21 | ADR-0072 |
 | **D73** | **A verdict is inference, gated by measured precision on a hand-labelled held-out set. The judge renders nothing until it beats a no-model baseline** | 2026-09-21 | ADR-0073 |
 | **D74** | **The companion is scaled up 20% across all surfaces, and the tap receipt is smoothed into a 420ms fluid circle ripple bloom with character micro-press** | 2026-09-21 | ADR-0074 |
+| **D75** | **Premium is suspended for the testing phase — every ADR-0015 paid feature (plan, judge, companion's judgment, memory, coach) is free, with no quota tied to payment status, until a later ADR ends the suspension** | 2026-09-22 | ADR-0075 |
 
 ## 7. Pending spawn proposals
 
