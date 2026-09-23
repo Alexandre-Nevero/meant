@@ -3,6 +3,7 @@ import { isEditable } from './lib/sentence-lock.js'
 import { normalizeDomain } from './lib/normalize-domain.js'
 import { resolveSitePhrase } from './lib/resolve-sites.js'
 import { withOpenSlice, toSegments } from './lib/tally.js'
+import { MAX_CYCLES, clampCount, plannedMinutesFor, restoreCycle } from './lib/cycles.js'
 
 const root = document.getElementById('root')
 
@@ -10,10 +11,6 @@ const root = document.getElementById('root')
 // extension can't import that TS module (T4 note). Task 10's gate.js reconciles the
 // duplication once it lands; this is a magic-number duplication, not a forward reference.
 const GRACE_MS = 60_000
-
-// D39. Matches lib/thresholds.ts's CYCLE_PRESETS, same cross-import limitation as GRACE_MS
-// above. `custom` is any pair; `null` cycle means one continuous block (today's behaviour).
-const CYCLE_PRESETS = [{ work: 25, break: 5 }, { work: 50, break: 10 }]
 
 function el(tag, className, text) {
   const node = document.createElement(tag)
@@ -60,7 +57,9 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
         chip.setAttribute('aria-pressed', String(selected.has(v)))
       } else {
         single = v
-        for (const b of row.querySelectorAll('.m-chip')) b.setAttribute('aria-pressed', String(b === chip))
+        // Direct children only: the cycle row nests its stepper's −/+ buttons (also .m-chip)
+        // inside the same row, and a single-select click must never stamp aria-pressed on them.
+        for (const b of row.querySelectorAll(':scope > .m-chip')) b.setAttribute('aria-pressed', String(b === chip))
       }
       if (onChange) onChange(currentValue())
     })
@@ -220,14 +219,16 @@ function header(mark) {
   return wrap
 }
 
-/** 25/5 · 50/10 · custom — one single-select, always visible. Custom reveals labelled
- *  work/break inputs plus two more chips (until I stop / no cycles), at-most-one-of-two.
- *  `.value` is `{ plannedMinutes, cycle }` directly — the exact shape the Start handler
- *  already sends to sw.js, so nothing downstream of this picker needs to change. */
+/** Two labelled presets, a cycle count, then custom (ADR-0081). Custom reveals labelled
+ *  work/break inputs plus two more chips (until I stop / no cycles), at-most-one-of-two. The
+ *  count applies to the presets and to custom "timed", and is hidden where it means nothing.
+ *  `.value` is `{ plannedMinutes, cycle }` directly — the exact shape the Start handler sends
+ *  to sw.js, so nothing downstream of this picker needs to change. */
 function cycleDurationPicker(lastChoice) {
-  const restored = restore(lastChoice)
+  const restored = restoreCycle(lastChoice)
   let mode = restored.mode
   let customMode = restored.customMode
+  let count = restored.count
 
   const workLabelText = el('span', null, customMode === 'none' ? 'minutes' : 'work')
   const workLabel = el('label', 'm-meta')
@@ -265,12 +266,42 @@ function cycleDurationPicker(lastChoice) {
   customRow.append(inputsRow, customChipsRow)
   customRow.hidden = mode !== 'custom'
 
+  // The count: static text plus −/+ (a stepper, not a dial — ADR-0045 refuses the dial).
+  const countText = el('span', 'm-meta')
+  const fewer = el('button', 'm-chip', '−')
+  fewer.type = 'button'
+  fewer.dataset.chipRole = 'step'
+  fewer.setAttribute('aria-label', 'Fewer cycles')
+  const more = el('button', 'm-chip', '+')
+  more.type = 'button'
+  more.dataset.chipRole = 'step'
+  more.setAttribute('aria-label', 'More cycles')
+  const stepper = el('div')
+  stepper.dataset.chipLayout = 'count'
+  stepper.append(countText, fewer, more)
+
+  function setCount(next) {
+    count = clampCount(next)
+    countText.textContent = `× ${count} ${count === 1 ? 'cycle' : 'cycles'}`
+    fewer.disabled = count <= 1
+    more.disabled = count >= MAX_CYCLES
+  }
+  fewer.addEventListener('click', () => setCount(count - 1))
+  more.addEventListener('click', () => setCount(count + 1))
+  setCount(count)
+
+  // A count means nothing without an end ("until I stop") or without cycles ("no cycles").
+  function syncStepper() {
+    stepper.hidden = mode === 'custom' && customMode !== 'timed'
+  }
+
   function setCustomMode(next) {
     customMode = next
     openChip.setAttribute('aria-pressed', String(next === 'open'))
     noneChip.setAttribute('aria-pressed', String(next === 'none'))
     brkInput.disabled = next === 'none'
     workLabelText.textContent = next === 'none' ? 'minutes' : 'work'
+    syncStepper()
   }
   openChip.addEventListener('click', () => setCustomMode(customMode === 'open' ? 'timed' : 'open'))
   noneChip.addEventListener('click', () => setCustomMode(customMode === 'none' ? 'timed' : 'none'))
@@ -281,10 +312,23 @@ function cycleDurationPicker(lastChoice) {
   brkInput.addEventListener('input', () => { if (customMode !== 'timed') setCustomMode('timed') })
 
   const level1 = chipGroup(
-    [{ label: '25/5', value: '25/5' }, { label: '50/10', value: '50/10' }, { label: 'custom', value: 'custom' }],
-    { mono: true, value: mode, onChange: (v) => { mode = v; customRow.hidden = v !== 'custom' } },
+    [
+      { label: '25 work · 5 break', value: '25/5' },
+      { label: '50 work · 10 break', value: '50/10' },
+      { label: 'custom', value: 'custom' },
+    ],
+    { mono: true, value: mode, onChange: (v) => { mode = v; customRow.hidden = v !== 'custom'; syncStepper() } },
   )
   level1.row.dataset.chipLayout = 'paired'
+  // Presets on the first line; the count and custom on the second (the owner's layout,
+  // 2026-09-23). A zero-height full-width span forces the wrap without a second chipGroup —
+  // exclusive single-select has to span all three chips.
+  const customChip = level1.row.lastElementChild
+  const lineBreak = el('span')
+  lineBreak.dataset.chipLayout = 'break'
+  level1.row.insertBefore(lineBreak, customChip)
+  level1.row.insertBefore(stepper, customChip)
+  syncStepper()
 
   return {
     row: level1.row,
@@ -294,28 +338,13 @@ function cycleDurationPicker(lastChoice) {
       const b = Number(brkInput.value) || 5
       if (level1.value !== 'custom') {
         const [pw, pb] = level1.value.split('/').map(Number)
-        return { plannedMinutes: pw + pb, cycle: { work: pw, break: pb } }
+        return { plannedMinutes: plannedMinutesFor({ work: pw, break: pb, count }), cycle: { work: pw, break: pb, count } }
       }
       if (customMode === 'none') return { plannedMinutes: w, cycle: null }
       if (customMode === 'open') return { plannedMinutes: null, cycle: { work: w, break: b } }
-      return { plannedMinutes: w + b, cycle: { work: w, break: b } }
+      return { plannedMinutes: plannedMinutesFor({ work: w, break: b, count }), cycle: { work: w, break: b, count } }
     },
   }
-}
-
-/** Reconstructs the picker's {mode, customMode, work, brk} starting state from a saved
- *  { plannedMinutes, cycle } choice — or the default when there is none yet. */
-function restore(lastChoice) {
-  if (!lastChoice) return { mode: '25/5', customMode: 'timed', work: 25, brk: 5 }
-  const { plannedMinutes: pm, cycle: c } = lastChoice
-  if (!c) return { mode: 'custom', customMode: 'none', work: pm ?? 25, brk: 5 }
-  const preset = CYCLE_PRESETS.find((p) => p.work === c.work && p.break === c.break)
-  if (preset && pm === preset.work + preset.break) {
-    return { mode: `${preset.work}/${preset.break}`, customMode: 'timed', work: c.work, brk: c.break }
-  }
-  // A preset pair with a mismatched duration is an old-model session (e.g. 50 min through
-  // two 25/5 cycles) — lands in custom, exactly where the new model puts that shape.
-  return { mode: 'custom', customMode: pm == null ? 'open' : 'timed', work: c.work, brk: c.break }
 }
 
 async function fetchLists() {
@@ -401,7 +430,7 @@ async function idle() {
   const knownWorkSites = lists.workSites ?? []
   const distractSites = lists.distractSites ?? []
 
-  // First ever session: 25/5 (30 min). A returning session recalls last time's pick.
+  // First ever session: 25/5, one cycle (25 min, ADR-0081). A returning session recalls last time's pick.
   const picker = cycleDurationPicker(lastChoice)
 
   // First ever session: workSites from the API, none pre-selected.
