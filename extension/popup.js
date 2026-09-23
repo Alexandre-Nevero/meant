@@ -513,7 +513,8 @@ async function idle() {
     await post('/api/device', undefined, { method: 'DELETE', queue: false })
     // pendingReview too: a stale marker from a previous account/device must never show
     // someone else's (or a revoked device's) outcome question after a fresh pairing.
-    await chrome.storage.local.set({ token: null, deviceId: null, session: null, pendingReview: null })
+    await chrome.storage.local.set({ token: null, deviceId: null, session: null, pendingReview: null, askPending: false })
+    await chrome.action.setBadgeText({ text: '' })
     render()
   })
 
@@ -744,6 +745,12 @@ function running(session) {
   )
 }
 
+/** ADR-0082. The marker, the pending auto-open and the badge always clear together. */
+async function clearPending() {
+  await chrome.storage.local.remove(['pendingReview', 'askPending'])
+  await chrome.action.setBadgeText({ text: '' })
+}
+
 async function outcome(sessionId) {
   const mark = el('p', 'm-mark', '')
   mark.dataset.state = 'ended'
@@ -756,13 +763,13 @@ async function outcome(sessionId) {
     const done = el('button', 'm-btn', 'Done')
     done.dataset.variant = 'quiet'
     done.addEventListener('click', async () => {
-      await chrome.storage.local.remove('pendingReview')
+      await clearPending()
       render()
     })
     return show(mark, el('p', 'm-meta', "Can't reach it right now."), done)
   }
   if (!res.ok || !res.data) {
-    await chrome.storage.local.remove('pendingReview')
+    await clearPending()
     return idle()
   }
   const data = res.data
@@ -824,7 +831,7 @@ async function outcome(sessionId) {
     const done = el('button', 'm-btn', 'Done')
     done.dataset.variant = 'quiet'
     done.addEventListener('click', async () => {
-      await chrome.storage.local.remove('pendingReview')
+      await clearPending()
       render()
     })
     nodes.push(done)

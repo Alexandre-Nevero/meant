@@ -168,6 +168,21 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
   return { ok: true, sessionId }
 }
 
+/** ADR-0082. Opens the popup to ask "Did you?" — at an elapsed end, and again on the next
+ *  window focus if Chrome had no focused window to open it into. No user gesture needed since
+ *  Chrome 127; the only failure is "no active browser window", which leaves askPending set. */
+async function askOutcome() {
+  const { pendingReview, askPending } = await chrome.storage.local.get(['pendingReview', 'askPending'])
+  if (!pendingReview || !askPending) return
+  try {
+    await chrome.action.openPopup()
+    await chrome.storage.local.set({ askPending: false })
+  } catch {
+    // The user is in another app. onFocusChanged below tries again when they come back.
+  }
+}
+self.askOutcome = askOutcome
+
 export async function endSession(endReason) {
   const session = await getSession()
   if (!session) return { ok: false }
@@ -195,6 +210,12 @@ export async function endSession(endReason) {
 
   if (endReason === 'stopped' || endReason === 'elapsed') {
     await chrome.storage.local.set({ pendingReview: { sessionId: session.sessionId } })
+    await chrome.action.setBadgeText({ text: '?' }) // ADR-0082: until the popup's Done
+  }
+  // Only an elapsed end asks by itself: after 'stopped' the popup is already open on the question.
+  if (endReason === 'elapsed') {
+    await chrome.storage.local.set({ askPending: true })
+    await askOutcome()
   }
 
   return { ok: true }
@@ -273,6 +294,12 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   }
   const { domain, url } = await activeTarget()
   await transition({ mode: 'attention', domain, url })
+})
+
+// ADR-0082. A second listener, not a branch in the one above: that one returns early when no
+// session is running, which is exactly when an elapsed session's question is waiting.
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  if (windowId !== chrome.windows.WINDOW_ID_NONE) askOutcome()
 })
 
 export async function flush() {

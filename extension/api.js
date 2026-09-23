@@ -22,6 +22,7 @@ export async function get(path) {
         pendingReview: null,
         unpairedReason: 'This device was disconnected from your account. Pair again.',
       })
+      await chrome.action.setBadgeText({ text: '' }) // ADR-0082: no question is waiting any more
     }
     return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) }
   } catch {
@@ -51,6 +52,7 @@ export async function post(path, body, { method = 'POST', queue: shouldQueue = t
         pendingReview: null,
         unpairedReason: 'This device was disconnected from your account. Pair again.',
       })
+      await chrome.action.setBadgeText({ text: '' }) // ADR-0082: no question is waiting any more
     }
     return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) }
   } catch {
