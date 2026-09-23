@@ -155,3 +155,32 @@ test('ending a two-task session asks Did you? once per task, with identical answ
   await page.getByRole('button', { name: 'Done' }).click()
   await expect(page.getByText('What do you mean to do?')).toBeVisible()
 })
+
+test('each task\'s review lists the other, and a late task\'s earlier time counts as paused, not unrecorded', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  const start = await send(page, START)
+  // Ten minutes into the block, a second task starts. Its row shares the block's clock, so those
+  // ten minutes belong to it as paused time.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    chrome.storage.local.get('session', ({ session }: any) => {
+      session.startedAt = new Date(Date.now() - 10 * 60_000).toISOString()
+      chrome.storage.local.set({ session }, () => resolve())
+    })
+  }))
+  const added = await send(page, { type: 'add-task', intention: 'research sources', blockedDomains: [], workSites: [] })
+  await send(page, { type: 'stop' })
+
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/sessions/${added.sessionId}/review`)).json()).pausedSeconds ?? 0, { timeout: 10_000 })
+    .toBeGreaterThanOrEqual(595)
+  const late = await (await page.request.get(`/api/sessions/${added.sessionId}/review`)).json()
+  expect(late.unrecordedSeconds).toBeLessThan(30)
+  expect(late.siblings.map((s: any) => s.id)).toEqual([start.sessionId])
+
+  await page.goto(`/review/${start.sessionId}`)
+  await expect(page.getByText('Also in this session', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'research sources' })).toHaveAttribute('href', `/review/${added.sessionId}`)
+})

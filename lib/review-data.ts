@@ -15,6 +15,10 @@ export type ReviewData = {
   answered: number
   /** Wall clock minus attention, away and break. ADR-0054: say what we did not see. */
   unrecordedSeconds: number
+  /** ADR-0084. Time this task sat parked while another task in its session was active. */
+  pausedSeconds: number
+  /** ADR-0084. The other tasks in this row's session, if it held more than one. */
+  siblings: { id: string; intention: string; outcome: string }[]
 }
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -23,7 +27,7 @@ export async function getReviewData(sessionId: string, userId: string): Promise<
   if (!UUID.test(sessionId)) return null
 
   const [session] = await sql`
-    select id, intention, outcome, started_at, ended_at
+    select id, intention, outcome, started_at, ended_at, block_id
       from session where id = ${sessionId} and user_id = ${userId}`
   if (!session) return null
 
@@ -44,6 +48,18 @@ export async function getReviewData(sessionId: string, userId: string): Promise<
     .filter((r) => r.kind === 'block_hit')
     .reduce((total, r) => total + r.hits, 0)
 
+  const pausedSeconds = rows
+    .filter((r) => r.kind === 'paused')
+    .reduce((total, r) => total + r.seconds, 0)
+  // user_id on this query too: block_id is client-supplied (ADR-0084), so it may only ever
+  // group the caller's own rows.
+  const siblings = session.block_id
+    ? ((await sql`
+        select id, intention, outcome from session
+         where user_id = ${userId} and block_id = ${session.block_id} and id <> ${sessionId}
+         order by id`) as { id: string; intention: string; outcome: string }[])
+    : []
+
   const [counts] = await sql`
     select
       count(*) filter (where outcome = 'yes')::int as finished,
@@ -61,5 +77,7 @@ export async function getReviewData(sessionId: string, userId: string): Promise<
     finished: counts.finished,
     answered: counts.answered,
     unrecordedSeconds: computeUnrecorded(session.started_at, session.ended_at, rows),
+    pausedSeconds,
+    siblings,
   }
 }
