@@ -3,6 +3,7 @@ import { BLOCKLISTS } from './blocklists.js'
 import { advance, emptySlice, idleMode, IDLE_DETECTION_S } from './lib/attribution.js'
 import { appendVisit, purgeExpired } from './lib/path-log.js'
 import { labelCurrentVisit, labelsToEvents } from './lib/visit-label.js'
+import { MAX_TASKS, addTask, switchTask, closingEvents } from './lib/block.js'
 
 const TICK = 'meant-tick'
 const RULE_ID_BASE = 1000
@@ -77,6 +78,23 @@ export async function getSession() {
   return session ?? null
 }
 
+async function getBlock() {
+  const { block } = await chrome.storage.local.get('block')
+  return block ?? null
+}
+
+// ADR-0084. Blocks follow the active task: lift the rules, send the old task's blocked tabs back
+// (only those the new task does not also block), then lay the new task's rules and sweep.
+// Same order as endSession, and for the same reason: a rule still installed during the
+// sweep-back would redirect that navigation straight back to blocked.html.
+async function swapRules(fromDomains, toDomains) {
+  await removeAllRules()
+  await sweepBlockedTabsBack((fromDomains ?? []).filter((d) => !(toDomains ?? []).includes(d)))
+  const { ruleIds, domains } = await installRules(toDomains)
+  await sweepOpenTabs(domains)
+  return ruleIds
+}
+
 // Strips `www.` so a tracked visit matches the same bare form the user configures
 // everywhere else (setup, the popup's site chips) — `new URL().hostname` alone
 // left `www.facebook.com` on the review page next to a configured `facebook.com`,
@@ -133,7 +151,9 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
       ruleIds: [], signals: [], corrected: [], judged: {},
       labels: [],                                   // ADR-0058: the companion's one-tap labels
       tally: { attention: {}, away: 0, break: 0 },
+      blockId: sessionId, lockFrom: startedAt,      // ADR-0084: a new session is a block of one
     },
+    block: { id: sessionId, tasks: [] },
     companionState: 'settled',
   })
   await chrome.alarms.create(TICK, { periodInMinutes: 0.5 })
@@ -164,8 +184,81 @@ export async function startSession({ intention, plannedMinutes, blockedDomains, 
   // localHour comes from the SAME `now` that produced startedAt — reading the clock again
   // here could let the two disagree (e.g. across a midnight rollover mid-function).
   const localHour = new Date(now).getHours()
-  post('/api/sessions', { id: sessionId, intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle, startedAt, localHour })
+  post('/api/sessions', { id: sessionId, intention, plannedMinutes, blockedDomains, blocklists, workSites, cycle, startedAt, localHour, blockId: sessionId })
   return { ok: true, sessionId }
+}
+
+/** ADR-0084. A new intention becomes the active task; the current one is parked. Rules swap
+ *  FIRST, so a failed swap aborts with nothing else changed (and the old rules restored). */
+export async function addTaskToSession({ intention, blockedDomains = [], workSites = [] }) {
+  const current = await getSession()
+  const block = await getBlock()
+  if (!current || !block) return { ok: false, error: 'no-session' }
+  if (1 + block.tasks.length >= MAX_TASKS) return { ok: false, error: 'max-tasks' }
+
+  let ruleIds
+  try {
+    ruleIds = await swapRules(current.blockedDomains, blockedDomains)
+  } catch (error) {
+    console.error('addTaskToSession: rules failed', error instanceof Error ? error.name : 'unknown')
+    await swapRules(blockedDomains, current.blockedDomains).catch(() => {})
+    return { ok: false, error: 'rules' }
+  }
+
+  const now = Date.now()
+  const closed = (await transition({ mode: current.slice?.mode ?? 'attention', domain: null, at: now })) ?? current
+  const sessionId = crypto.randomUUID()
+  const task = {
+    sessionId, intention, startedAt: current.startedAt, plannedMinutes: current.plannedMinutes,
+    blockedDomains, blocklists: [], workSites, cycle: current.cycle,
+    slice: emptySlice(now), dwellSince: now, visitSeq: 0,
+    ruleIds, signals: [], corrected: [], judged: {},
+    labels: [],
+    tally: { attention: {}, away: 0, break: 0 },
+    blockId: block.id, lockFrom: new Date(now).toISOString(),
+  }
+  const next = addTask(block, closed, task, now)
+  await chrome.storage.local.set({ session: next.active, block: next.block })
+  if (next.paused) await enqueue(next.active, next.paused)
+  const seed = await activeTarget()
+  await transition({ mode: 'attention', domain: seed.domain, url: seed.url })
+  // AWAITED, unlike startSession's fire-and-forget: a Stop pressed right after "+ task" would
+  // otherwise PATCH this row's end before its insert lands, and a 404 PATCH is never queued —
+  // the task would stay open forever. Offline, post() queues it and returns at once, and flush()
+  // replays the queue in order (this insert before that PATCH). The row shares the block's
+  // clock: same started_at, same hour (ADR-0067's hour is the block's).
+  await post('/api/sessions', {
+    id: sessionId, intention, plannedMinutes: current.plannedMinutes, blockedDomains, blocklists: [],
+    workSites, cycle: current.cycle, startedAt: current.startedAt,
+    localHour: new Date(current.startedAt).getHours(), blockId: block.id,
+  })
+  return { ok: true, sessionId }
+}
+
+/** ADR-0084. One tap from one task to another; rules swap first, exactly as above. */
+export async function switchToTask(targetId) {
+  const current = await getSession()
+  const block = await getBlock()
+  const target = block?.tasks.find((t) => t.sessionId === targetId)
+  if (!current || !target) return { ok: false, error: 'no-task' }
+
+  let ruleIds
+  try {
+    ruleIds = await swapRules(current.blockedDomains, target.blockedDomains)
+  } catch (error) {
+    console.error('switchToTask: rules failed', error instanceof Error ? error.name : 'unknown')
+    await swapRules(target.blockedDomains, current.blockedDomains).catch(() => {})
+    return { ok: false, error: 'rules' }
+  }
+
+  const now = Date.now()
+  const closed = (await transition({ mode: current.slice?.mode ?? 'attention', domain: null, at: now })) ?? current
+  const next = switchTask(block, closed, targetId, now)
+  await chrome.storage.local.set({ session: { ...next.active, ruleIds }, block: next.block })
+  if (next.paused) await enqueue(next.active, next.paused)
+  const seed = await activeTarget()
+  await transition({ mode: 'attention', domain: seed.domain, url: seed.url })
+  return { ok: true }
 }
 
 /** ADR-0082. Opens the popup to ask "Did you?" — at an elapsed end, and again on the next
@@ -186,13 +279,19 @@ self.askOutcome = askOutcome
 export async function endSession(endReason) {
   const session = await getSession()
   if (!session) return { ok: false }
+  const block = await getBlock()
+  const parked = block?.tasks ?? []
+  const endedAt = new Date().toISOString()
   try {
     await transition({ mode: session.slice?.mode ?? 'attention', domain: null })
+    // ADR-0084: each parked task's last stretch of inactivity, then every row ends together.
+    for (const { sessionId, event } of closingEvents(block, Date.parse(endedAt))) {
+      await enqueue({ sessionId }, event)
+    }
     await flush()
-    await post(`/api/sessions/${session.sessionId}`, {
-      endedAt: new Date().toISOString(),
-      endReason,
-    }, { method: 'PATCH' })
+    for (const id of [session.sessionId, ...parked.map((t) => t.sessionId)]) {
+      await post(`/api/sessions/${id}`, { endedAt, endReason }, { method: 'PATCH' })
+    }
   } finally {
     // removeAllRules() must run BEFORE the sweep: declarativeNetRequest intercepts the
     // sweep's own tabs.update navigation just like any other new navigation attempt — if
@@ -200,16 +299,19 @@ export async function endSession(endReason) {
     // real site gets redirected right back to blocked.html (the exact same URL, so it
     // looks like nothing happened). Removing the rule first closes that race.
     await removeAllRules()
-    await sweepBlockedTabsBack(session.blockedDomains)
+    // A parked task's rules are already lifted, but a tab can still sit on its blocked.html.
+    await sweepBlockedTabsBack([...new Set([session, ...parked].flatMap((t) => t.blockedDomains ?? []))])
     await chrome.alarms.clear(TICK)
-    await chrome.storage.local.set({ session: null, companionState: null })
+    await chrome.storage.local.set({ session: null, block: null, companionState: null })
     // No session means no alarm to drain the queue later, so try once more now — this is
     // what lets a queued end-of-session PATCH sync without waiting for the next session.
     await flush()
   }
 
   if (endReason === 'stopped' || endReason === 'elapsed') {
-    await chrome.storage.local.set({ pendingReview: { sessionId: session.sessionId } })
+    await chrome.storage.local.set({
+      pendingReview: { sessionId: session.sessionId, sessionIds: [session.sessionId, ...parked.map((t) => t.sessionId)] },
+    })
     await chrome.action.setBadgeText({ text: '?' }) // ADR-0082: until the popup's Done
   }
   // Only an elapsed end asks by itself: after 'stopped' the popup is already open on the question.
@@ -396,6 +498,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(await startSession({ ...message, blockedDomains }))
     } else if (message?.type === 'stop') sendResponse(await endSession('stopped'))
     else if (message?.type === 'not-the-work') sendResponse(await recordNotTheWork())
+    else if (message?.type === 'add-task') sendResponse(await addTaskToSession(message))
+    else if (message?.type === 'switch-task') sendResponse(await switchToTask(message.sessionId))
     else if (message?.type === 'open-meant') {
       ;(async () => {
         if (chrome.action?.openPopup) {
@@ -423,7 +527,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function recoverStaleSession() {
   const session = await getSession()
   if (session) await endSession('recovered')
-  else await removeAllRules()
+  else {
+    await removeAllRules()
+    await chrome.storage.local.set({ block: null }) // ADR-0084: never a block without its active task
+  }
 }
 
 chrome.runtime.onInstalled.addListener(recoverStaleSession)

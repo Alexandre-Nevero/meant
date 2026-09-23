@@ -1,0 +1,89 @@
+import { test, expect } from './fixtures'
+
+// ADR-0084. One session, several tasks; blocking follows the active one.
+async function pairPopup(page: import('@playwright/test').Page, extensionId: string) {
+  const mint = await page.request.post('/api/pair')
+  const { code } = await mint.json()
+  const claim = await page.request.post('/api/pair/claim', { data: { code } })
+  const { token, deviceId } = await claim.json()
+  await page.goto(`chrome-extension://${extensionId}/popup.html`)
+  await page.evaluate(({ token, deviceId }) => new Promise<void>((r) => chrome.storage.local.set({ token, deviceId }, () => r())), { token, deviceId })
+  await page.reload()
+}
+const storage = (page: import('@playwright/test').Page, key: string) =>
+  page.evaluate((k) => new Promise<any>((r) => chrome.storage.local.get(k, (v: any) => r(v[k] ?? null))), key)
+const send = (page: import('@playwright/test').Page, message: object) =>
+  page.evaluate((m) => chrome.runtime.sendMessage(m), message) as Promise<any>
+async function ruleDomains(context: import('@playwright/test').BrowserContext) {
+  const [sw] = context.serviceWorkers()
+  return sw.evaluate(async () =>
+    (await chrome.declarativeNetRequest.getDynamicRules()).map((r) => r.condition.requestDomains![0]).sort())
+}
+const START = { type: 'start', intention: 'write the letter', plannedMinutes: 60, blockedDomains: ['youtube.com'], blocklists: [], workSites: [], cycle: null }
+
+test('adding a task parks the first and swaps the blocks; switching swaps them back; stop ends both', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  const start = await send(page, START)
+  expect(start.ok).toBe(true)
+  const first = start.sessionId
+  expect(await ruleDomains(context)).toEqual(['youtube.com'])
+
+  const added = await send(page, { type: 'add-task', intention: 'research sources', blockedDomains: ['x.com'], workSites: [] })
+  expect(added.ok).toBe(true)
+  expect(await ruleDomains(context)).toEqual(['x.com'])
+  const active = await storage(page, 'session')
+  expect(active.sessionId).toBe(added.sessionId)
+  expect(active.blockId).toBe(first)
+  expect(active.startedAt).toBe((await storage(page, 'block')).tasks[0].startedAt) // one shared clock
+  const block = await storage(page, 'block')
+  expect(block.tasks.map((t: any) => t.sessionId)).toEqual([first])
+  expect(typeof block.tasks[0].pausedAt).toBe('number')
+
+  const back = await send(page, { type: 'switch-task', sessionId: first })
+  expect(back.ok).toBe(true)
+  expect(await ruleDomains(context)).toEqual(['youtube.com'])
+  expect((await storage(page, 'session')).sessionId).toBe(first)
+  expect((await storage(page, 'block')).tasks.map((t: any) => t.sessionId)).toEqual([added.sessionId])
+
+  await send(page, { type: 'stop' })
+  await expect.poll(async () => storage(page, 'session')).toBeNull()
+  expect(await storage(page, 'block')).toBeNull()
+  expect(await ruleDomains(context)).toEqual([])
+  const pending = await storage(page, 'pendingReview')
+  expect(pending.sessionId).toBe(first)
+  expect([...pending.sessionIds].sort()).toEqual([first, added.sessionId].sort())
+
+  for (const id of [first, added.sessionId]) {
+    await expect
+      .poll(async () => (await (await page.request.get(`/api/sessions/${id}/review`)).json()).endedAt ?? null, { timeout: 10_000 })
+      .not.toBeNull()
+  }
+})
+
+test('a session holds at most four tasks', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  await send(page, START)
+  for (const i of [2, 3, 4]) {
+    expect((await send(page, { type: 'add-task', intention: `task ${i}`, blockedDomains: [], workSites: [] })).ok).toBe(true)
+  }
+  expect(await send(page, { type: 'add-task', intention: 'task 5', blockedDomains: [], workSites: [] })).toEqual({ ok: false, error: 'max-tasks' })
+  await send(page, { type: 'stop' })
+})
+
+test('switching to a task that is not parked changes nothing', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  const start = await send(page, START)
+  expect(await send(page, { type: 'switch-task', sessionId: '00000000-0000-4000-8000-000000000000' })).toEqual({ ok: false, error: 'no-task' })
+  expect((await storage(page, 'session')).sessionId).toBe(start.sessionId)
+  expect(await ruleDomains(context)).toEqual(['youtube.com'])
+  await send(page, { type: 'stop' })
+})

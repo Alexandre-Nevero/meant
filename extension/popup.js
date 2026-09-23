@@ -607,7 +607,7 @@ async function idle() {
     await post('/api/device', undefined, { method: 'DELETE', queue: false })
     // pendingReview too: a stale marker from a previous account/device must never show
     // someone else's (or a revoked device's) outcome question after a fresh pairing.
-    await chrome.storage.local.set({ token: null, deviceId: null, session: null, pendingReview: null, askPending: false })
+    await chrome.storage.local.set({ token: null, deviceId: null, session: null, block: null, pendingReview: null, askPending: false })
     await chrome.action.setBadgeText({ text: '' })
     render()
   })
