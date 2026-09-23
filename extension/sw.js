@@ -429,6 +429,17 @@ async function recoverStaleSession() {
 chrome.runtime.onInstalled.addListener(recoverStaleSession)
 chrome.runtime.onStartup.addListener(recoverStaleSession)
 
+/** ADR-0082. The badge is only ever SET inside endSession; nothing re-applies it after a
+ *  service-worker restart or extension update. Wired to both onInstalled and onStartup for
+ *  the same reason recoverStaleSession above is: an unpacked extension's relaunch behaviour
+ *  isn't guaranteed to fire one over the other. Idempotent either way. */
+async function resyncBadge() {
+  const { pendingReview } = await chrome.storage.local.get('pendingReview')
+  await chrome.action.setBadgeText({ text: pendingReview ? '?' : '' })
+}
+chrome.runtime.onInstalled.addListener(resyncBadge)
+chrome.runtime.onStartup.addListener(resyncBadge)
+
 // The tick alarm only runs during a session, so without this a queued session-end PATCH
 // (e.g. the browser closed offline) would otherwise wait for the next session to sync.
 chrome.runtime.onStartup.addListener(flush)

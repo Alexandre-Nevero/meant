@@ -548,9 +548,12 @@ function running(session) {
   const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000)
 
   // A single read, not a ticking clock — toolkit §9 refuses "a countdown that ticks".
-  // With duration merged into the cycle (Task 4), "left in this cycle" and "left in this
-  // session" are the same number for every mode except "until I stop" — two lines would
-  // say one thing twice, so this collapses them into one.
+  // This is phase-remaining time (current work/break block), not session-remaining time —
+  // for a multi-cycle session (count > 1) those differ, the session total being the larger,
+  // unshown number. blocked.js's own remaining line reads the opposite way: it's the whole
+  // session's plannedMinutes, not the current phase — the two screens deliberately answer
+  // different questions ("how much of this block is left" vs "how much of this site-block
+  // is left"), so don't unify them.
   const phaseLine = phase
     ? el('p', 'm-meta', phase.phase === 'break'
         ? `${elapsedMinutes} min · break, ${phase.remainingMinutes} min left`
