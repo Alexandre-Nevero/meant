@@ -4,6 +4,8 @@ import { normalizeDomain } from './lib/normalize-domain.js'
 import { resolveSitePhrase } from './lib/resolve-sites.js'
 import { withOpenSlice, toSegments } from './lib/tally.js'
 import { MAX_CYCLES, clampCount, plannedMinutesFor, restoreCycle } from './lib/cycles.js'
+import { PRESETS } from './blocklists.js'
+import { matchPreset, presetBlockSet } from './lib/presets.js'
 
 const root = document.getElementById('root')
 
@@ -40,6 +42,7 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
   const selected = multi ? new Set(value ?? []) : null
   let single = multi ? null : (value ?? options[0]?.value)
   let plusButton = null
+  const chips = new Map() // value -> its chip body button, so set() can re-press them
 
   function currentValue() {
     return multi ? [...selected] : single
@@ -50,6 +53,7 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
     chip.type = 'button'
     chip.dataset.mono = String(mono)
     chip.setAttribute('aria-pressed', String(multi ? selected.has(v) : single === v))
+    chips.set(v, chip)
     chip.addEventListener('click', () => {
       if (multi) {
         if (selected.has(v)) selected.delete(v)
@@ -78,6 +82,7 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
     del.setAttribute('aria-label', `Remove ${label}`)
     del.addEventListener('click', () => {
       selected.delete(v)
+      chips.delete(v)
       wrap.remove()
       if (onRemove) onRemove(v)
       if (onChange) onChange(currentValue())
@@ -186,7 +191,18 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
     row.append(plusButton)
   }
 
-  return { row, get value() { return currentValue() } }
+  /** ADR-0083. Programmatic pre-fill for multi groups: adds a chip for any value not yet shown,
+   *  presses exactly `values`, and deliberately does NOT fire onChange — onChange means the user
+   *  touched the chips, and a pre-fill must never look like that. */
+  function set(values) {
+    if (!multi) return
+    for (const v of values) if (!chips.has(v)) addChip(v)
+    selected.clear()
+    for (const v of values) selected.add(v)
+    for (const [v, chip] of chips) chip.setAttribute('aria-pressed', String(selected.has(v)))
+  }
+
+  return { row, get value() { return currentValue() }, set }
 }
 
 function navRow() {
@@ -445,12 +461,52 @@ async function idle() {
   const blockedValues = lastChoice ? lastChoice.blockedDomains : distractSites
   const blockedOptions = [...new Set([...distractSites, ...blockedValues])].map((d) => ({ label: d, value: d }))
   const blockingLabel = el('p', 'm-meta', 'what to block')
+  // ADR-0083: any user action on these chips freezes the intention's pre-fill for this view.
+  let blocksTouched = false
   const blocked = chipGroup(blockedOptions, {
     multi: true,
     addable: true,
     removable: true,
     value: blockedValues,
     onRemove: (domain) => removeFromList('distract', domain),
+    onChange: () => { blocksTouched = true },
+  })
+
+  // ADR-0083. The intention picks a preset: keyword first, instantly; the AI classifier only when
+  // no keyword matched, 800ms after typing stops. Either way it only PRE-FILLS the chips — the
+  // first manual toggle freezes them, and Start never waits for an answer.
+  let started = false
+  let aiTimer = null
+  const aiAnswers = new Map() // settled intention text -> preset id | null, this view's lifetime
+  const presetNote = el('p', 'm-meta', '')
+  presetNote.hidden = true
+
+  function applyPreset(id) {
+    if (blocksTouched || started) return
+    if (!id) {
+      blocked.set(blockedValues)
+      presetNote.hidden = true
+      return
+    }
+    const preset = PRESETS[id]
+    blocked.set(presetBlockSet({ standing: distractSites, preset, workSites: workSites.value, intention: field.value }))
+    presetNote.textContent = `${preset.label} preset`
+    presetNote.hidden = false
+  }
+
+  field.addEventListener('input', () => {
+    clearTimeout(aiTimer)
+    const text = field.value.trim()
+    const byKeyword = matchPreset(text)
+    if (byKeyword || text.length < 3) return applyPreset(byKeyword)
+    if (aiAnswers.has(text)) return applyPreset(aiAnswers.get(text))
+    applyPreset(null)
+    aiTimer = setTimeout(async () => {
+      const res = await post('/api/presets/classify', { intention: text }, { queue: false })
+      const id = res.ok && typeof res.data?.preset === 'string' && PRESETS[res.data.preset] ? res.data.preset : null
+      aiAnswers.set(text, id)
+      if (field.value.trim() === text) applyPreset(id)
+    }, 800)
   })
 
   // data-chip-layout, not a class: the class contract is frozen at 13 fixed classes plus
@@ -460,7 +516,7 @@ async function idle() {
   whereGroup.append(el('p', 'm-meta', 'where it happens'), workSites.row)
   const blockGroup = el('div')
   blockGroup.dataset.chipLayout = 'group'
-  blockGroup.append(blockingLabel, blocked.row)
+  blockGroup.append(blockingLabel, presetNote, blocked.row)
   const siteCluster = el('div')
   siteCluster.dataset.chipLayout = 'cluster'
   siteCluster.append(whereGroup, blockGroup)
@@ -469,6 +525,7 @@ async function idle() {
   start.dataset.variant = 'primary'
   start.addEventListener('click', async () => {
     start.disabled = true
+    started = true // ADR-0083: a classifier answer landing after this must change nothing
     const { plannedMinutes, cycle: cycleValue } = picker.value
     const workSitesValue = workSites.value
     const blockedDomainsValue = blocked.value
@@ -484,6 +541,7 @@ async function idle() {
     if (!res?.ok) {
       console.error('popup: start failed', res, chrome.runtime.lastError)
       start.disabled = false
+      started = false
       show(header(mark), label, field, picker.row, picker.customRow, siteCluster, start,
         el('p', 'm-meta', res?.offline ? 'No connection. A session needs one to start.' : 'Could not start.'))
       return
