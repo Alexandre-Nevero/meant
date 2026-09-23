@@ -33,7 +33,7 @@
 
 **Who is served (ADR-0054):** anyone for whom **the work surface and the distraction surface are the same browser** — researchers, students, marketers, freelancers, operators, and the browser-resident half of anyone else's day. No job-title filter. The boundary is **browser share, reported at runtime**: where recorded attention is a small fraction of a session's wall clock, the review says what it did not see.
 
-**Who pays (D10, unchanged):** the **self-employed** browser-native worker. Freelancers, consultants, coaches, VAs, marketers, course creators, solo operators. Owns her laptop and her card. Everyone else is served free — tracking and blocking cost nothing per user. *(Load-bearing on the freemium shape; see PRD §2 and Q6.)*
+**Who pays (D10, unchanged):** the **self-employed** browser-native worker. Freelancers, consultants, coaches, VAs, marketers, course creators, solo operators. Owns her laptop and her card. Everyone else is served free — tracking and blocking cost nothing per user. *(Load-bearing on the freemium shape; see PRD §2 and Q6.)* **Suspended for the testing phase (ADR-0075):** every feature is free until a later ADR ends it; no code gates anything.
 
 **Segments are deliberately unranked.** Two of the five columns needed to rank them — pain acuity and reachability — are empty for every candidate. Not choosing is the correct state.
 

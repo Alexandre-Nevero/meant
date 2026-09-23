@@ -74,3 +74,82 @@ test('a timed session ends itself once its planned duration elapses', async ({ c
   const rules = await sw.evaluate(() => chrome.declarativeNetRequest.getDynamicRules())
   expect(rules.length).toBe(0)
 })
+
+// Shared by the two ADR-0082 cases below: start a 25-minute "no cycles" session, push its
+// start 26 minutes back, and fire the TICK alarm so endSession('elapsed') runs for real.
+async function startAndElapse(page: import('@playwright/test').Page, context: import('@playwright/test').BrowserContext, intention: string) {
+  await page.locator('input.m-field').first().fill(intention)
+  await page.getByRole('button', { name: 'custom', exact: true }).click()
+  await page.getByRole('button', { name: 'no cycles', exact: true }).click()
+  await page.getByRole('button', { name: 'Start' }).click()
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    chrome.storage.local.get('session', ({ session }: any) => {
+      session.startedAt = new Date(Date.now() - 26 * 60_000).toISOString()
+      chrome.storage.local.set({ session }, () => resolve())
+    })
+  }))
+  const [sw] = context.serviceWorkers()
+  await sw.evaluate(() => chrome.alarms.create('meant-tick', { delayInMinutes: 0.01 }))
+  await expect
+    .poll(async () => page.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session)))),
+      { timeout: 70_000, intervals: [2_000] })
+    .toBeNull()
+  return sw
+}
+
+// ADR-0082. openPopup is spied rather than observed: a headless run has no toolbar to open a
+// popup into, and the spy is what proves the service worker ASKED. The spy lives on the
+// service worker's global, so this test must finish before the worker idles out (~30s).
+test('an elapsed session asks by opening the popup, and badges the icon until Done', async ({ context, extensionId, freshAccount }) => {
+  test.setTimeout(90_000)
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairAndOpenPopup(page, extensionId)
+
+  const [sw0] = context.serviceWorkers()
+  await sw0.evaluate(() => {
+    const g = self as any
+    g.__opened = 0
+    chrome.action.openPopup = (async () => { g.__opened++ }) as typeof chrome.action.openPopup
+  })
+
+  const sw = await startAndElapse(page, context, 'auto-open test')
+
+  await expect.poll(async () => sw.evaluate(() => (self as any).__opened)).toBe(1)
+  expect(await sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('?')
+  expect(await page.evaluate(() => new Promise((r) => chrome.storage.local.get('askPending', (v: any) => r(v.askPending))))).toBe(false)
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Yes' }).click()
+  await page.getByRole('button', { name: 'Done' }).click()
+  await expect.poll(async () => sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('')
+})
+
+test('when no window can take the popup, it is asked again on the next focus', async ({ context, extensionId, freshAccount }) => {
+  test.setTimeout(90_000)
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairAndOpenPopup(page, extensionId)
+
+  const [sw0] = context.serviceWorkers()
+  await sw0.evaluate(() => {
+    const g = self as any
+    g.__opened = 0
+    g.__refuse = true
+    chrome.action.openPopup = (async () => {
+      if (g.__refuse) throw new Error('Could not find an active browser window.')
+      g.__opened++
+    }) as typeof chrome.action.openPopup
+  })
+
+  const sw = await startAndElapse(page, context, 'focus-return test')
+
+  expect(await sw.evaluate(() => (self as any).__opened)).toBe(0)
+  expect(await page.evaluate(() => new Promise((r) => chrome.storage.local.get('askPending', (v: any) => r(v.askPending))))).toBe(true)
+
+  // chrome.windows.onFocusChanged cannot be synthesised from a test; its listener's whole body
+  // is askOutcome(), exposed on the worker global for exactly this call.
+  await sw.evaluate(async () => { (self as any).__refuse = false; await (self as any).askOutcome() })
+  expect(await sw.evaluate(() => (self as any).__opened)).toBe(1)
+  expect(await page.evaluate(() => new Promise((r) => chrome.storage.local.get('askPending', (v: any) => r(v.askPending))))).toBe(false)
+})

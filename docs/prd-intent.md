@@ -478,6 +478,10 @@ Direct consumer subscription. **Free is mechanical** — blocking, review, ledge
 that knows you** — judge, companion, memory, coach. The paywall sits exactly where the inference
 cost sits, which is the only pricing shape that survives M9.
 
+> **Suspended for the testing phase (ADR-0075, 2026-09-22).** Every feature this section calls
+> paid is free until a later ADR ends the suspension, and no code gates any feature. The paywall's
+> placement at the inference cost is not revisited; it is what resumes when the phase ends.
+
 **The price ceiling is lower than the coaching comparison suggests.** IDEA §5 C16: certified ADHD
 coaches charge $150–250 per session and packages run $300–700/month, but the software this competes
 with for a subscription slot is Focusmate at **$8/mo annual, $12/mo monthly**. Price against the

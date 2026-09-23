@@ -118,3 +118,78 @@ test('a session survives a browser close, and ends itself (without popping a tab
     fs.rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+// Case J — the toolbar badge is only ever SET inside endSession (sw.js's endReason ===
+// 'stopped' || 'elapsed' branch); nothing re-applies it after a service-worker restart or
+// extension update. Whether Chrome itself persists badge text across a restart is
+// unconfirmed (no docs either way), so this proves the badge is right regardless: sw.js's
+// resyncBadge, wired to onInstalled/onStartup next to recoverStaleSession above for the
+// same reason, re-derives it from the persisted pendingReview flag on every relaunch.
+//
+// Seeds pendingReview directly rather than running a whole session to elapse — resyncBadge
+// only ever reads that one key, so this exercises the real function without the scaffolding
+// of starting and elapsing a session.
+test('the badge resyncs to "?" after a browser restart when a review is still pending', async () => {
+  test.setTimeout(60_000)
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meant-pw-badge-'))
+  const launchArgs = {
+    channel: 'chromium' as const,
+    args: [`--disable-extensions-except=${EXTENSION_PATH}`, `--load-extension=${EXTENSION_PATH}`],
+  }
+
+  const context1 = await chromium.launchPersistentContext(userDataDir, launchArgs)
+  try {
+    let sw1 = context1.serviceWorkers()[0]
+    if (!sw1) sw1 = await context1.waitForEvent('serviceworker')
+
+    await sw1.evaluate(() => new Promise<void>((r) =>
+      chrome.storage.local.set({ pendingReview: { sessionId: 'badge-resync-test' } }, () => r()),
+    ))
+  } finally {
+    await context1.close()
+  }
+
+  const context2 = await chromium.launchPersistentContext(userDataDir, launchArgs)
+  try {
+    let sw2 = context2.serviceWorkers()[0]
+    if (!sw2) sw2 = await context2.waitForEvent('serviceworker')
+
+    await expect.poll(async () => sw2.evaluate(() => chrome.action.getBadgeText({}))).toBe('?')
+  } finally {
+    await context2.close()
+    fs.rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+// The negative case: a badge left over from a state that no longer holds must not survive
+// a restart just because nothing wrote over it.
+test('the badge resyncs to empty after a restart when no review is pending', async () => {
+  test.setTimeout(60_000)
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meant-pw-badge-none-'))
+  const launchArgs = {
+    channel: 'chromium' as const,
+    args: [`--disable-extensions-except=${EXTENSION_PATH}`, `--load-extension=${EXTENSION_PATH}`],
+  }
+
+  const context1 = await chromium.launchPersistentContext(userDataDir, launchArgs)
+  try {
+    let sw1 = context1.serviceWorkers()[0]
+    if (!sw1) sw1 = await context1.waitForEvent('serviceworker')
+    // No pendingReview set. Force a stale '?' so a restart clearing it proves the resync,
+    // not just a fresh profile's default empty text.
+    await sw1.evaluate(() => chrome.action.setBadgeText({ text: '?' }))
+  } finally {
+    await context1.close()
+  }
+
+  const context2 = await chromium.launchPersistentContext(userDataDir, launchArgs)
+  try {
+    let sw2 = context2.serviceWorkers()[0]
+    if (!sw2) sw2 = await context2.waitForEvent('serviceworker')
+
+    await expect.poll(async () => sw2.evaluate(() => chrome.action.getBadgeText({}))).toBe('')
+  } finally {
+    await context2.close()
+    fs.rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
