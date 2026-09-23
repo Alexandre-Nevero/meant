@@ -17,6 +17,7 @@ import {
   computePerformanceFidelity,
   computeMonthlyBreakdown,
   computeWeeklyBreakdown,
+  countSessions,
   type EventRow,
   type SessionRow,
 } from '@/lib/dashboard-figures'
@@ -114,7 +115,7 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
 
   // Fetch recent sessions (capped at 50 for performance and bounded query)
   const sessionsRaw = await sql`
-    select s.id, s.intention, s.started_at, s.ended_at, s.outcome,
+    select s.id, s.intention, s.started_at, s.ended_at, s.outcome, s.block_id,
            coalesce(
              (select json_agg(json_build_object('kind', e.kind, 'domain', e.domain, 'seconds', e.seconds, 'label', e.label))
                 from event e where e.session_id = s.id),
@@ -156,17 +157,17 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
        and s.started_at < date_trunc('month', now())`) as unknown as EventRow[]
 
   const monthSessions = (await sql`
-    select s.id, s.outcome
+    select s.id, s.outcome, s.block_id
       from session s
      where s.user_id = ${userId}
-       and s.started_at >= date_trunc('month', now())`) as { id: string; outcome: string | null }[]
+       and s.started_at >= date_trunc('month', now())`) as { id: string; outcome: string | null; block_id: string | null }[]
 
   const prevMonthSessions = (await sql`
-    select s.id, s.outcome
+    select s.id, s.outcome, s.block_id
       from session s
      where s.user_id = ${userId}
        and s.started_at >= date_trunc('month', now() - interval '1 month')
-       and s.started_at < date_trunc('month', now())`) as { id: string; outcome: string | null }[]
+       and s.started_at < date_trunc('month', now())`) as { id: string; outcome: string | null; block_id: string | null }[]
 
   // ADR-0060: Inference contrasts before the judge
   const contrastRows = (await sql`
@@ -244,7 +245,7 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
 
   const fidelity = computePerformanceFidelity(
     monthSessions,
-    prevMonthSessions.length,
+    countSessions(prevMonthSessions),
     currentTotals.attention,
     prevTotals.attention,
   )

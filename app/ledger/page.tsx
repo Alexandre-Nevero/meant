@@ -44,7 +44,7 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
 
   // Fetch recent sessions
   const sessionsRaw = await sql`
-    select s.id, s.intention, s.started_at, s.ended_at, s.outcome,
+    select s.id, s.intention, s.started_at, s.ended_at, s.outcome, s.block_id,
            coalesce(
              (select json_agg(json_build_object('kind', e.kind, 'domain', e.domain, 'seconds', e.seconds, 'label', e.label))
                 from event e where e.session_id = s.id),
