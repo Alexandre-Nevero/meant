@@ -467,6 +467,9 @@ async function idle() {
   const workSites = chipGroup(workSiteOptions, {
     multi: true, addable: true, removable: true, value: workSiteValues,
     onRemove: (domain) => removeFromList('work', domain),
+    // ADR-0083: a work site picked AFTER the intention was typed must still re-exclude it from
+    // the block set — applyPreset reads workSites.value fresh each time it runs.
+    onChange: () => applyPreset(currentPresetId),
   })
 
   // First ever session: blockedDomains defaults to the whole standing distract list.
@@ -498,8 +501,11 @@ async function idle() {
   // accumulate as permanent unpressed ghosts across an intention edit within the same view.
   const initialBlockedDomains = new Set(blockedOptions.map((o) => o.value))
   let seededExtras = []
+  let currentPresetId = null // ADR-0083: last preset id applied (or null), so a later work-site
+                              // change can re-run the same preset with fresh workSites.value
 
   function applyPreset(id) {
+    currentPresetId = id
     if (blocksTouched || started) return
     if (seededExtras.length) {
       blocked.remove(seededExtras)
@@ -554,6 +560,7 @@ async function idle() {
   start.dataset.variant = 'primary'
   start.addEventListener('click', async () => {
     start.disabled = true
+    clearTimeout(aiTimer) // ADR-0083: a pending classify call answers nothing Start would use
     started = true // ADR-0083: a classifier answer landing after this must change nothing
     const { plannedMinutes, cycle: cycleValue } = picker.value
     const workSitesValue = workSites.value

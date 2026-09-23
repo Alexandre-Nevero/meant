@@ -120,6 +120,25 @@ test('switching from one preset to another does not leave the old preset\'s spar
   await expect(blockChip(page, 'reddit.com')).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('a work site picked after typing the intention is re-excluded from the block set', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  await page.locator('input.m-field').first().fill('edit the video description')
+  await expect(page.getByText('Writing preset', { exact: true })).toBeVisible()
+  await expect(blockChip(page, 'youtube.com')).toHaveAttribute('aria-pressed', 'true')
+
+  // Picking youtube.com as a work site AFTER the intention was typed — the normal order —
+  // must re-run the preset and spare it, not leave it blocked for the whole session.
+  const plusButtons = page.getByRole('button', { name: '+', exact: true })
+  await plusButtons.first().click() // the "where it happens" row's own +
+  await page.keyboard.type('youtube.com')
+  await page.keyboard.press('Enter')
+
+  await expect(blockChip(page, 'youtube.com')).toHaveAttribute('aria-pressed', 'false')
+})
+
 test('the classify route refuses anonymous callers and answers null for a too-short intention', async ({ context, extensionId, freshAccount }) => {
   const page = await context.newPage()
   const anon = await page.request.post('/api/presets/classify', { data: { intention: 'quarterly numbers' } })
