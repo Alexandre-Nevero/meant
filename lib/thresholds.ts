@@ -31,6 +31,12 @@ export const DAILY_ANALYSIS_CAP = 10
  *  testing phase, so this bounds spend and abuse only — it is not a paywall and does not vary
  *  by payment status. Re-derive against real transcripts once any exist. */
 export const DAILY_COACH_TURNS = 40
+/** ADR-0083. The preset classifier's fuse. openai/gpt-oss-20b is $0.075 / $0.30 per Mtok; a
+ *  ~250-token prompt plus a reasoning answer of a few hundred tokens is about $0.0001 a call, so
+ *  fifty a day stays under half a cent. Cost control, not a paywall (ADR-0075). The popup
+ *  already asks at most once per distinct intention, 800ms after typing stops, and only when no
+ *  keyword matched. */
+export const DAILY_PRESET_CLASSIFY_CAP = 50
 /** ADR-0080. The judge spike's own findings suggested ~0.70 "looks like a reasonable
  *  candidate" on SYNTHETIC data, and explicitly warned not to trust the specific number.
  *  This is that placeholder, applied only when PRESENTING a result — judgment.label and
