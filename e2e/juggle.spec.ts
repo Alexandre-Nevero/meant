@@ -87,3 +87,71 @@ test('switching to a task that is not parked changes nothing', async ({ context,
   expect(await ruleDomains(context)).toEqual(['youtube.com'])
   await send(page, { type: 'stop' })
 })
+
+test('the running popup adds a task and switches back in one tap', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+  await page.route('**/api/presets/classify', (r) => r.fulfill({ json: { preset: null } }))
+
+  await page.locator('input.m-field').first().fill('write the letter')
+  await page.getByRole('button', { name: 'Start' }).click()
+
+  await page.getByRole('button', { name: '+ task' }).click()
+  await page.getByPlaceholder('What else do you mean to do?').fill('research sources')
+  await page.getByPlaceholder('What else do you mean to do?').press('Enter')
+
+  await expect(page.locator('[data-timer-pill="true"] input.m-field')).toHaveValue('research sources')
+  await expect(page.getByText('other tasks', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Switch to write the letter' }).click()
+  await expect(page.locator('[data-timer-pill="true"] input.m-field')).toHaveValue('write the letter')
+  await expect(page.getByRole('button', { name: 'Switch to research sources' })).toBeVisible()
+
+  await send(page, { type: 'stop' })
+})
+
+test('the + task control disappears once the session holds four tasks', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  await send(page, START)
+  for (const i of [2, 3, 4]) await send(page, { type: 'add-task', intention: `task ${i}`, blockedDomains: [], workSites: [] })
+  await page.reload()
+  await expect(page.getByRole('button', { name: '+ task' })).toBeHidden()
+  await send(page, { type: 'stop' })
+})
+
+test('ending a two-task session asks Did you? once per task, with identical answers', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  const start = await send(page, START)
+  const added = await send(page, { type: 'add-task', intention: 'research sources', blockedDomains: [], workSites: [] })
+  await send(page, { type: 'stop' })
+  for (const id of [start.sessionId, added.sessionId]) {
+    await expect
+      .poll(async () => (await (await page.request.get(`/api/sessions/${id}/review`)).json()).endedAt ?? null, { timeout: 10_000 })
+      .not.toBeNull()
+  }
+
+  await page.reload()
+  await expect(page.getByText('Did you?', { exact: true })).toHaveCount(2)
+  await expect(page.getByText('write the letter', { exact: true })).toBeVisible()
+  await expect(page.getByText('research sources', { exact: true })).toBeVisible()
+
+  // Invariant 1, across tasks too: Yes and Not yet are identical in every property.
+  const style = (name: string) => page.getByRole('button', { name, exact: true }).first().evaluate((el) => {
+    const s = getComputedStyle(el)
+    return [s.color, s.backgroundColor, s.fontSize, s.fontWeight, s.width, s.height, s.transition].join('|')
+  })
+  expect(await style('Yes')).toBe(await style('Not yet'))
+
+  await page.getByRole('button', { name: 'Yes', exact: true }).first().click()
+  await expect(page.getByText('Did you?', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Done' })).toHaveCount(0) // one task still open
+  await page.getByRole('button', { name: 'Not yet', exact: true }).first().click()
+  await page.getByRole('button', { name: 'Done' }).click()
+  await expect(page.getByText('What do you mean to do?')).toBeVisible()
+})

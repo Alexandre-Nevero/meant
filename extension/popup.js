@@ -6,6 +6,7 @@ import { withOpenSlice, toSegments } from './lib/tally.js'
 import { MAX_CYCLES, clampCount, plannedMinutesFor, restoreCycle } from './lib/cycles.js'
 import { PRESETS } from './blocklists.js'
 import { matchPreset, presetBlockSet } from './lib/presets.js'
+import { MAX_TASKS, attendedSeconds } from './lib/block.js'
 
 const root = document.getElementById('root')
 
@@ -632,7 +633,7 @@ function cyclePhase(session) {
   return { phase: 'break', elapsedInPhaseMs: posInCycle - workMs, phaseMs: brk * 60_000, remainingMinutes: Math.ceil((cycleMs - posInCycle) / 60_000) }
 }
 
-function running(session) {
+function running(session, block) {
   const mark = el('p', 'm-mark', '')
   mark.dataset.state = 'running'
 
@@ -663,7 +664,9 @@ function running(session) {
   })
 
   let sentenceNode
-  if (isEditable(Date.now(), startedAt, GRACE_MS)) {
+  // ADR-0041 per task (ADR-0084): a task added mid-session gets its own 60 seconds.
+  const lockFrom = new Date(session.lockFrom ?? session.startedAt).getTime()
+  if (isEditable(Date.now(), lockFrom, GRACE_MS)) {
     sentenceNode = el('input', 'm-field')
     sentenceNode.value = session.intention
     sentenceNode.spellcheck = false
@@ -831,11 +834,76 @@ function running(session) {
     pillWrap.append(svg)
   }))
 
+  // ADR-0084. The session's other tasks, each one tap from being the active one.
+  const others = block?.tasks ?? []
+  const tasksLabel = others.length > 0 ? el('p', 'm-meta', 'other tasks') : null
+  const taskRows = others.map((t) => {
+    const row = el('div', 'm-row')
+    row.dataset.row = 'task'
+    const bar = el('span', 'm-row-bar')
+    bar.dataset.kind = 'step-open'
+    const name = el('p', 'm-row-domain', `${t.intention || 'No intention given'} · ${Math.round(attendedSeconds(t) / 60)} min`)
+    const go = el('button', 'm-chip', 'switch')
+    go.type = 'button'
+    go.setAttribute('aria-label', `Switch to ${t.intention || 'the other task'}`)
+    go.addEventListener('click', async () => {
+      go.disabled = true
+      await chrome.runtime.sendMessage({ type: 'switch-task', sessionId: t.sessionId })
+      render()
+    })
+    row.append(bar, name, go)
+    return row
+  })
+
+  // "+ task": a new intention becomes the active task. Its blocks come from a KEYWORD preset
+  // (ADR-0083) when one matches, otherwise from this task — no model call on this path.
+  const addButton = el('button', 'm-btn', '+ task')
+  addButton.dataset.variant = 'quiet'
+  addButton.hidden = 1 + others.length >= MAX_TASKS
+  const addField = el('input', 'm-field')
+  addField.placeholder = 'What else do you mean to do?'
+  addField.spellcheck = false
+  addField.hidden = true
+  const addError = el('p', 'm-meta', '')
+  addError.hidden = true
+  addButton.addEventListener('click', () => {
+    addButton.hidden = true
+    addField.hidden = false
+    addField.focus()
+  })
+  addField.addEventListener('keydown', async (e) => {
+    if (e.key === 'Escape') {
+      addField.hidden = true
+      addButton.hidden = false
+      return
+    }
+    if (e.key !== 'Enter') return
+    const intention = addField.value.trim()
+    if (!intention) return
+    addField.disabled = true
+    const id = matchPreset(intention)
+    const blockedDomains = id
+      ? presetBlockSet({ standing: (await fetchLists()).distractSites ?? [], preset: PRESETS[id], workSites: session.workSites ?? [], intention })
+      : (session.blockedDomains ?? [])
+    const res = await chrome.runtime.sendMessage({ type: 'add-task', intention, blockedDomains, workSites: session.workSites ?? [] })
+    if (!res?.ok) {
+      addField.disabled = false
+      addError.textContent = res?.error === 'max-tasks' ? 'Four tasks is the most one session holds.' : 'Could not add it.'
+      addError.hidden = false
+      return
+    }
+    render()
+  })
+
   show(
     header(mark),
     pillWrap,
     phaseLine,
     ...attentionRows,
+    ...(tasksLabel ? [tasksLabel, ...taskRows] : []),
+    addButton,
+    addField,
+    addError,
     ...(blockingLabel ? [blockingLabel] : []),
     ...(blockedRowsContainer ? [blockedRowsContainer] : []),
     stop,
@@ -937,14 +1005,76 @@ async function outcome(sessionId) {
   show(...nodes)
 }
 
+/** ADR-0084. The multi-task outcome: every task asked on its own, byte-identical Yes / Not yet
+ *  for each (invariant 1). Done appears once every task has an answer, exactly as the single
+ *  view shows Done only after its one answer. */
+async function outcomeMany(sessionIds) {
+  const mark = el('p', 'm-mark', '')
+  mark.dataset.state = 'ended'
+
+  const results = await Promise.all(sessionIds.map((id) => get(`/api/sessions/${id}/review`)))
+  if (results.some((r) => r.offline || (typeof r.status === 'number' && r.status >= 500))) {
+    const done = el('button', 'm-btn', 'Done')
+    done.dataset.variant = 'quiet'
+    done.addEventListener('click', async () => {
+      await clearPending()
+      render()
+    })
+    return show(mark, el('p', 'm-meta', "Can't reach it right now."), done)
+  }
+  const tasks = results.map((r, i) => ({ id: sessionIds[i], data: r.ok ? r.data : null })).filter((t) => t.data)
+  if (tasks.length === 0) {
+    await clearPending()
+    return idle()
+  }
+
+  const nodes = [header(mark), el('p', 'm-meta', 'You meant to')]
+  for (const { id, data } of tasks) {
+    const sentence = el('p', 'm-sentence', data.intention || "You didn't say what you meant to do.")
+    sentence.dataset.compact = 'true'
+    const attended = data.rows.filter((r) => r.kind === 'attention').reduce((sum, r) => sum + r.seconds, 0)
+    nodes.push(sentence, el('p', 'm-meta', `${Math.round(attended / 60)} min on it`))
+    if (data.outcome === 'unanswered') {
+      nodes.push(el('p', 'm-rate', 'Did you?'))
+      const yes = el('button', 'm-answer', 'Yes')
+      const notYet = el('button', 'm-answer', 'Not yet')
+      const answer = async (value) => {
+        yes.disabled = true
+        notYet.disabled = true
+        await post(`/api/sessions/${id}/outcome`, { outcome: value }, { method: 'PATCH' })
+        render()
+      }
+      yes.addEventListener('click', () => answer('yes'))
+      notYet.addEventListener('click', () => answer('no'))
+      nodes.push(yes, notYet)
+    } else {
+      nodes.push(el('p', 'm-meta', data.outcome === 'yes'
+        ? `Good. That's ${data.finished} of ${data.answered}.`
+        : 'Noted. It carries over.'))
+    }
+  }
+
+  if (tasks.every((t) => t.data.outcome !== 'unanswered')) {
+    const done = el('button', 'm-btn', 'Done')
+    done.dataset.variant = 'quiet'
+    done.addEventListener('click', async () => {
+      await clearPending()
+      render()
+    })
+    nodes.push(done)
+  }
+  show(...nodes)
+}
+
 async function render() {
-  const { token, session, unpairedReason, pendingReview } = await chrome.storage.local.get(['token', 'session', 'unpairedReason', 'pendingReview'])
+  const { token, session, unpairedReason, pendingReview, block } = await chrome.storage.local.get(['token', 'session', 'unpairedReason', 'pendingReview', 'block'])
   if (!token) {
     if (unpairedReason) await chrome.storage.local.remove('unpairedReason')
     return unpaired(unpairedReason)
   }
-  if (session) return running(session)
-  if (pendingReview) return outcome(pendingReview.sessionId)
+  if (session) return running(session, block)
+  // ADR-0084: a session that held several tasks asks each one.
+  if (pendingReview) return pendingReview.sessionIds?.length > 1 ? outcomeMany(pendingReview.sessionIds) : outcome(pendingReview.sessionId)
   await idle()
 }
 
