@@ -102,6 +102,24 @@ test('an AI answer that arrives after Start changes nothing', async ({ context, 
   await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
 })
 
+test('switching from one preset to another does not leave the old preset\'s spared chips behind', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  const field = page.locator('input.m-field').first()
+  await field.fill('write the letter to the landlord')
+  await expect(page.getByText('Writing preset', { exact: true })).toBeVisible()
+  await expect(blockChip(page, 'youtube.com')).toHaveAttribute('aria-pressed', 'true')
+
+  // youtube.com is in writing's block list but NOT in research's — switching to research
+  // must remove that seeded chip entirely, not just leave it behind unpressed.
+  await field.fill('research competitor pricing')
+  await expect(page.getByText('Research preset', { exact: true })).toBeVisible()
+  await expect(blockChip(page, 'youtube.com')).toHaveCount(0)
+  await expect(blockChip(page, 'reddit.com')).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('the classify route refuses anonymous callers and answers null for a too-short intention', async ({ context, extensionId, freshAccount }) => {
   const page = await context.newPage()
   const anon = await page.request.post('/api/presets/classify', { data: { intention: 'quarterly numbers' } })

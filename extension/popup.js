@@ -202,7 +202,19 @@ function chipGroup(options, { mono = false, multi = false, value, addable = fals
     for (const [v, chip] of chips) chip.setAttribute('aria-pressed', String(selected.has(v)))
   }
 
-  return { row, get value() { return currentValue() }, set }
+  /** ADR-0083. Removes chips added purely as a preset seed — never a user's own chip or one
+   *  from the standing list, since applyPreset only ever passes its own seededExtras here. */
+  function remove(values) {
+    for (const v of values) {
+      if (!chips.has(v)) continue
+      selected.delete(v)
+      const chip = chips.get(v)
+      chips.delete(v)
+      ;(chip.closest('[data-chip-item]') || chip).remove()
+    }
+  }
+
+  return { row, get value() { return currentValue() }, set, remove }
 }
 
 function navRow() {
@@ -481,8 +493,18 @@ async function idle() {
   const presetNote = el('p', 'm-meta', '')
   presetNote.hidden = true
 
+  // ADR-0083: set() only ever adds chips, never removes — so a preset's seed-only extras
+  // (below) must be tracked and cleared before the next preset seeds its own, or they'd
+  // accumulate as permanent unpressed ghosts across an intention edit within the same view.
+  const initialBlockedDomains = new Set(blockedOptions.map((o) => o.value))
+  let seededExtras = []
+
   function applyPreset(id) {
     if (blocksTouched || started) return
+    if (seededExtras.length) {
+      blocked.remove(seededExtras)
+      seededExtras = []
+    }
     if (!id) {
       blocked.set(blockedValues)
       presetNote.hidden = true
@@ -494,6 +516,7 @@ async function idle() {
     // unpressed below. set() never removes a chip, only adds missing ones and re-presses the
     // full accumulated set, so this is safe to immediately re-press to the real, adjusted set;
     // both calls are synchronous, before the next paint — no flicker, nothing animates.
+    seededExtras = preset.block.filter((d) => !initialBlockedDomains.has(d))
     blocked.set(preset.block)
     blocked.set(presetBlockSet({ standing: distractSites, preset, workSites: workSites.value, intention: field.value }))
     presetNote.textContent = `${preset.label} preset`
