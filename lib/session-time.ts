@@ -27,7 +27,8 @@ export function computeUnrecorded(
   const wall = Math.round((end - start) / 1000)
   // Only kinds that carry real duration. block_hit rows have no dwell — the block prevented it.
   const accounted = rows
-    .filter((r) => r.kind === 'attention' || r.kind === 'away' || r.kind === 'break')
+    // 'paused' (ADR-0084): time on the session's other task was watched, just not for this row.
+    .filter((r) => r.kind === 'attention' || r.kind === 'away' || r.kind === 'break' || r.kind === 'paused')
     .reduce((total, r) => total + r.seconds, 0)
   return Math.max(0, wall - accounted)
 }

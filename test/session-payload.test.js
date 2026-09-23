@@ -64,3 +64,12 @@ test('normalizeStartPayload nulls an out-of-range, non-integer, wrong-type or mi
   assert.equal(normalizeStartPayload({ localHour: null }).localHour, null)
   assert.equal(normalizeStartPayload({}).localHour, null)
 })
+
+test('normalizeStartPayload carries a valid blockId, lowercased, and nulls anything else (ADR-0084)', () => {
+  const id = '0b7c2c1e-3f4a-4d5b-9c6d-7e8f9a0b1c2d'
+  assert.equal(normalizeStartPayload({ blockId: id }).blockId, id)
+  assert.equal(normalizeStartPayload({ blockId: id.toUpperCase() }).blockId, id)
+  assert.equal(normalizeStartPayload({ blockId: 'not-a-uuid' }).blockId, null)
+  assert.equal(normalizeStartPayload({ blockId: 42 }).blockId, null)
+  assert.equal(normalizeStartPayload({}).blockId, null)
+})

@@ -8,7 +8,9 @@ import { MEMORY_MIN_EVIDENCE, MEMORY_MIN_AGREEMENT, MEMORY_MIN_VERDICTS } from '
 // batches all of a session's queued events into one POST, so a kind this list rejects
 // fails the whole batch — and because nothing is then marked sent, every attention and
 // away event for that session requeues and retries forever with the same payload.
-const KINDS = ['attention', 'away', 'block_hit', 'label']
+// 'paused' (ADR-0084) is a parked task's inactive time. Same rule as 'label' above: a kind
+// missing here fails the whole batch and requeues it forever.
+const KINDS = ['attention', 'away', 'block_hit', 'label', 'paused']
 
 export async function POST(req: Request) {
   const device = await deviceFromRequest(req)
