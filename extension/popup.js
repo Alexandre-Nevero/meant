@@ -489,6 +489,12 @@ async function idle() {
       return
     }
     const preset = PRESETS[id]
+    // Seed a chip for every domain this preset would normally touch — including one the
+    // intention names, like instagram.com in PRESETS.admin.block — so it exists to be shown
+    // unpressed below. set() never removes a chip, only adds missing ones and re-presses the
+    // full accumulated set, so this is safe to immediately re-press to the real, adjusted set;
+    // both calls are synchronous, before the next paint — no flicker, nothing animates.
+    blocked.set(preset.block)
     blocked.set(presetBlockSet({ standing: distractSites, preset, workSites: workSites.value, intention: field.value }))
     presetNote.textContent = `${preset.label} preset`
     presetNote.hidden = false
