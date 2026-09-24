@@ -19,7 +19,10 @@ export const PARTS = [
 ]
 
 export type PartName = (typeof PARTS)[number]['name']
-export type PartOfDayRow = { startedAtLocalHour: number; outcome: string }
+/** blockId (ADR-0084): several tasks can share one browsing session (one block_id) and, by
+ *  construction, one started_at_local_hour — null for a row that predates the migration, or a
+ *  single-task session, where each row already stands for exactly one real session. */
+export type PartOfDayRow = { startedAtLocalHour: number; outcome: string; blockId: string | null }
 export type PartOfDayContrast = {
   part: PartName
   finished: number
@@ -40,21 +43,44 @@ export type PartOfDayContrast = {
  *  The caller takes the first entry that clears `PATTERN_MIN_SESSIONS`, exactly as it does with
  *  contrastByOutcome. Ranking is this module's job; the evidence floor is the caller's. */
 export function contrastByPartOfDay(rows: PartOfDayRow[]): PartOfDayContrast[] {
-  const byPart = new Map<PartName, { yes: number; no: number }>()
+  // Dedupe to one row per (part, BLOCK) before counting. Every task in one block shares the
+  // block's started_at, so by construction all of a block's rows land in the same part — the
+  // only question is not letting one block contribute more than 1 to that part's yes+no, the
+  // same inflation contrastByOutcome's per-block fold exists to prevent. A block whose own
+  // tasks disagree on outcome is excluded from the part entirely rather than picked arbitrarily
+  // — mirrors contrastByOutcome's mixed-outcome exclusion.
+  //
+  // blockId ?? a per-row fallback identity: null (pre-migration, or a single-task session) means
+  // this row already stands for exactly one real session and must never merge with another
+  // null-block row that happens to land in the same part.
+  const byPart = new Map<PartName, Map<string, { outcome: string; excluded: boolean }>>()
 
-  for (const row of rows) {
+  rows.forEach((row, i) => {
     // `unanswered` is the absence of an answer, not a third outcome to compare against.
-    if (row.outcome !== 'yes' && row.outcome !== 'no') continue
+    if (row.outcome !== 'yes' && row.outcome !== 'no') return
     const hour = row.startedAtLocalHour
-    if (!Number.isInteger(hour) || hour < 0 || hour > 23) continue
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) return
     const part = PARTS.find((p) => p.covers(hour))!.name
-    const entry = byPart.get(part) ?? { yes: 0, no: 0 }
-    entry[row.outcome === 'yes' ? 'yes' : 'no'] += 1
-    byPart.set(part, entry)
+    const blockKey = row.blockId ?? `row:${i}`
+    const blocks = byPart.get(part) ?? new Map<string, { outcome: string; excluded: boolean }>()
+    const seen = blocks.get(blockKey)
+    if (!seen) blocks.set(blockKey, { outcome: row.outcome, excluded: false })
+    else if (!seen.excluded && seen.outcome !== row.outcome) seen.excluded = true
+    byPart.set(part, blocks)
+  })
+
+  const tallied = new Map<PartName, { yes: number; no: number }>()
+  for (const [part, blocks] of byPart) {
+    const entry = { yes: 0, no: 0 }
+    for (const { outcome, excluded } of blocks.values()) {
+      if (excluded) continue
+      entry[outcome === 'yes' ? 'yes' : 'no'] += 1
+    }
+    tallied.set(part, entry)
   }
 
   return (
-    [...byPart.entries()]
+    [...tallied.entries()]
       // BOTH arms required. One arm is not a contrast, and stating one would be a pattern claim
       // from a single side — I6 as amended by ADR-0050.
       .filter(([, e]) => e.yes > 0 && e.no > 0)

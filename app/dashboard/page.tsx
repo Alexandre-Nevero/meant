@@ -171,7 +171,7 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
 
   // ADR-0060: Inference contrasts before the judge
   const contrastRows = (await sql`
-    select e.domain, e.seconds, s.outcome, s.id as "sessionId"
+    select e.domain, e.seconds, s.outcome, s.id as "sessionId", s.block_id as "blockId"
       from event e join session s on s.id = e.session_id
      where s.user_id = ${userId}
        and e.kind = 'attention'
@@ -182,11 +182,12 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
     seconds: number
     outcome: string
     sessionId: string
+    blockId: string | null
   }[]
   const contrasts = contrastByOutcome(contrastRows)
 
   const partRows = (await sql`
-    select s.started_at_local_hour as "startedAtLocalHour", s.outcome
+    select s.started_at_local_hour as "startedAtLocalHour", s.outcome, s.block_id as "blockId"
       from session s
      where s.user_id = ${userId}
        and s.outcome in ('yes', 'no')
@@ -194,6 +195,7 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
        and s.started_at >= date_trunc('month', now())`) as {
     startedAtLocalHour: number
     outcome: string
+    blockId: string | null
   }[]
   const partsOfDay = contrastByPartOfDay(partRows)
 

@@ -125,6 +125,54 @@ test('a thin domain with a wide gap does not hide a thick one from the evidence 
   assert.equal(out.find((c) => c.sessions >= 8).domain, 'thick.com')
 })
 
+// Fix wave (post-hoc review of ADR-0084): sessions counted per row, but a block of 4 tasks
+// sharing one block_id is one real browsing session, not 4 — inflating `sessions` and letting
+// the I6 evidence floor fire on 2 real sessions worth of rows.
+test('a 4-task block with the same outcome counts as 1 session, not 4', () => {
+  const rows = Array.from({ length: 4 }, (_, i) => ({
+    domain: 'a.com', sessionId: `t${i}`, blockId: 'block-1', seconds: 100, outcome: 'yes',
+  }))
+  rows.push({ domain: 'a.com', sessionId: 'other', blockId: 'block-2', seconds: 300, outcome: 'no' })
+  const [top] = contrastByOutcome(rows)
+  assert.equal(top.sessions, 2) // block-1 (1) + block-2 (1), not 4 + 1
+  assert.equal(top.finishedAvgSeconds, 400) // (100*4) summed within block-1, averaged over 1 "session"
+  assert.equal(top.unfinishedAvgSeconds, 300)
+})
+
+test('a block whose own tasks disagree on a domain\'s outcome excludes that domain from the block', () => {
+  const rows = [
+    { domain: 'mixed.com', sessionId: 't1', blockId: 'block-1', seconds: 100, outcome: 'yes' },
+    { domain: 'mixed.com', sessionId: 't2', blockId: 'block-1', seconds: 200, outcome: 'no' },
+    // Both arms still need real evidence elsewhere or the domain vanishes entirely (expected —
+    // it has nothing left after block-1 is excluded).
+  ]
+  assert.deepEqual(contrastByOutcome(rows), [])
+})
+
+test('a mixed-outcome block is excluded even when the domain has other, clean evidence', () => {
+  const rows = [
+    { domain: 'mixed.com', sessionId: 't1', blockId: 'block-1', seconds: 100, outcome: 'yes' },
+    { domain: 'mixed.com', sessionId: 't2', blockId: 'block-1', seconds: 200, outcome: 'no' },
+    ...Array.from({ length: 4 }, (_, i) => ({
+      domain: 'mixed.com', sessionId: `y${i}`, blockId: `clean-yes-${i}`, seconds: 50, outcome: 'yes',
+    })),
+    ...Array.from({ length: 4 }, (_, i) => ({
+      domain: 'mixed.com', sessionId: `n${i}`, blockId: `clean-no-${i}`, seconds: 900, outcome: 'no',
+    })),
+  ]
+  const [top] = contrastByOutcome(rows)
+  assert.equal(top.sessions, 8) // block-1 excluded entirely — 4 clean yes + 4 clean no, not 10
+})
+
+test('a null block_id (pre-migration, single-task) row still counts as its own session', () => {
+  const rows = [
+    { domain: 'a.com', sessionId: 's1', blockId: null, seconds: 100, outcome: 'yes' },
+    { domain: 'a.com', sessionId: 's2', blockId: null, seconds: 200, outcome: 'no' },
+  ]
+  const [top] = contrastByOutcome(rows)
+  assert.equal(top.sessions, 2)
+})
+
 test('equal gaps break by domain name, not by the order the rows arrived in', () => {
   // Before the secondary key, two domains with identical gaps fell back to Map insertion order —
   // the order Postgres returned the event rows in, from a query with no ORDER BY. The sentence
