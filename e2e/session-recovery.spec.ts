@@ -193,3 +193,98 @@ test('the badge resyncs to empty after a restart when no review is pending', asy
     fs.rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+// Fix wave (post-hoc review of ADR-0084): endSession('recovered')'s closingEvents loop used to
+// run unconditionally, attributing the ENTIRE time the browser sat closed to a parked task's
+// review as "paused" (time on its sibling) — when in truth nobody observed that stretch at all,
+// browser closed or not. Recovery must leave it unrecorded, exactly like the active task's own
+// gap always was.
+test('a recovered session with a parked task reports the closed-browser gap as unrecorded, not paused', async ({ baseURL }) => {
+  test.setTimeout(60_000)
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meant-pw-recovery-park-'))
+  const launchArgs = {
+    channel: 'chromium' as const,
+    args: [`--disable-extensions-except=${EXTENSION_PATH}`, `--load-extension=${EXTENSION_PATH}`],
+  }
+
+  const context1 = await chromium.launchPersistentContext(userDataDir, launchArgs)
+  let parkedId: string
+  try {
+    let sw1 = context1.serviceWorkers()[0]
+    if (!sw1) sw1 = await context1.waitForEvent('serviceworker')
+    const extensionId = sw1.url().split('/')[2]
+
+    await sw1.evaluate(
+      (base) => new Promise<void>((r) => chrome.storage.local.set({ apiBase: base }, () => r())),
+      baseURL!,
+    )
+
+    const page = await context1.newPage()
+    const email = `e2e-recovery-park-${Date.now()}@example.com`
+    await page.goto('/sign-in')
+    const signupForm = page.getByRole('form', { name: 'Create an account' })
+    await signupForm.getByLabel('Name').fill('E2E Recovery Park')
+    await signupForm.getByLabel('Email').fill(email)
+    await signupForm.getByLabel('Password').fill('e2e-test-password-1')
+    await signupForm.getByRole('button', { name: 'Create an account' }).click()
+    await page.waitForURL('**/dashboard')
+
+    const mint = await page.request.post('/api/pair')
+    const { code } = await mint.json()
+    const claim = await page.request.post('/api/pair/claim', { data: { code } })
+    const { token, deviceId } = await claim.json()
+    await page.goto(`chrome-extension://${extensionId}/popup.html`)
+    await page.evaluate(({ token, deviceId }) => new Promise<void>((r) => chrome.storage.local.set({ token, deviceId }, () => r())), { token, deviceId })
+    await page.reload()
+    await page.locator('input.m-field').first().fill('first task')
+    await page.getByRole('button', { name: 'Start' }).click()
+
+    const added = await page.evaluate(
+      () => chrome.runtime.sendMessage({ type: 'add-task', intention: 'second task', blockedDomains: [], workSites: [] }),
+    )
+    expect(added.ok).toBe(true)
+    parkedId = await page.evaluate(
+      () => new Promise<string>((r) => chrome.storage.local.get('block', ({ block }: any) => r(block.tasks[0].sessionId))),
+    )
+
+    await expect
+      .poll(async () => (await page.request.get(`/api/sessions/${parkedId}/review`)).status(), { timeout: 10_000 })
+      .toBe(200)
+
+    // Push the parked task's pausedAt 10 real minutes back, so the closed-browser gap this test
+    // is checking for is unmistakably distinct from whatever tiny real gap the park itself took.
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      chrome.storage.local.get('block', ({ block }: any) => {
+        block.tasks[0].pausedAt = Date.now() - 10 * 60_000
+        chrome.storage.local.set({ block }, () => resolve())
+      })
+    }))
+  } finally {
+    await context1.close()
+  }
+
+  const context2 = await chromium.launchPersistentContext(userDataDir, launchArgs)
+  try {
+    let sw2 = context2.serviceWorkers()[0]
+    if (!sw2) sw2 = await context2.waitForEvent('serviceworker')
+    const extensionId = sw2.url().split('/')[2]
+    const checkPage = await context2.newPage()
+    await checkPage.goto(`chrome-extension://${extensionId}/popup.html`)
+
+    await expect
+      .poll(async () => checkPage.evaluate(() => new Promise((r) => chrome.storage.local.get('session', (v: any) => r(v.session)))))
+      .toBeNull()
+
+    const review = await (await checkPage.request.get(`/api/sessions/${parkedId}/review`)).json()
+    // The bug: closingEvents ran unconditionally, so the manufactured 10-minute pausedAt gap
+    // landed in pausedSeconds as if the user had genuinely been on the sibling task the whole
+    // time (~600s). Fixed, endSession('recovered') never enqueues that event at all — the
+    // parked task's own real wall-clock span (started_at..ended_at, only as long as this test
+    // actually ran) is all that is left to account for, and none of it is misattributed as
+    // "paused."
+    expect(review.pausedSeconds).toBeLessThan(30)
+  } finally {
+    await context2.close()
+    fs.rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

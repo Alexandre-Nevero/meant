@@ -302,8 +302,13 @@ export async function endSession(endReason) {
   try {
     await transition({ mode: session.slice?.mode ?? 'attention', domain: null })
     // ADR-0084: each parked task's last stretch of inactivity, then every row ends together.
-    for (const { sessionId, event } of closingEvents(block, Date.parse(endedAt))) {
-      await enqueue({ sessionId }, event)
+    // Skipped on 'recovered': that stretch spans the time the browser was actually closed, which
+    // was NOT observed as "on another task" — it's unrecorded, same as it always was for the
+    // active task. Attributing it as paused would hide the real gap behind a false attribution.
+    if (endReason !== 'recovered') {
+      for (const { sessionId, event } of closingEvents(block, Date.parse(endedAt))) {
+        await enqueue({ sessionId }, event)
+      }
     }
     await flush()
     for (const id of [session.sessionId, ...parked.map((t) => t.sessionId)]) {
