@@ -25,7 +25,65 @@ export interface SessionRow {
   outcome?: string | null
   started_at: string
   ended_at?: string | null
+  /** ADR-0084. Tasks of one session share it; null on rows written before tasks existed. */
+  block_id?: string | null
   events?: EventRow[]
+}
+
+/** ADR-0084. One session may be several task rows; they share block_id. */
+export function sessionKey(s: { id: string; block_id?: string | null }): string {
+  return s.block_id ?? s.id
+}
+
+/** Sessions, not task rows. A row with no id (callers that pass outcomes alone) counts once. */
+export function countSessions(rows: { id?: string; block_id?: string | null }[]): number {
+  return new Set(rows.map((s, i) => s.block_id ?? s.id ?? `#${i}`)).size
+}
+
+/** One row per session for anything drawn on a time axis: a block's tasks share one clock, so
+ *  drawing them separately would stack identical bars. Intentions join; events concatenate. */
+export function mergeBlocks(sessions: SessionRow[]): SessionRow[] {
+  const byKey = new Map<string, SessionRow>()
+  for (const s of sessions) {
+    const key = sessionKey(s)
+    const seen = byKey.get(key)
+    if (!seen) {
+      byKey.set(key, { ...s, events: s.events ? [...s.events] : s.events })
+      continue
+    }
+    seen.intention = [seen.intention, s.intention].filter(Boolean).join(' · ')
+    if (s.events) seen.events = [...(seen.events ?? []), ...s.events]
+    if (s.ended_at && (!seen.ended_at || s.ended_at > seen.ended_at)) seen.ended_at = s.ended_at
+  }
+  return [...byKey.values()]
+}
+
+/** ADR-0084. A merged row's outcome column: a single label+dot when every task in the block
+ *  agrees (including the ordinary single-task case), or a joined "N Yes · M Not yet" text when
+ *  they don't — reusing the exact phrasing already shown on the Performance & Fidelity card,
+ *  rather than silently picking one task's answer and hiding a real disagreement. */
+export function blockOutcomeSummary(rows: { outcome?: string | null }[]): {
+  mixed: boolean
+  label: string
+} {
+  let yes = 0, no = 0, unanswered = 0
+  for (const r of rows) {
+    const out = (r.outcome || '').toLowerCase()
+    if (out === 'yes') yes++
+    else if (out === 'no') no++
+    else unanswered++
+  }
+  const parts = [
+    yes > 0 && `${yes} Yes`,
+    no > 0 && `${no} Not yet`,
+    unanswered > 0 && `${unanswered} Unanswered`,
+  ].filter(Boolean) as string[]
+  if (parts.length <= 1) {
+    // Uniform (including the single-row case): return the plain label the existing single
+    // dot+label rendering already expects.
+    return { mixed: false, label: yes > 0 ? 'Yes' : no > 0 ? 'Not yet' : 'Unanswered' }
+  }
+  return { mixed: true, label: parts.join(' · ') }
 }
 
 /** Formats a second count into human-readable "X hr Y min" or "Y min" */
@@ -141,12 +199,12 @@ export interface PerformanceFidelity {
 
 /** Computes overall performance and fidelity metrics. */
 export function computePerformanceFidelity(
-  currentSessions: { outcome?: string | null }[],
+  currentSessions: { id?: string; block_id?: string | null; outcome?: string | null }[],
   prevSessionsCount = 0,
   currentAttentionSeconds = 0,
   prevAttentionSeconds = 0,
 ): PerformanceFidelity {
-  const sessionCount = currentSessions.length
+  const sessionCount = countSessions(currentSessions)
   let finishedCount = 0
   let notYetCount = 0
   let unansweredCount = 0
@@ -214,7 +272,7 @@ export function computeDailyTimeline(
   let totalAwaySeconds = 0
   let totalBreakSeconds = 0
 
-  for (const s of sessions) {
+  for (const s of mergeBlocks(sessions)) {
     if (!s.started_at) continue
     const start = new Date(s.started_at)
     if (isNaN(start.getTime())) continue
@@ -333,6 +391,7 @@ export function computeMonthlyBreakdown(
   let totalAwaySeconds = 0
   let totalBreakSeconds = 0
 
+  const counted = new Set<string>() // ADR-0084: day:session pairs already counted
   for (const s of sessions) {
     if (!s.started_at) continue
     const d = new Date(s.started_at)
@@ -365,7 +424,11 @@ export function computeMonthlyBreakdown(
     days[dayIdx].attendedSeconds += attended
     days[dayIdx].awaySeconds += away
     days[dayIdx].breakSeconds += breakSec
-    days[dayIdx].sessionCount += 1
+    const dayKey = `${dayIdx}:${sessionKey(s)}`
+    if (!counted.has(dayKey)) {
+      counted.add(dayKey)
+      days[dayIdx].sessionCount += 1
+    }
 
     totalAttendedSeconds += attended
     totalAwaySeconds += away
@@ -452,6 +515,7 @@ export function computeWeeklyBreakdown(
   let totalAwaySeconds = 0
   let totalBreakSeconds = 0
 
+  const counted = new Set<string>() // ADR-0084: day:session pairs already counted
   for (const s of sessions) {
     if (!s.started_at) continue
     const d = new Date(s.started_at)
@@ -480,7 +544,11 @@ export function computeWeeklyBreakdown(
     days[dayIdx].attendedSeconds += attended
     days[dayIdx].awaySeconds += away
     days[dayIdx].breakSeconds += breakSec
-    days[dayIdx].sessionCount += 1
+    const dayKey = `${dayIdx}:${sessionKey(s)}`
+    if (!counted.has(dayKey)) {
+      counted.add(dayKey)
+      days[dayIdx].sessionCount += 1
+    }
 
     totalAttendedSeconds += attended
     totalAwaySeconds += away

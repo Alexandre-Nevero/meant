@@ -133,6 +133,39 @@ test('a thin part of day does not suppress a thick one that clears the floor', (
   assert.equal(claim.unfinished, 6)
 })
 
+// Fix wave (post-hoc review of ADR-0084): a 4-task block sharing one block_id lands every row
+// in the same part (same started_at_local_hour) by construction, and used to count as 4
+// sessions there instead of 1.
+test('a 4-task block with the same outcome counts as 1 session in its part, not 4', () => {
+  const rows = [
+    ...Array.from({ length: 4 }, () => ({ startedAtLocalHour: 9, outcome: 'yes', blockId: 'block-1' })),
+    { startedAtLocalHour: 9, outcome: 'no', blockId: 'block-2' },
+  ]
+  const r = top(rows)
+  assert.equal(r.finished, 1) // block-1, not 4
+  assert.equal(r.unfinished, 1)
+  assert.equal(r.sessions, 2)
+})
+
+test('a block whose own tasks disagree on outcome is excluded from its part entirely', () => {
+  const rows = [
+    { startedAtLocalHour: 9, outcome: 'yes', blockId: 'block-1' },
+    { startedAtLocalHour: 9, outcome: 'no', blockId: 'block-1' },
+    ...Array.from({ length: 4 }, () => ({ startedAtLocalHour: 9, outcome: 'yes', blockId: 'clean-yes' })).map((r, i) => ({ ...r, blockId: `clean-yes-${i}` })),
+    ...Array.from({ length: 4 }, () => ({ startedAtLocalHour: 9, outcome: 'no', blockId: 'clean-no' })).map((r, i) => ({ ...r, blockId: `clean-no-${i}` })),
+  ]
+  const r = top(rows)
+  assert.equal(r.sessions, 8) // block-1 excluded — 4 clean yes + 4 clean no, not 10
+})
+
+test('a null block_id (pre-migration, single-task) row still counts as its own session', () => {
+  const rows = [
+    { startedAtLocalHour: 9, outcome: 'yes', blockId: null },
+    { startedAtLocalHour: 9, outcome: 'no', blockId: null },
+  ]
+  assert.equal(top(rows).sessions, 2)
+})
+
 test('equal gaps break by PARTS order, not by the order the rows arrived in', () => {
   // The sort is stable, so before the secondary key equal gaps fell back to Map insertion order
   // — which is whatever Postgres returned, from a query with no ORDER BY. The same six rows in

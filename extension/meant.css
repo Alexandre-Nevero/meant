@@ -344,6 +344,15 @@ body.m-app::before {
 .m-row-bar[data-kind="attention-1"] { background: var(--m-clay); }
 .m-row-bar[data-kind="attention-2"] { background: var(--m-clay-2); }
 .m-row-bar[data-kind="attention-3"] { background: var(--m-clay-3); }
+/* ADR-0084. A task row trades the 56px figure column for its switch chip. data-row, not a class. */
+[data-surface="popup"] .m-row[data-row="task"] { grid-template-columns: 11px minmax(0, 1fr) auto; }
+/* ADR-0084. .m-btn / .m-field set their own `display`, which (same as [data-chip-layout="count"]
+ * above) outranks the [hidden] attribute's UA display:none on a specificity tie — restore it for
+ * the "+ task" button and its field, the first .m-btn/.m-field to toggle `hidden` at runtime. */
+[data-surface="popup"] .m-btn[hidden], [data-surface="popup"] .m-field[hidden] { display: none; }
+/* ADR-0084. The multi-task outcome stacks up to four intentions; the full 76px outline each
+ * would push the answers below the 600px popup ceiling. */
+[data-surface="popup"] .m-sentence[data-compact="true"] { font-size: 16px; min-height: 0; }
 .m-row-bar[data-kind="away"] { background: var(--m-away); border: var(--m-stroke-hair) solid var(--m-ink-3); }
 .m-row-bar[data-kind="remainder"] { background: transparent; border: var(--m-stroke-hair) dashed var(--m-edge); }
 

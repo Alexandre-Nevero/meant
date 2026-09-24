@@ -9,6 +9,9 @@ import {
   computeDailyTimeline,
   computeMonthlyBreakdown,
   computeWeeklyBreakdown,
+  countSessions,
+  mergeBlocks,
+  blockOutcomeSummary,
 } from '../lib/dashboard-figures.ts'
 
 test('formatHm drops the hour when there is none', () => {
@@ -145,5 +148,75 @@ test('computeWeeklyBreakdown groups session attention by day of the week', () =>
   assert.equal(breakdown.days.length, 7)
   assert.equal(breakdown.totalAttendedSeconds, 9000)
   assert.equal(breakdown.totalAwaySeconds, 1800)
+})
+
+// ADR-0084. One session with several tasks is several rows sharing a block_id.
+test('countSessions counts a block of tasks once, and rows without ids once each', () => {
+  assert.equal(countSessions([{ id: 'a', block_id: 'a' }, { id: 'b', block_id: 'a' }, { id: 'c', block_id: null }]), 2)
+  assert.equal(countSessions([{ outcome: 'yes' }, { outcome: 'no' }]), 2)
+})
+
+test('computePerformanceFidelity counts sessions by block and outcomes by task', () => {
+  const perf = computePerformanceFidelity(
+    [{ id: 'a', block_id: 'a', outcome: 'yes' }, { id: 'b', block_id: 'a', outcome: 'no' }],
+    0, 0, 0,
+  )
+  assert.equal(perf.sessionCount, 1)
+  assert.equal(perf.finishedCount, 1)
+  assert.equal(perf.notYetCount, 1)
+})
+
+test('computeDailyTimeline draws one bar per block, joining its tasks and ignoring paused time', () => {
+  const at = { started_at: '2026-09-18T08:00:00.000Z', ended_at: '2026-09-18T09:00:00.000Z' }
+  const timeline = computeDailyTimeline('2026-09-18', [
+    { id: 'a', block_id: 'a', intention: 'write', ...at, events: [{ kind: 'attention', seconds: 600 }, { kind: 'paused', seconds: 300 }] },
+    { id: 'b', block_id: 'a', intention: 'research', ...at, events: [{ kind: 'attention', seconds: 300 }, { kind: 'paused', seconds: 600 }] },
+  ], 4, 22)
+  assert.equal(timeline.blocks.length, 1)
+  assert.equal(timeline.sessionsCount, 1)
+  assert.equal(timeline.blocks[0].intention, 'write · research')
+  assert.equal(timeline.blocks[0].attendedSeconds, 900)
+})
+
+test('computeMonthlyBreakdown counts a block once per day but sums all its tasks\' time', () => {
+  const at = { started_at: '2026-09-01T10:00:00.000Z', ended_at: '2026-09-01T11:00:00.000Z' }
+  const month = computeMonthlyBreakdown(2026, 9, [
+    { id: 'a', block_id: 'a', ...at, events: [{ kind: 'attention', seconds: 600 }] },
+    { id: 'b', block_id: 'a', ...at, events: [{ kind: 'attention', seconds: 300 }] },
+  ])
+  assert.equal(month.days[0].sessionCount, 1)
+  assert.equal(month.days[0].attendedSeconds, 900)
+})
+
+// ADR-0084 fixwave: the ledger/dashboard row lists must dedupe a block the same way the
+// timeline already does.
+test('mergeBlocks is exported and importable', () => {
+  const merged = mergeBlocks([
+    { id: 'a', block_id: 'a', started_at: '2026-09-18T08:00:00.000Z', intention: 'write' },
+    { id: 'b', block_id: 'a', started_at: '2026-09-18T08:00:00.000Z', intention: 'research' },
+  ])
+  assert.equal(merged.length, 1)
+  assert.equal(merged[0].intention, 'write · research')
+})
+
+test('blockOutcomeSummary: a uniform block returns the plain label', () => {
+  assert.deepEqual(
+    blockOutcomeSummary([{ outcome: 'yes' }, { outcome: 'yes' }]),
+    { mixed: false, label: 'Yes' },
+  )
+})
+
+test('blockOutcomeSummary: a mixed block joins the disagreeing outcomes', () => {
+  assert.deepEqual(
+    blockOutcomeSummary([{ outcome: 'yes' }, { outcome: 'no' }]),
+    { mixed: true, label: '1 Yes · 1 Not yet' },
+  )
+})
+
+test('blockOutcomeSummary: a single unanswered row is the ordinary single-row case', () => {
+  assert.deepEqual(
+    blockOutcomeSummary([{ outcome: null }]),
+    { mixed: false, label: 'Unanswered' },
+  )
 })
 

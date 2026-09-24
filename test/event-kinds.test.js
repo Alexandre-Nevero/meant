@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { labelsToEvents } from '../extension/lib/visit-label.js'
+import { pausedEvent } from '../extension/lib/block.js'
 
 // Regression guard. The companion's one-tap label (ADR-0058) emits kind 'label'. The events
 // route validates against a fixed KINDS list and rejects anything else with a 400.
@@ -14,6 +15,7 @@ test("the events route accepts every kind the extension can emit", () => {
   const route = readFileSync('app/api/events/route.ts', 'utf8')
   const emitted = new Set(labelsToEvents([{ domain: 'a.com', label: 'drift', at: 1 }]).map((e) => e.kind))
   emitted.add('attention').add('away').add('block_hit')
+  emitted.add(pausedEvent(0, 60_000).kind) // ADR-0084: a parked task's inactive time
   const declared = route.match(/const KINDS = \[([^\]]+)\]/)
   assert.ok(declared, 'KINDS not found in the events route')
   for (const kind of emitted) {

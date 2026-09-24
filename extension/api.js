@@ -18,7 +18,7 @@ export async function get(path) {
       await chrome.storage.local.set({
         token: null,
         deviceId: null,
-        session: null,
+        session: null, block: null,
         pendingReview: null,
         unpairedReason: 'This device was disconnected from your account. Pair again.',
       })
@@ -48,7 +48,7 @@ export async function post(path, body, { method = 'POST', queue: shouldQueue = t
       await chrome.storage.local.set({
         token: null,
         deviceId: null,
-        session: null,
+        session: null, block: null,
         pendingReview: null,
         unpairedReason: 'This device was disconnected from your account. Pair again.',
       })

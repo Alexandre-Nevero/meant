@@ -9,6 +9,8 @@ import {
   formatHm,
   formatHmCompact,
   computeDailyTimeline,
+  mergeBlocks,
+  blockOutcomeSummary,
   type SessionRow,
 } from '@/lib/dashboard-figures'
 
@@ -44,7 +46,7 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
 
   // Fetch recent sessions
   const sessionsRaw = await sql`
-    select s.id, s.intention, s.started_at, s.ended_at, s.outcome,
+    select s.id, s.intention, s.started_at, s.ended_at, s.outcome, s.block_id,
            coalesce(
              (select json_agg(json_build_object('kind', e.kind, 'domain', e.domain, 'seconds', e.seconds, 'label', e.label))
                 from event e where e.session_id = s.id),
@@ -76,6 +78,16 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
     if (!s.started_at) return false
     return new Date(s.started_at).toISOString().slice(0, 10) === todayString
   })
+
+  // ADR-0084: one row per session, not per task. mergeBlocks draws the display rows; the raw
+  // per-task rows behind each one feed blockOutcomeSummary since mergeBlocks itself doesn't
+  // keep them.
+  const displayRows = mergeBlocks(todaySessions)
+  const rawByKey = new Map<string, typeof todaySessions>()
+  for (const s of todaySessions) {
+    const key = s.block_id ?? s.id
+    rawByKey.set(key, [...(rawByKey.get(key) ?? []), s])
+  }
 
   const latestIntention = sessions[0]?.intention || null
 
@@ -206,11 +218,11 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
         <section className="m-record-panel" aria-label="Today's Sessions">
           <div className="m-panel-head">
             <span>Today&apos;s Sessions</span>
-            <span>{todaySessions.length} Completed</span>
+            <span>{displayRows.length} Completed</span>
           </div>
 
           <div className="m-record-list">
-            {todaySessions.length === 0 ? (
+            {displayRows.length === 0 ? (
               <div className="m-record-empty">
                 <span className="m-record-empty-title">No sessions completed yet today</span>
                 <span className="m-record-empty-sub">
@@ -218,7 +230,7 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
                 </span>
               </div>
             ) : (
-              todaySessions.map(s => {
+              displayRows.map(s => {
                 const totalSec = (s.events || []).reduce((acc, e) => acc + (e.seconds || 0), 0)
                 const attSec = (s.events || [])
                   .filter(e => e.kind === 'attention')
@@ -239,6 +251,8 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
                 const outLabel = out === 'yes' ? 'Yes' : out === 'no' ? 'Not yet' : 'Unanswered'
                 const outClass = out === 'yes' ? 'yes' : out === 'no' ? 'not-yet' : 'unanswered'
                 const events = (s.events || []) as Parameters<typeof toBand>[0]
+                const raw = rawByKey.get(s.block_id ?? s.id) ?? [s]
+                const { mixed, label } = blockOutcomeSummary(raw)
 
                 return (
                   <div key={s.id} className="m-record-row">
@@ -248,10 +262,16 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
 
                     <Band segments={toBand(events)} state={s.ended_at ? 'ended' : 'running'} />
 
-                    <div className="m-row-outcome">
-                      <span className={`m-outcome-dot ${outClass}`} aria-hidden="true" />
-                      <span>{outLabel}</span>
-                    </div>
+                    {mixed ? (
+                      <div className="m-row-outcome">
+                        <span>{label}</span>
+                      </div>
+                    ) : (
+                      <div className="m-row-outcome">
+                        <span className={`m-outcome-dot ${outClass}`} aria-hidden="true" />
+                        <span>{outLabel}</span>
+                      </div>
+                    )}
 
                     <div className="m-row-dur">
                       {s.ended_at && s.started_at

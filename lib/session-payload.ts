@@ -17,12 +17,15 @@ export type StartPayload = {
   cycleWorkMin: number | null
   cycleBreakMin: number | null
   localHour: number | null
+  blockId: string | null
 }
 
 /** Client-supplied and untrusted, exactly like `body.id`. A non-array becomes an empty
  *  array rather than throwing, and every member is stringified so a nested object cannot
  *  reach the text[] columns. */
 const strArray = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => String(x)) : [])
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export function normalizeStartPayload(body: Record<string, unknown>): StartPayload {
   const cycle = body.cycle as { work?: unknown; break?: unknown } | null | undefined
@@ -44,5 +47,8 @@ export function normalizeStartPayload(body: Record<string, unknown>): StartPaylo
     localHour: Number.isInteger(body.localHour) && (body.localHour as number) >= 0 && (body.localHour as number) <= 23
       ? (body.localHour as number)
       : null,
+    // ADR-0084. Client-supplied and untrusted, like body.id. Lowercased so every row of one
+    // block compares equal whatever case the client sent.
+    blockId: typeof body.blockId === 'string' && UUID.test(body.blockId) ? body.blockId.toLowerCase() : null,
   }
 }

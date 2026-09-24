@@ -17,6 +17,9 @@ import {
   computePerformanceFidelity,
   computeMonthlyBreakdown,
   computeWeeklyBreakdown,
+  countSessions,
+  mergeBlocks,
+  blockOutcomeSummary,
   type EventRow,
   type SessionRow,
 } from '@/lib/dashboard-figures'
@@ -114,7 +117,7 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
 
   // Fetch recent sessions (capped at 50 for performance and bounded query)
   const sessionsRaw = await sql`
-    select s.id, s.intention, s.started_at, s.ended_at, s.outcome,
+    select s.id, s.intention, s.started_at, s.ended_at, s.outcome, s.block_id,
            coalesce(
              (select json_agg(json_build_object('kind', e.kind, 'domain', e.domain, 'seconds', e.seconds, 'label', e.label))
                 from event e where e.session_id = s.id),
@@ -156,21 +159,21 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
        and s.started_at < date_trunc('month', now())`) as unknown as EventRow[]
 
   const monthSessions = (await sql`
-    select s.id, s.outcome
+    select s.id, s.outcome, s.block_id
       from session s
      where s.user_id = ${userId}
-       and s.started_at >= date_trunc('month', now())`) as { id: string; outcome: string | null }[]
+       and s.started_at >= date_trunc('month', now())`) as { id: string; outcome: string | null; block_id: string | null }[]
 
   const prevMonthSessions = (await sql`
-    select s.id, s.outcome
+    select s.id, s.outcome, s.block_id
       from session s
      where s.user_id = ${userId}
        and s.started_at >= date_trunc('month', now() - interval '1 month')
-       and s.started_at < date_trunc('month', now())`) as { id: string; outcome: string | null }[]
+       and s.started_at < date_trunc('month', now())`) as { id: string; outcome: string | null; block_id: string | null }[]
 
   // ADR-0060: Inference contrasts before the judge
   const contrastRows = (await sql`
-    select e.domain, e.seconds, s.outcome, s.id as "sessionId"
+    select e.domain, e.seconds, s.outcome, s.id as "sessionId", s.block_id as "blockId"
       from event e join session s on s.id = e.session_id
      where s.user_id = ${userId}
        and e.kind = 'attention'
@@ -181,11 +184,12 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
     seconds: number
     outcome: string
     sessionId: string
+    blockId: string | null
   }[]
   const contrasts = contrastByOutcome(contrastRows)
 
   const partRows = (await sql`
-    select s.started_at_local_hour as "startedAtLocalHour", s.outcome
+    select s.started_at_local_hour as "startedAtLocalHour", s.outcome, s.block_id as "blockId"
       from session s
      where s.user_id = ${userId}
        and s.outcome in ('yes', 'no')
@@ -193,6 +197,7 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
        and s.started_at >= date_trunc('month', now())`) as {
     startedAtLocalHour: number
     outcome: string
+    blockId: string | null
   }[]
   const partsOfDay = contrastByPartOfDay(partRows)
 
@@ -244,7 +249,7 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
 
   const fidelity = computePerformanceFidelity(
     monthSessions,
-    prevMonthSessions.length,
+    countSessions(prevMonthSessions),
     currentTotals.attention,
     prevTotals.attention,
   )
@@ -825,39 +830,60 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
             </div>
           )}
 
-          {Array.from(groupedSessions.entries()).map(([dateStr, daySessions]) => (
-            <div key={dateStr}>
-              <div className="m-day-divider">{formatDayDivider(dateStr)}</div>
-              {daySessions.map((s) => {
-                const events = (s.events || []) as Parameters<typeof toBand>[0]
-                return (
-                  <div className="m-row m-record-row" key={s.id}>
-                    {s.intention ? (
-                      <Link className="m-sentence m-row-intention" href={`/review/${s.id}`}>
-                        {s.intention}
-                      </Link>
-                    ) : (
-                      <Link className="m-meta m-row-intention" href={`/review/${s.id}`}>
-                        No intention given
-                      </Link>
-                    )}
-                    <Band segments={toBand(events)} state={s.ended_at ? 'ended' : 'running'} />
-                    <div className="m-row-outcome">
-                      <span className={`m-outcome-dot ${s.outcome === 'yes' ? 'yes' : s.outcome === 'no' ? 'not-yet' : 'unanswered'}`} />
-                      <span className="m-meta" style={{ color: s.outcome === 'unanswered' ? undefined : 'var(--m-ink)' }}>
-                        {s.outcome === 'yes' ? 'Yes' : s.outcome === 'no' ? 'Not yet' : 'Unanswered'}
-                      </span>
+          {Array.from(groupedSessions.entries()).map(([dateStr, daySessions]) => {
+            // ADR-0084: one row per session, not per task. Every task in a block shares
+            // started_at, so a block's rows always land in the same day group — safe to
+            // merge per group. rawByKey feeds blockOutcomeSummary since mergeBlocks doesn't
+            // keep which raw rows fed each merged one.
+            const dayDisplayRows = mergeBlocks(daySessions)
+            const dayRawByKey = new Map<string, typeof daySessions>()
+            for (const s of daySessions) {
+              const key = s.block_id ?? s.id
+              dayRawByKey.set(key, [...(dayRawByKey.get(key) ?? []), s])
+            }
+
+            return (
+              <div key={dateStr}>
+                <div className="m-day-divider">{formatDayDivider(dateStr)}</div>
+                {dayDisplayRows.map((s) => {
+                  const events = (s.events || []) as Parameters<typeof toBand>[0]
+                  const raw = dayRawByKey.get(s.block_id ?? s.id) ?? [s]
+                  const { mixed, label } = blockOutcomeSummary(raw)
+                  return (
+                    <div className="m-row m-record-row" key={s.id}>
+                      {s.intention ? (
+                        <Link className="m-sentence m-row-intention" href={`/review/${s.id}`}>
+                          {s.intention}
+                        </Link>
+                      ) : (
+                        <Link className="m-meta m-row-intention" href={`/review/${s.id}`}>
+                          No intention given
+                        </Link>
+                      )}
+                      <Band segments={toBand(events)} state={s.ended_at ? 'ended' : 'running'} />
+                      {mixed ? (
+                        <div className="m-row-outcome">
+                          <span className="m-meta" style={{ color: 'var(--m-ink)' }}>{label}</span>
+                        </div>
+                      ) : (
+                        <div className="m-row-outcome">
+                          <span className={`m-outcome-dot ${s.outcome === 'yes' ? 'yes' : s.outcome === 'no' ? 'not-yet' : 'unanswered'}`} />
+                          <span className="m-meta" style={{ color: s.outcome === 'unanswered' ? undefined : 'var(--m-ink)' }}>
+                            {s.outcome === 'yes' ? 'Yes' : s.outcome === 'no' ? 'Not yet' : 'Unanswered'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="m-row-dur m-row-figure">
+                        {s.ended_at && s.started_at
+                          ? formatHmCompact((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000)
+                          : 'running'}
+                      </div>
                     </div>
-                    <div className="m-row-dur m-row-figure">
-                      {s.ended_at && s.started_at
-                        ? formatHmCompact((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000)
-                        : 'running'}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+                  )
+                })}
+              </div>
+            )
+          })}
         </section>
       )}
 

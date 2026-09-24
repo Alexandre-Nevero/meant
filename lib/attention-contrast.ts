@@ -15,8 +15,12 @@ import { EXTENSION_ID_SHAPE } from './band.ts'
  *  averaging, it does not ship. */
 
 /** One attention row. Several rows share a sessionId when a session returned to the same
- *  domain — which is the common case, and the reason sessionId is required here. */
-export type ContrastRow = { domain: string; sessionId: string; seconds: number; outcome: string }
+ *  domain — which is the common case, and the reason sessionId is required here.
+ *
+ *  blockId (ADR-0084): several TASKS can share one browsing session (one block_id). null for a
+ *  row that predates the migration, or a single-task session — sessionId is its own identity
+ *  then, exactly as before. */
+export type ContrastRow = { domain: string; sessionId: string; blockId: string | null; seconds: number; outcome: string }
 export type Contrast = {
   domain: string
   finishedAvgSeconds: number
@@ -28,24 +32,35 @@ export type Contrast = {
 const mean = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length)
 
 export function contrastByOutcome(rows: ContrastRow[]): Contrast[] {
-  // Fold to one total per (domain, session) FIRST. Without this both outputs are wrong, and
-  // wrong in the direction that matters: `sessions` would count event rows, so the I6
-  // evidence gate fires far too early — real data had 53 rows for chatgpt.com across 5
-  // sessions, which would have stated a pattern on 5 sessions while reporting 53. And the
-  // average would weight a fragmented session above a focused one with the same total time.
-  const perSession = new Map<string, { domain: string; outcome: string; seconds: number }>()
+  // Fold to one total per (domain, BLOCK) FIRST. Without this both outputs are wrong, and
+  // wrong in the direction that matters: `sessions` would count event rows (or, since ADR-0084,
+  // task rows within one block), so the I6 evidence gate fires far too early — real data had 53
+  // rows for chatgpt.com across 5 sessions, which would have stated a pattern on 5 sessions
+  // while reporting 53. And the average would weight a fragmented session above a focused one
+  // with the same total time.
+  //
+  // Grouped by blockId ?? sessionId, not sessionId alone: a 4-task block sharing one block_id
+  // is one real session, not four. A block whose OWN tasks disagree on this domain's outcome
+  // (one 'yes' task visited it, another 'no' task in the same block also did) cannot honestly
+  // support either side of the contrast — `excluded` marks that key rather than letting the
+  // fold silently pick a winner.
+  const perSession = new Map<string, { domain: string; outcome: string; seconds: number; excluded: boolean }>()
   for (const row of rows) {
     // `unanswered` is not a third outcome to average — it is the absence of an answer.
     if (row.outcome !== 'yes' && row.outcome !== 'no') continue
     if (!row.domain || EXTENSION_ID_SHAPE.test(row.domain)) continue
-    const key = `${row.domain}\u0000${row.sessionId}`
+    const blockKey = row.blockId ?? row.sessionId
+    const key = `${row.domain}\u0000${blockKey}`
     const seen = perSession.get(key)
-    if (seen) seen.seconds += row.seconds
-    else perSession.set(key, { domain: row.domain, outcome: row.outcome, seconds: row.seconds })
+    if (!seen) perSession.set(key, { domain: row.domain, outcome: row.outcome, seconds: row.seconds, excluded: false })
+    else if (seen.excluded) continue
+    else if (seen.outcome !== row.outcome) seen.excluded = true
+    else seen.seconds += row.seconds
   }
 
   const byDomain = new Map<string, { yes: number[]; no: number[] }>()
-  for (const { domain, outcome, seconds } of perSession.values()) {
+  for (const { domain, outcome, seconds, excluded } of perSession.values()) {
+    if (excluded) continue
     const entry = byDomain.get(domain) ?? { yes: [], no: [] }
     entry[outcome === 'yes' ? 'yes' : 'no'].push(seconds)
     byDomain.set(domain, entry)

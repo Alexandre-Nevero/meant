@@ -56,20 +56,30 @@ test.describe('session lifecycle', () => {
 
     // Editable case: startedAt is "now."
     await page.reload()
-    await expect(page.locator('input.m-field')).toBeVisible()
+    // Scoped to the timer pill: Task 4 (ADR-0084) added a second .m-field (the "+ task" input,
+    // initially hidden) to the same running view, so the bare locator is a strict-mode
+    // violation now — same disambiguation e2e/juggle.spec.ts's own tests already use.
+    await expect(page.locator('[data-timer-pill="true"] input.m-field')).toBeVisible()
 
-    // Locked case: push startedAt back past GRACE_MS without waiting 60 real seconds.
+    // Locked case: push startedAt (and lockFrom, ADR-0084's own per-task lock anchor —
+    // popup.js:668 reads `session.lockFrom ?? session.startedAt`, and a solo task's lockFrom
+    // is seeded equal to startedAt at Start, so both must move together here) back past
+    // GRACE_MS without waiting 60 real seconds.
     await page.evaluate(() => {
       return new Promise<void>((resolve) => {
         chrome.storage.local.get('session', ({ session }: any) => {
           session.startedAt = new Date(Date.now() - 90_000).toISOString()
+          session.lockFrom = session.startedAt
           chrome.storage.local.set({ session }, () => resolve())
         })
       })
     })
     await page.reload()
     await expect(page.locator('p.m-sentence')).toBeVisible()
-    await expect(page.locator('input.m-field')).toHaveCount(0)
+    // Scoped to the timer pill, same as above — the page now always has a second, hidden
+    // .m-field (the "+ task" input) regardless of the sentence lock, so the bare locator
+    // would find 1 element here too instead of 0.
+    await expect(page.locator('[data-timer-pill="true"] input.m-field')).toHaveCount(0)
 
     await page.evaluate(() => chrome.runtime.sendMessage({ type: 'stop' }))
   })
@@ -86,7 +96,8 @@ test.describe('session lifecycle', () => {
       () => new Promise<string>((r) => chrome.storage.local.get('session', ({ session }: any) => r(session.sessionId))),
     )
 
-    const sentenceField = page.locator('input.m-field')
+    // Scoped to the timer pill for the same reason as above — a second .m-field now exists.
+    const sentenceField = page.locator('[data-timer-pill="true"] input.m-field')
     await sentenceField.fill('revised intention')
     // A real click-away, not locator.blur() — matches the pattern already proven to
     // reliably trigger popup.js's blur handlers elsewhere in this suite.

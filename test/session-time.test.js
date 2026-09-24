@@ -40,3 +40,9 @@ test('the render threshold is a share of the session, not a fixed number of minu
   // A fixed floor would shout on a 10-minute session and stay silent on a 4-hour one.
   assert.ok(UNRECORDED_MIN_SHARE > 0 && UNRECORDED_MIN_SHARE < 1)
 })
+
+test('computeUnrecorded counts time parked on another task as accounted for (ADR-0084)', () => {
+  // 30 minutes of wall clock: 10 attention, 5 away, 15 spent on the session's other task.
+  const parked = [...rows(600, 300), { kind: 'paused', domain: null, seconds: 900, hits: 1 }]
+  assert.equal(computeUnrecorded('2026-09-15T10:00:00Z', '2026-09-15T10:30:00Z', parked), 0)
+})

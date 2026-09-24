@@ -6,6 +6,7 @@ import { Band } from '../../band'
 import { Answer } from './answer'
 import { toWords } from '@/lib/words'
 import { UNRECORDED_MIN_SHARE } from '@/lib/session-time'
+import Link from 'next/link'
 
 const TINTS = ['attention-1', 'attention-2', 'attention-3'] as const
 
@@ -89,6 +90,25 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
             browser. This page cannot tell you about those.
           </p>
         )}
+
+      {/* ADR-0084. A task shares its session's clock, so time on the other tasks is accounted
+          for, not missing — say where it went, in minutes spelled as words like the line above. */}
+      {data.pausedSeconds >= 60 && (
+        <p {...rise('m-meta')}>
+          {toWords(minutes(data.pausedSeconds))} minutes of this session went to your other{' '}
+          {data.siblings.length === 1 ? 'task' : 'tasks'}.
+        </p>
+      )}
+      {data.siblings.length > 0 && (
+        <div {...rise('m-review-rows')}>
+          <p className="m-meta">Also in this session</p>
+          {data.siblings.map((s) => (
+            <Link key={s.id} className="m-meta" href={`/review/${s.id}`}>
+              {s.intention || 'No intention given'}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div {...rise('m-review-ask')}>
         {data.outcome === 'unanswered' ? (
