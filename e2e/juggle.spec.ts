@@ -253,3 +253,40 @@ test('a redirect fired mid-switch does not orphan the parked task (storage race)
 
   await send(page, { type: 'stop' })
 })
+
+// Fix wave (post-hoc review of ADR-0084, task 6): computeDailyTimeline already drew one bar
+// for a block and sessionCount already counted it once, but the ledger's "Today's Sessions"
+// list and the dashboard's "Session Record" list both still mapped the raw per-task rows —
+// a two-task session showed as two rows with two outcome dots, contradicting the "1 sessions
+// logged" hero above it. This proves the row lists are deduped too, and that a real
+// disagreement between the tasks' outcomes renders as joined text rather than being hidden.
+test('a two-task session with different outcomes is one row in the ledger and dashboard record lists', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  const start = await send(page, START)
+  const added = await send(page, { type: 'add-task', intention: 'research sources', blockedDomains: [], workSites: [] })
+  await send(page, { type: 'stop' })
+  for (const id of [start.sessionId, added.sessionId]) {
+    await expect
+      .poll(async () => (await (await page.request.get(`/api/sessions/${id}/review`)).json()).endedAt ?? null, { timeout: 10_000 })
+      .not.toBeNull()
+  }
+
+  await page.reload()
+  await expect(page.getByText('Did you?', { exact: true })).toHaveCount(2)
+  await page.getByRole('button', { name: 'Yes', exact: true }).first().click()
+  await page.getByRole('button', { name: 'Not yet', exact: true }).first().click()
+  await page.getByRole('button', { name: 'Done' }).click()
+
+  await page.goto('/ledger')
+  const ledgerRows = page.locator('[data-surface="ledger"] .m-record-row')
+  await expect(ledgerRows).toHaveCount(1)
+  await expect(ledgerRows.locator('.m-row-outcome')).toContainText('1 Yes · 1 Not yet')
+
+  await page.goto('/dashboard')
+  const dashRows = page.locator('[data-surface="ledger"] .m-record-row')
+  await expect(dashRows).toHaveCount(1)
+  await expect(dashRows.locator('.m-row-outcome')).toContainText('1 Yes · 1 Not yet')
+})

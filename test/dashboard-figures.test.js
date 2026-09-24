@@ -10,6 +10,8 @@ import {
   computeMonthlyBreakdown,
   computeWeeklyBreakdown,
   countSessions,
+  mergeBlocks,
+  blockOutcomeSummary,
 } from '../lib/dashboard-figures.ts'
 
 test('formatHm drops the hour when there is none', () => {
@@ -184,5 +186,37 @@ test('computeMonthlyBreakdown counts a block once per day but sums all its tasks
   ])
   assert.equal(month.days[0].sessionCount, 1)
   assert.equal(month.days[0].attendedSeconds, 900)
+})
+
+// ADR-0084 fixwave: the ledger/dashboard row lists must dedupe a block the same way the
+// timeline already does.
+test('mergeBlocks is exported and importable', () => {
+  const merged = mergeBlocks([
+    { id: 'a', block_id: 'a', started_at: '2026-09-18T08:00:00.000Z', intention: 'write' },
+    { id: 'b', block_id: 'a', started_at: '2026-09-18T08:00:00.000Z', intention: 'research' },
+  ])
+  assert.equal(merged.length, 1)
+  assert.equal(merged[0].intention, 'write · research')
+})
+
+test('blockOutcomeSummary: a uniform block returns the plain label', () => {
+  assert.deepEqual(
+    blockOutcomeSummary([{ outcome: 'yes' }, { outcome: 'yes' }]),
+    { mixed: false, label: 'Yes' },
+  )
+})
+
+test('blockOutcomeSummary: a mixed block joins the disagreeing outcomes', () => {
+  assert.deepEqual(
+    blockOutcomeSummary([{ outcome: 'yes' }, { outcome: 'no' }]),
+    { mixed: true, label: '1 Yes · 1 Not yet' },
+  )
+})
+
+test('blockOutcomeSummary: a single unanswered row is the ordinary single-row case', () => {
+  assert.deepEqual(
+    blockOutcomeSummary([{ outcome: null }]),
+    { mixed: false, label: 'Unanswered' },
+  )
 })
 

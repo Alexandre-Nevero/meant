@@ -42,7 +42,7 @@ export function countSessions(rows: { id?: string; block_id?: string | null }[])
 
 /** One row per session for anything drawn on a time axis: a block's tasks share one clock, so
  *  drawing them separately would stack identical bars. Intentions join; events concatenate. */
-function mergeBlocks(sessions: SessionRow[]): SessionRow[] {
+export function mergeBlocks(sessions: SessionRow[]): SessionRow[] {
   const byKey = new Map<string, SessionRow>()
   for (const s of sessions) {
     const key = sessionKey(s)
@@ -56,6 +56,34 @@ function mergeBlocks(sessions: SessionRow[]): SessionRow[] {
     if (s.ended_at && (!seen.ended_at || s.ended_at > seen.ended_at)) seen.ended_at = s.ended_at
   }
   return [...byKey.values()]
+}
+
+/** ADR-0084. A merged row's outcome column: a single label+dot when every task in the block
+ *  agrees (including the ordinary single-task case), or a joined "N Yes · M Not yet" text when
+ *  they don't — reusing the exact phrasing already shown on the Performance & Fidelity card,
+ *  rather than silently picking one task's answer and hiding a real disagreement. */
+export function blockOutcomeSummary(rows: { outcome?: string | null }[]): {
+  mixed: boolean
+  label: string
+} {
+  let yes = 0, no = 0, unanswered = 0
+  for (const r of rows) {
+    const out = (r.outcome || '').toLowerCase()
+    if (out === 'yes') yes++
+    else if (out === 'no') no++
+    else unanswered++
+  }
+  const parts = [
+    yes > 0 && `${yes} Yes`,
+    no > 0 && `${no} Not yet`,
+    unanswered > 0 && `${unanswered} Unanswered`,
+  ].filter(Boolean) as string[]
+  if (parts.length <= 1) {
+    // Uniform (including the single-row case): return the plain label the existing single
+    // dot+label rendering already expects.
+    return { mixed: false, label: yes > 0 ? 'Yes' : no > 0 ? 'Not yet' : 'Unanswered' }
+  }
+  return { mixed: true, label: parts.join(' · ') }
 }
 
 /** Formats a second count into human-readable "X hr Y min" or "Y min" */

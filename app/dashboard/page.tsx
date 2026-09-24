@@ -18,6 +18,8 @@ import {
   computeMonthlyBreakdown,
   computeWeeklyBreakdown,
   countSessions,
+  mergeBlocks,
+  blockOutcomeSummary,
   type EventRow,
   type SessionRow,
 } from '@/lib/dashboard-figures'
@@ -828,39 +830,60 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
             </div>
           )}
 
-          {Array.from(groupedSessions.entries()).map(([dateStr, daySessions]) => (
-            <div key={dateStr}>
-              <div className="m-day-divider">{formatDayDivider(dateStr)}</div>
-              {daySessions.map((s) => {
-                const events = (s.events || []) as Parameters<typeof toBand>[0]
-                return (
-                  <div className="m-row m-record-row" key={s.id}>
-                    {s.intention ? (
-                      <Link className="m-sentence m-row-intention" href={`/review/${s.id}`}>
-                        {s.intention}
-                      </Link>
-                    ) : (
-                      <Link className="m-meta m-row-intention" href={`/review/${s.id}`}>
-                        No intention given
-                      </Link>
-                    )}
-                    <Band segments={toBand(events)} state={s.ended_at ? 'ended' : 'running'} />
-                    <div className="m-row-outcome">
-                      <span className={`m-outcome-dot ${s.outcome === 'yes' ? 'yes' : s.outcome === 'no' ? 'not-yet' : 'unanswered'}`} />
-                      <span className="m-meta" style={{ color: s.outcome === 'unanswered' ? undefined : 'var(--m-ink)' }}>
-                        {s.outcome === 'yes' ? 'Yes' : s.outcome === 'no' ? 'Not yet' : 'Unanswered'}
-                      </span>
+          {Array.from(groupedSessions.entries()).map(([dateStr, daySessions]) => {
+            // ADR-0084: one row per session, not per task. Every task in a block shares
+            // started_at, so a block's rows always land in the same day group — safe to
+            // merge per group. rawByKey feeds blockOutcomeSummary since mergeBlocks doesn't
+            // keep which raw rows fed each merged one.
+            const dayDisplayRows = mergeBlocks(daySessions)
+            const dayRawByKey = new Map<string, typeof daySessions>()
+            for (const s of daySessions) {
+              const key = s.block_id ?? s.id
+              dayRawByKey.set(key, [...(dayRawByKey.get(key) ?? []), s])
+            }
+
+            return (
+              <div key={dateStr}>
+                <div className="m-day-divider">{formatDayDivider(dateStr)}</div>
+                {dayDisplayRows.map((s) => {
+                  const events = (s.events || []) as Parameters<typeof toBand>[0]
+                  const raw = dayRawByKey.get(s.block_id ?? s.id) ?? [s]
+                  const { mixed, label } = blockOutcomeSummary(raw)
+                  return (
+                    <div className="m-row m-record-row" key={s.id}>
+                      {s.intention ? (
+                        <Link className="m-sentence m-row-intention" href={`/review/${s.id}`}>
+                          {s.intention}
+                        </Link>
+                      ) : (
+                        <Link className="m-meta m-row-intention" href={`/review/${s.id}`}>
+                          No intention given
+                        </Link>
+                      )}
+                      <Band segments={toBand(events)} state={s.ended_at ? 'ended' : 'running'} />
+                      {mixed ? (
+                        <div className="m-row-outcome">
+                          <span className="m-meta" style={{ color: 'var(--m-ink)' }}>{label}</span>
+                        </div>
+                      ) : (
+                        <div className="m-row-outcome">
+                          <span className={`m-outcome-dot ${s.outcome === 'yes' ? 'yes' : s.outcome === 'no' ? 'not-yet' : 'unanswered'}`} />
+                          <span className="m-meta" style={{ color: s.outcome === 'unanswered' ? undefined : 'var(--m-ink)' }}>
+                            {s.outcome === 'yes' ? 'Yes' : s.outcome === 'no' ? 'Not yet' : 'Unanswered'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="m-row-dur m-row-figure">
+                        {s.ended_at && s.started_at
+                          ? formatHmCompact((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000)
+                          : 'running'}
+                      </div>
                     </div>
-                    <div className="m-row-dur m-row-figure">
-                      {s.ended_at && s.started_at
-                        ? formatHmCompact((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000)
-                        : 'running'}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+                  )
+                })}
+              </div>
+            )
+          })}
         </section>
       )}
 
