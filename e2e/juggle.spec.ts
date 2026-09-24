@@ -184,3 +184,72 @@ test('each task\'s review lists the other, and a late task\'s earlier time count
   await expect(page.getByText('Also in this session', { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'research sources' })).toHaveAttribute('href', `/review/${added.sessionId}`)
 })
+
+// Fix wave (post-hoc review of ADR-0084): a storage race in extension/sw.js. switchToTask's
+// rule swap (swapRules -> installRules -> sweepOpenTabs) redirects an already-open tab that
+// sits on the domain the SWITCH TARGET blocks straight to blocked.html — and that redirect
+// fires chrome.tabs.onUpdated, which calls transition(), which does its own unguarded read
+// of `session` and write back. If that read lands before switchToTask's own read but its
+// write lands AFTER switchToTask's `chrome.storage.local.set({ session, block })`, the active
+// task silently reverts while `block` has already moved on: the new task is referenced by
+// neither key. serialized() in sw.js queues every top-level listener entry point onto one
+// promise chain so this interleaving can no longer happen.
+//
+// Honesty note (see fixwave report): the exact interleave isn't something a test can pin to
+// the microtask — it depends on how fast chrome.tabs.update's own onUpdated event dispatches
+// relative to switchToTask's remaining awaits, so a single switch call did not reliably hit
+// it (confirmed: it passed clean 4/4 against the unfixed code). Looping ten back-and-forth
+// switches does: run against the pre-mutex code, it reproduced the exact orphan described
+// above (active session silently reverted to the old task, e.g. failing at iteration 5 with
+// the active `session.sessionId` still equal to the OTHER task's id) inside a single run.
+// Against the fixed code it has passed cleanly on every run tried (3/3, plus the single-pass
+// version before the loop was added). That's evidence of the fix, not a proof the race can
+// never resurface under different timing — it is not a deterministic repro.
+test('a redirect fired mid-switch does not orphan the parked task (storage race)', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairPopup(page, extensionId)
+
+  const a = await send(page, { ...START, intention: 'task A', blockedDomains: [] })
+  expect(a.ok).toBe(true)
+  const b = await send(page, { type: 'add-task', intention: 'task B', blockedDomains: ['example.com'], workSites: [] })
+  expect(b.ok).toBe(true)
+  // Active is now B (blocks example.com), parked is [A]. Switch back so A is active and B —
+  // which blocks the domain we're about to open a real tab on — is the parked switch target.
+  expect((await send(page, { type: 'switch-task', sessionId: a.sessionId })).ok).toBe(true)
+
+  const tab = await context.newPage()
+  await tab.goto('https://example.com') // A is active and does not block it; loads clean.
+  await tab.bringToFront()
+
+  // Switching to B installs its example.com rule, and swapRules's own sweepOpenTabs redirects
+  // this already-open tab to blocked.html mid-switch — the exact re-entrant transition() call
+  // this fix serializes against. Switching back to A does the same thing in reverse
+  // (sweepBlockedTabsBack). Neither direction hits the exact interleave every single time in a
+  // real browser (see the honesty note above this test), so this loops several back-and-forth
+  // switches, checking consistency after every one, to raise the odds of catching it within one
+  // run rather than asserting on a single roll.
+  for (let i = 0; i < 10; i++) {
+    const toB = await send(page, { type: 'switch-task', sessionId: b.sessionId })
+    expect(toB.ok).toBe(true)
+    await tab.waitForURL(/blocked\.html/, { timeout: 3_000 }).catch(() => {})
+    let session = await storage(page, 'session')
+    let block = await storage(page, 'block')
+    expect(session.sessionId, `iteration ${i}, switched to B`).toBe(b.sessionId)
+    let parkedIds = block.tasks.map((t: any) => t.sessionId)
+    expect(parkedIds, `iteration ${i}, switched to B`).toEqual([a.sessionId])
+    expect(new Set(parkedIds).size).toBe(parkedIds.length)
+
+    const toA = await send(page, { type: 'switch-task', sessionId: a.sessionId })
+    expect(toA.ok).toBe(true)
+    await tab.waitForURL('https://example.com/', { timeout: 3_000 }).catch(() => {})
+    session = await storage(page, 'session')
+    block = await storage(page, 'block')
+    expect(session.sessionId, `iteration ${i}, switched to A`).toBe(a.sessionId)
+    parkedIds = block.tasks.map((t: any) => t.sessionId)
+    expect(parkedIds, `iteration ${i}, switched to A`).toEqual([b.sessionId])
+    expect(new Set(parkedIds).size).toBe(parkedIds.length)
+  }
+
+  await send(page, { type: 'stop' })
+})

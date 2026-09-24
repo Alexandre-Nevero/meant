@@ -8,6 +8,23 @@ import { MAX_TASKS, addTask, switchTask, closingEvents } from './lib/block.js'
 const TICK = 'meant-tick'
 const RULE_ID_BASE = 1000
 
+// A storage race guard. transition() (and everything it's nested inside — endSession,
+// addTaskToSession, switchToTask, recordNotTheWork) does an unguarded read-modify-write of
+// the `session`/`block` storage keys. Two top-level listener callbacks running their bodies
+// concurrently can interleave those reads and writes and silently drop one's update — worse
+// since ADR-0084, because addTaskToSession/switchToTask's own rule swap can itself trigger a
+// tabs.onUpdated event (the blocked.html redirect) whose transition() call races the very
+// function that triggered it. serialized() queues entry points onto one promise chain so
+// only one is ever running at a time. Wrap ONLY the outermost listener callbacks below —
+// never transition() or any other helper — or a nested call would await a chain link that
+// is itself waiting on the outer call, and deadlock.
+let chain = Promise.resolve()
+function serialized(fn) {
+  const result = chain.then(fn, fn)
+  chain = result.catch(() => {})
+  return result
+}
+
 async function installRules(listNames) {
   const domains = [...new Set((listNames ?? []).flatMap((name) => BLOCKLISTS[name] ?? [name]))]
   if (domains.length === 0) return { ruleIds: [], domains: [] }
@@ -370,32 +387,40 @@ async function transition({ mode, domain, url = null, at = Date.now() }) {
 chrome.idle.setDetectionInterval(IDLE_DETECTION_S)
 
 chrome.idle.onStateChanged.addListener(async (state) => {
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-  const mode = idleMode(state, Boolean(tab?.audible))
-  if (mode === null) return                       // D27: idle but still playing. Step 3b re-checks.
-  const target = mode === 'attention' ? await activeTarget() : { domain: null, url: null }
-  await transition({ mode, domain: target.domain, url: target.url })
+  return serialized(async () => {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    const mode = idleMode(state, Boolean(tab?.audible))
+    if (mode === null) return                       // D27: idle but still playing. Step 3b re-checks.
+    const target = mode === 'attention' ? await activeTarget() : { domain: null, url: null }
+    await transition({ mode, domain: target.domain, url: target.url })
+  })
 })
 
 chrome.tabs.onActivated.addListener(async () => {
-  const { domain, url } = await activeTarget()
-  await transition({ mode: 'attention', domain, url })
+  return serialized(async () => {
+    const { domain, url } = await activeTarget()
+    await transition({ mode: 'attention', domain, url })
+  })
 })
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (!changeInfo.url || !tab.active) return
-  await transition({ mode: 'attention', domain: safeHostname(changeInfo.url), url: changeInfo.url })
+  return serialized(async () => {
+    if (!changeInfo.url || !tab.active) return
+    await transition({ mode: 'attention', domain: safeHostname(changeInfo.url), url: changeInfo.url })
+  })
 })
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
-  const session = await getSession()
-  if (!session) return
-  if (windowId === chrome.windows.WINDOW_ID_NONE) {
-    await transition({ mode: 'away', domain: null })
-    return
-  }
-  const { domain, url } = await activeTarget()
-  await transition({ mode: 'attention', domain, url })
+  return serialized(async () => {
+    const session = await getSession()
+    if (!session) return
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+      await transition({ mode: 'away', domain: null })
+      return
+    }
+    const { domain, url } = await activeTarget()
+    await transition({ mode: 'attention', domain, url })
+  })
 })
 
 // ADR-0082. A second listener, not a branch in the one above: that one returns early when no
@@ -437,36 +462,38 @@ export async function flush() {
 }
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== TICK) return
-  const session = await getSession()
-  if (!session) return
+  return serialized(async () => {
+    if (alarm.name !== TICK) return
+    const session = await getSession()
+    if (!session) return
 
-  await flush()
+    await flush()
 
-  // ADR-0059's TTL. The only thing bounding the on-device path log for a user who never
-  // runs an analysis, which is every free-tier user by design. Write only when something
-  // actually expired, so the common case costs one read and no write.
-  const { pathLog } = await chrome.storage.local.get('pathLog')
-  if (Array.isArray(pathLog) && pathLog.length > 0) {
-    const kept = purgeExpired(pathLog, Date.now())
-    if (kept.length !== pathLog.length) await chrome.storage.local.set({ pathLog: kept })
-  }
-
-  // D27's escape hatch needs a re-check, because chrome.idle will not fire again while the
-  // system stays idle. Bounded by the alarm period, which satisfies N1 (< 30s loss per gap).
-  const idle = await chrome.idle.queryState(IDLE_DETECTION_S)
-  if (idle !== 'active') {
-    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-    const mode = idleMode(idle, Boolean(tab?.audible))
-    if (mode !== null) await transition({ mode, domain: null })
-  }
-
-  if (session.plannedMinutes != null) {
-    const elapsedMs = Date.now() - new Date(session.startedAt).getTime()
-    if (elapsedMs >= session.plannedMinutes * 60_000) {
-      await endSession('elapsed')
+    // ADR-0059's TTL. The only thing bounding the on-device path log for a user who never
+    // runs an analysis, which is every free-tier user by design. Write only when something
+    // actually expired, so the common case costs one read and no write.
+    const { pathLog } = await chrome.storage.local.get('pathLog')
+    if (Array.isArray(pathLog) && pathLog.length > 0) {
+      const kept = purgeExpired(pathLog, Date.now())
+      if (kept.length !== pathLog.length) await chrome.storage.local.set({ pathLog: kept })
     }
-  }
+
+    // D27's escape hatch needs a re-check, because chrome.idle will not fire again while the
+    // system stays idle. Bounded by the alarm period, which satisfies N1 (< 30s loss per gap).
+    const idle = await chrome.idle.queryState(IDLE_DETECTION_S)
+    if (idle !== 'active') {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+      const mode = idleMode(idle, Boolean(tab?.audible))
+      if (mode !== null) await transition({ mode, domain: null })
+    }
+
+    if (session.plannedMinutes != null) {
+      const elapsedMs = Date.now() - new Date(session.startedAt).getTime()
+      if (elapsedMs >= session.plannedMinutes * 60_000) {
+        await endSession('elapsed')
+      }
+    }
+  })
 })
 
 /** ADR-0058. The companion's one tap: "this isn't the work."
@@ -492,7 +519,10 @@ async function recordNotTheWork() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  ;(async () => {
+  // Only the inner async work queues on the mutex — sendResponse's Promise-keeping `return
+  // true` below must fire synchronously, before serialized()'s fn has even started, or Chrome
+  // would tear the message channel down before this message's turn in the queue arrives.
+  serialized(async () => {
     if (message?.type === 'start') {
       const blockedDomains = message.blockedDomains ?? message.blocklist ?? []
       sendResponse(await startSession({ ...message, blockedDomains }))
@@ -513,7 +543,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })()
       sendResponse({ ok: true })
     } else sendResponse({ ok: false })
-  })()
+  })
   return true
 })
 
@@ -525,12 +555,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // fires for them, both listeners run the same recovery so a live session can never leak
 // regardless of which one Chromium chooses.
 async function recoverStaleSession() {
-  const session = await getSession()
-  if (session) await endSession('recovered')
-  else {
-    await removeAllRules()
-    await chrome.storage.local.set({ block: null }) // ADR-0084: never a block without its active task
-  }
+  return serialized(async () => {
+    const session = await getSession()
+    if (session) await endSession('recovered')
+    else {
+      await removeAllRules()
+      await chrome.storage.local.set({ block: null }) // ADR-0084: never a block without its active task
+    }
+  })
 }
 
 chrome.runtime.onInstalled.addListener(recoverStaleSession)
