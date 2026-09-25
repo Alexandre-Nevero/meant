@@ -7,6 +7,8 @@ import { MAX_CYCLES, clampCount, plannedMinutesFor, restoreCycle } from './lib/c
 import { PRESETS } from './blocklists.js'
 import { matchPreset, presetBlockSet } from './lib/presets.js'
 import { MAX_TASKS, attendedSeconds } from './lib/block.js'
+import { analyzeSessions } from './lib/judge-client.js'
+import { analysisIds, shouldOffer, readAnalysis, rowText, judgedKey } from './lib/judge-view.js'
 
 const root = document.getElementById('root')
 
@@ -916,6 +918,67 @@ async function clearPending() {
   await chrome.action.setBadgeText({ text: '' })
 }
 
+/** "Try the judge" (ADR-0086), behind JUDGE_RENDERS and the user's `judgeEnabled` switch.
+ *  Returns null when not offered. Only answered sessions are judgeable (buildCases skips the
+ *  rest), so callers place it beside Done. Static: the popup animates nothing. */
+async function judgePanel(sessionIds, intentions = {}) {
+  const { judgeEnabled, lastJudged } = await chrome.storage.local.get(['judgeEnabled', 'lastJudged'])
+  if (!shouldOffer({ judgeEnabled })) return null
+  const ids = analysisIds(sessionIds)
+  const key = judgedKey(ids)
+  const panel = el('div')
+  panel.dataset.judge = 'panel'
+  const button = el('button', 'm-btn', 'Try the judge')
+  button.dataset.variant = 'quiet'
+
+  const ask = async () => {
+    button.disabled = true
+    button.textContent = 'Asking…'
+    const result = readAnalysis(await analyzeSessions(ids))
+    if (result.kind === 'rows' || result.kind === 'nothing') {
+      // ADR-0077: the route returns the stored analysis for this set on every later ask, at
+      // no cost, so a reopened popup asks again and shows the same frozen answer.
+      await chrome.storage.local.set({ lastJudged: key })
+      return panel.replaceChildren(...judgeResult(result, ids, intentions))
+    }
+    button.disabled = false
+    button.textContent = 'Try the judge'
+    panel.replaceChildren(el('p', 'm-meta', JUDGE_FAILURE_COPY[result.kind]), ...(result.kind === 'cap' ? [] : [button]))
+  }
+  button.addEventListener('click', ask)
+  panel.append(button)
+  if (lastJudged === key) ask()
+  return panel
+}
+
+const JUDGE_FAILURE_COPY = {
+  offline: "Can't reach it right now.",
+  cap: "That's today's analyses. Try again tomorrow.",
+  error: "The judge didn't answer. Try again in a moment.",
+}
+
+/** Plain rows, host · label. No colour, no weight change: a verdict is not graded (ADR-0068).
+ *  With several tasks, each task's rows sit under its own sentence — one host can serve one
+ *  task and not another. */
+function judgeResult(result, ids, intentions) {
+  if (result.kind === 'nothing') return [el('p', 'm-meta', 'Nothing the judge is sure of.')]
+  const groups = []
+  for (const id of ids) {
+    const rows = result.rows.filter((r) => r.sessionId === id)
+    if (rows.length === 0) continue
+    const group = el('div')
+    group.dataset.judge = 'group'
+    if (ids.length > 1) group.append(el('p', 'm-meta', `For "${intentions[id] || 'this task'}":`))
+    for (const r of rows) {
+      const row = el('p', 'm-meta', rowText(r))
+      row.dataset.judge = 'verdict'
+      group.append(row)
+    }
+    groups.push(group)
+  }
+  return groups
+}
+
 async function outcome(sessionId) {
   const mark = el('p', 'm-mark', '')
   mark.dataset.state = 'ended'
@@ -993,6 +1056,8 @@ async function outcome(sessionId) {
     nodes.push(el('p', 'm-meta', data.outcome === 'yes'
       ? `Good. That's ${data.finished} of ${data.answered}.`
       : 'Noted. It carries over.'))
+    const judge = await judgePanel([sessionId])
+    if (judge) nodes.push(judge)
     const done = el('button', 'm-btn', 'Done')
     done.dataset.variant = 'quiet'
     done.addEventListener('click', async () => {
@@ -1055,6 +1120,8 @@ async function outcomeMany(sessionIds) {
   }
 
   if (tasks.every((t) => t.data.outcome !== 'unanswered')) {
+    const judge = await judgePanel(tasks.map((t) => t.id), Object.fromEntries(tasks.map((t) => [t.id, t.data.intention])))
+    if (judge) nodes.push(judge)
     const done = el('button', 'm-btn', 'Done')
     done.dataset.variant = 'quiet'
     done.addEventListener('click', async () => {

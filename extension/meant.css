@@ -353,6 +353,9 @@ body.m-app::before {
 /* ADR-0084. The multi-task outcome stacks up to four intentions; the full 76px outline each
  * would push the answers below the 600px popup ceiling. */
 [data-surface="popup"] .m-sentence[data-compact="true"] { font-size: 16px; min-height: 0; }
+/* ADR-0086. "Try the judge": the popup's own 18px rhythm between the panel's parts (a failure
+ * line and its retry, one task's verdicts and the next); a task's rows stay one tight list. */
+[data-surface="popup"] [data-judge="panel"] { display: flex; flex-direction: column; gap: 18px; }
 .m-row-bar[data-kind="away"] { background: var(--m-away); border: var(--m-stroke-hair) solid var(--m-ink-3); }
 .m-row-bar[data-kind="remainder"] { background: transparent; border: var(--m-stroke-hair) dashed var(--m-edge); }
 
