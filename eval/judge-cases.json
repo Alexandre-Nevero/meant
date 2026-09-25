@@ -1,0 +1,2576 @@
+{
+  "about": "ADR-0085. The judge eval set: synthetic, hand-authored, fictional paths only. Sessions were written first with no labels; a separate AI agent context labelled every visit afterwards, seeing only this record (never the author intent). Labels are AI-authored at the owner instruction, not by a blind human. Paths are pathname only, as extension/lib/path-log.js records them. Re-run with: npm run eval:judge.",
+  "labels": {
+    "focused": "directly performs the task named in the intention",
+    "supportive": "helps accomplish the task but is not the task itself",
+    "neutral": "genuinely neither: not doing the task, and not replacing it either",
+    "drift": "unrelated activity that replaced the intended work",
+    "unknown": "the record does not let a careful reader tell which; the judge is right here only by staying below the floor (ADR-0037)"
+  },
+  "sessions": [
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000001",
+      "intention": "schedule next week's instagram posts for the bakery client",
+      "outcome": "yes",
+      "localHour": 10,
+      "workSites": [
+        "instagram.com",
+        "later.com"
+      ],
+      "blockedDomains": [
+        "youtube.com",
+        "reddit.com"
+      ],
+      "visits": [
+        {
+          "host": "later.com",
+          "seconds": 1523,
+          "paths": [
+            "/app/calendar/week",
+            "/app/media",
+            "/app/calendar/week/next"
+          ],
+          "label": "focused",
+          "reason": "Later weekly calendar and next week: the scheduling itself."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 842,
+          "paths": [
+            "/crumbandcoalbakery/",
+            "/p/Cx81bQeLm2k/",
+            "/direct/inbox/"
+          ],
+          "label": "supportive",
+          "reason": "Client's bakery profile and a post: reference for what to schedule."
+        },
+        {
+          "host": "canva.com",
+          "seconds": 961,
+          "paths": [
+            "/design/DAF3kq92Lx0/edit"
+          ],
+          "label": "supportive",
+          "reason": "Canva design edit: making post graphics, prep for scheduling."
+        },
+        {
+          "host": "drive.google.com",
+          "seconds": 187,
+          "paths": [
+            "/drive/folders/1pQfictBakeryAssets09"
+          ],
+          "label": "supportive",
+          "reason": "Bakery assets folder in Drive: source media for posts."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 118,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "neutral",
+          "reason": "Two-minute inbox check; no link to scheduling visible."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000002",
+      "intention": "draft the bakery's october content calendar",
+      "outcome": "no",
+      "localHour": 14,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 904,
+          "paths": [
+            "/spreadsheets/d/1kR8fictContentCal/edit"
+          ],
+          "label": "focused",
+          "reason": "Content calendar spreadsheet: the drafting itself."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 2281,
+          "paths": [
+            "/reels/",
+            "/explore/",
+            "/reels/",
+            "/explore/search/"
+          ],
+          "label": "drift",
+          "reason": "38 min looping reels and explore feeds; outcome no."
+        },
+        {
+          "host": "pinterest.com",
+          "seconds": 612,
+          "paths": [
+            "/search/pins/",
+            "/pin/771234890123456789/"
+          ],
+          "label": "unknown",
+          "reason": "Pinterest pin search could be content ideas or browsing; query not recorded."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000003",
+      "intention": "reply to the three client DMs about the launch",
+      "outcome": "yes",
+      "localHour": 16,
+      "workSites": [
+        "instagram.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "instagram.com",
+          "seconds": 1142,
+          "paths": [
+            "/direct/inbox/",
+            "/direct/t/340282366841710300949128157/",
+            "/direct/t/340282366841710300949128163/"
+          ],
+          "label": "focused",
+          "reason": "Instagram DM threads: replying to the client DMs."
+        },
+        {
+          "host": "business.facebook.com",
+          "seconds": 297,
+          "paths": [
+            "/latest/inbox/all"
+          ],
+          "label": "focused",
+          "reason": "Business Suite inbox: same message queue for client DMs."
+        },
+        {
+          "host": "notion.so",
+          "seconds": 244,
+          "paths": [
+            "/lumen-studio/Launch-FAQ-3f9a2c"
+          ],
+          "label": "supportive",
+          "reason": "Launch FAQ page: reference for answering launch questions."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000004",
+      "intention": "finish chapter 3 of the thesis (methods)",
+      "outcome": "no",
+      "localHour": 21,
+      "workSites": [
+        "docs.google.com",
+        "scholar.google.com"
+      ],
+      "blockedDomains": [
+        "instagram.com",
+        "tiktok.com"
+      ],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 2106,
+          "paths": [
+            "/document/d/1Th3sisCh3fict/edit"
+          ],
+          "label": "focused",
+          "reason": "Chapter doc in Google Docs: writing the methods chapter."
+        },
+        {
+          "host": "scholar.google.com",
+          "seconds": 418,
+          "paths": [
+            "/scholar",
+            "/citations"
+          ],
+          "label": "supportive",
+          "reason": "Scholar search and citations: sourcing for methods chapter."
+        },
+        {
+          "host": "zotero.org",
+          "seconds": 301,
+          "paths": [
+            "/groups/4412871/library"
+          ],
+          "label": "supportive",
+          "reason": "Zotero group library: managing references for the chapter."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 1812,
+          "paths": [
+            "/",
+            "/watch",
+            "/shorts/Qm4xLr8Tn2A",
+            "/shorts/Pz7vKe1Wd0B"
+          ],
+          "label": "drift",
+          "reason": "30 min of home feed and Shorts; outcome no."
+        },
+        {
+          "host": "reddit.com",
+          "seconds": 907,
+          "paths": [
+            "/r/GradSchool/",
+            "/r/GradSchool/comments/1fq2x9a/does_everyone_hate_writing_methods/"
+          ],
+          "label": "drift",
+          "reason": "15 min on a thread about hating writing methods, not writing it."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 176,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "neutral",
+          "reason": "Three-minute inbox check."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000005",
+      "intention": "watch lecture 7 and do the problem set for linear algebra",
+      "outcome": "yes",
+      "localHour": 19,
+      "workSites": [
+        "ocw.mit.edu"
+      ],
+      "blockedDomains": [
+        "reddit.com"
+      ],
+      "visits": [
+        {
+          "host": "youtube.com",
+          "seconds": 3012,
+          "paths": [
+            "/@mitocw/videos",
+            "/watch",
+            "/playlist"
+          ],
+          "label": "focused",
+          "reason": "MIT OCW channel videos and playlist: watching lecture 7."
+        },
+        {
+          "host": "ocw.mit.edu",
+          "seconds": 604,
+          "paths": [
+            "/courses/18-06sc-linear-algebra-fall-2011/pages/least-squares-determinants-and-eigenvalues/"
+          ],
+          "label": "focused",
+          "reason": "OCW course session page: the problem set materials."
+        },
+        {
+          "host": "wolframalpha.com",
+          "seconds": 297,
+          "paths": [
+            "/input"
+          ],
+          "label": "supportive",
+          "reason": "Wolfram Alpha input: computing checks for the problem set."
+        },
+        {
+          "host": "chatgpt.com",
+          "seconds": 538,
+          "paths": [
+            "/c/68f1a0b2-5e7d-8003-b1c4-9a2e7f0d1c35"
+          ],
+          "label": "supportive",
+          "reason": "ChatGPT conversation during a problem-set session: help working problems."
+        },
+        {
+          "host": "music.youtube.com",
+          "seconds": 2984,
+          "paths": [
+            "/watch",
+            "/playlist"
+          ],
+          "label": "neutral",
+          "reason": "YouTube Music playlist alongside work: background music."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000006",
+      "intention": "write the product description copy for the candle shop",
+      "outcome": "yes",
+      "localHour": 9,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [
+        "instagram.com",
+        "facebook.com"
+      ],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 1863,
+          "paths": [
+            "/document/d/1CndlCopyFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Copy doc: writing the product descriptions."
+        },
+        {
+          "host": "etsy.com",
+          "seconds": 541,
+          "paths": [
+            "/shop/WickAndWillowCo",
+            "/listing/1587264930/soy-candle-cedar-and-smoke"
+          ],
+          "label": "supportive",
+          "reason": "Candle shop and a candle listing on Etsy: product reference."
+        },
+        {
+          "host": "thesaurus.com",
+          "seconds": 122,
+          "paths": [
+            "/browse/cozy",
+            "/browse/warm"
+          ],
+          "label": "supportive",
+          "reason": "Thesaurus lookups for cozy and warm: word choice for copy."
+        },
+        {
+          "host": "music.youtube.com",
+          "seconds": 1860,
+          "paths": [
+            "/watch"
+          ],
+          "label": "neutral",
+          "reason": "YouTube Music track: background music."
+        },
+        {
+          "host": "chatgpt.com",
+          "seconds": 419,
+          "paths": [
+            "/c/68f2b7e1-1a22-8004-9d3e-44c1f0a2b981"
+          ],
+          "label": "supportive",
+          "reason": "ChatGPT conversation: drafting aid for the copy."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000007",
+      "intention": "fix the flaky checkout test in CI",
+      "outcome": "yes",
+      "localHour": 11,
+      "workSites": [
+        "github.com"
+      ],
+      "blockedDomains": [
+        "news.ycombinator.com",
+        "x.com"
+      ],
+      "visits": [
+        {
+          "host": "github.com",
+          "seconds": 1497,
+          "paths": [
+            "/northwind-labs/storefront/actions/runs/11873290412",
+            "/northwind-labs/storefront/pull/1289/files",
+            "/northwind-labs/storefront/blob/main/tests/checkout.spec.ts"
+          ],
+          "label": "focused",
+          "reason": "CI run, PR files, checkout spec: fixing the flaky test."
+        },
+        {
+          "host": "localhost",
+          "seconds": 903,
+          "paths": [
+            "/checkout",
+            "/cart"
+          ],
+          "label": "focused",
+          "reason": "Local checkout and cart pages: reproducing the test flow."
+        },
+        {
+          "host": "stackoverflow.com",
+          "seconds": 362,
+          "paths": [
+            "/questions/68845512/playwright-waitforresponse-race-condition"
+          ],
+          "label": "supportive",
+          "reason": "Stack Overflow on Playwright waitForResponse race: fix reference."
+        },
+        {
+          "host": "playwright.dev",
+          "seconds": 241,
+          "paths": [
+            "/docs/api/class-page",
+            "/docs/test-retries"
+          ],
+          "label": "supportive",
+          "reason": "Playwright docs on page API and retries: reference."
+        },
+        {
+          "host": "app.slack.com",
+          "seconds": 183,
+          "paths": [
+            "/client/T04NW2LQ/C05QADEPLOY"
+          ],
+          "label": "neutral",
+          "reason": "Three minutes in a deploy channel; routine team check."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000008",
+      "intention": "write the Q3 investor update",
+      "outcome": "no",
+      "localHour": 15,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [
+        "linkedin.com"
+      ],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 1204,
+          "paths": [
+            "/document/d/1InvQ3fict/edit"
+          ],
+          "label": "focused",
+          "reason": "Investor update doc: writing it."
+        },
+        {
+          "host": "lookerstudio.google.com",
+          "seconds": 597,
+          "paths": [
+            "/reporting/9b2e41fict/page/p_1"
+          ],
+          "label": "supportive",
+          "reason": "Looker Studio report: metrics for the update."
+        },
+        {
+          "host": "news.ycombinator.com",
+          "seconds": 1512,
+          "paths": [
+            "/",
+            "/item",
+            "/news",
+            "/item"
+          ],
+          "label": "drift",
+          "reason": "25 min of HN front page and items; outcome no."
+        },
+        {
+          "host": "x.com",
+          "seconds": 893,
+          "paths": [
+            "/home",
+            "/northwind_hq"
+          ],
+          "label": "drift",
+          "reason": "X home feed for 15 min; outcome no."
+        },
+        {
+          "host": "techcrunch.com",
+          "seconds": 478,
+          "paths": [
+            "/2026/09/23/series-a-rounds-shrink-for-dev-tools/"
+          ],
+          "label": "drift",
+          "reason": "Industry news article read in the HN/X browsing chain."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000009",
+      "intention": "reconcile september expenses in quickbooks",
+      "outcome": "yes",
+      "localHour": 13,
+      "workSites": [
+        "quickbooks.intuit.com"
+      ],
+      "blockedDomains": [
+        "youtube.com"
+      ],
+      "visits": [
+        {
+          "host": "quickbooks.intuit.com",
+          "seconds": 2396,
+          "paths": [
+            "/app/banking",
+            "/app/expenses",
+            "/app/reconcile"
+          ],
+          "label": "focused",
+          "reason": "QuickBooks banking, expenses, reconcile: the task."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 423,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "unknown",
+          "reason": "Seven minutes in Gmail could be receipts or routine mail; not visible."
+        },
+        {
+          "host": "drive.google.com",
+          "seconds": 305,
+          "paths": [
+            "/drive/folders/1RcptsSeptFict"
+          ],
+          "label": "supportive",
+          "reason": "September receipts folder: source documents for reconciling."
+        },
+        {
+          "host": "amazon.com",
+          "seconds": 358,
+          "paths": [
+            "/gp/your-account/order-history",
+            "/gp/css/summary/print.html"
+          ],
+          "label": "supportive",
+          "reason": "Amazon order history and printable summary: expense receipts."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000010",
+      "intention": "prep slides for the thursday workshop",
+      "outcome": "no",
+      "localHour": 20,
+      "workSites": [
+        "canva.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "canva.com",
+          "seconds": 1198,
+          "paths": [
+            "/design/DAG1wkShopFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Workshop deck in Canva: making the slides."
+        },
+        {
+          "host": "unsplash.com",
+          "seconds": 421,
+          "paths": [
+            "/s/photos/team-meeting",
+            "/photos/Kf3n0x1aB2c"
+          ],
+          "label": "supportive",
+          "reason": "Unsplash team-meeting photos: images for the slides."
+        },
+        {
+          "host": "netflix.com",
+          "seconds": 2704,
+          "paths": [
+            "/browse",
+            "/watch/81726354"
+          ],
+          "label": "drift",
+          "reason": "45 min on Netflix watch page; outcome no."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000011",
+      "intention": "outline the podcast episode on pricing",
+      "outcome": "yes",
+      "localHour": 8,
+      "workSites": [
+        "notion.so"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "notion.so",
+          "seconds": 1502,
+          "paths": [
+            "/hollis-coaching/Ep-42-Pricing-outline-8d1e0f"
+          ],
+          "label": "focused",
+          "reason": "Pricing episode outline in Notion: the outline itself."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 1207,
+          "paths": [
+            "/@pricingroundtable/videos",
+            "/watch"
+          ],
+          "label": "supportive",
+          "reason": "Pricing channel videos: research for the pricing episode."
+        },
+        {
+          "host": "open.spotify.com",
+          "seconds": 902,
+          "paths": [
+            "/show/5xKq2PodFict",
+            "/episode/3tYh8EpFict"
+          ],
+          "label": "unknown",
+          "reason": "Podcast show and episode: could be reference or listening; not clear."
+        },
+        {
+          "host": "google.com",
+          "seconds": 118,
+          "paths": [
+            "/search"
+          ],
+          "label": "unknown",
+          "reason": "Two-minute search, query not recorded."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000012",
+      "intention": "answer support tickets",
+      "outcome": "yes",
+      "localHour": 9,
+      "workSites": [
+        "app.intercom.com"
+      ],
+      "blockedDomains": [
+        "reddit.com"
+      ],
+      "visits": [
+        {
+          "host": "app.intercom.com",
+          "seconds": 3006,
+          "paths": [
+            "/a/inbox/tq8x2k/inbox/shared/all",
+            "/a/inbox/tq8x2k/inbox/conversation/218734000451",
+            "/a/inbox/tq8x2k/inbox/conversation/218734000467"
+          ],
+          "label": "focused",
+          "reason": "Intercom inbox and conversations: answering tickets."
+        },
+        {
+          "host": "help.northwind.io",
+          "seconds": 417,
+          "paths": [
+            "/help/refunds",
+            "/help/shipping-times"
+          ],
+          "label": "supportive",
+          "reason": "Help center refunds and shipping pages: answers for tickets."
+        },
+        {
+          "host": "dashboard.stripe.com",
+          "seconds": 361,
+          "paths": [
+            "/payments",
+            "/payments/pi_3Nfict2x"
+          ],
+          "label": "supportive",
+          "reason": "Stripe payment lookup: checking a customer's payment."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 238,
+          "paths": [
+            "/watch"
+          ],
+          "label": "unknown",
+          "reason": "Single four-minute video, no channel or context."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000013",
+      "intention": "learn the basics of figma auto layout",
+      "outcome": "yes",
+      "localHour": 17,
+      "workSites": [
+        "figma.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "youtube.com",
+          "seconds": 1803,
+          "paths": [
+            "/results",
+            "/watch",
+            "/watch"
+          ],
+          "label": "focused",
+          "reason": "Searched and watched videos in a session to learn auto layout."
+        },
+        {
+          "host": "figma.com",
+          "seconds": 1496,
+          "paths": [
+            "/design/Kp2fictAutoLay/Practice-file"
+          ],
+          "label": "focused",
+          "reason": "Figma practice file: practising auto layout."
+        },
+        {
+          "host": "help.figma.com",
+          "seconds": 482,
+          "paths": [
+            "/hc/en-us/articles/5731482952599-auto-layout-basics"
+          ],
+          "label": "focused",
+          "reason": "Figma help article on auto layout basics: learning material."
+        },
+        {
+          "host": "reddit.com",
+          "seconds": 303,
+          "paths": [
+            "/r/FigmaDesign/comments/1d8xk2p/auto_layout_finally_clicked/"
+          ],
+          "label": "supportive",
+          "reason": "Thread about auto layout clicking: related discussion."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000014",
+      "intention": "send this month's invoices",
+      "outcome": "yes",
+      "localHour": 10,
+      "workSites": [
+        "my.freshbooks.com"
+      ],
+      "blockedDomains": [
+        "instagram.com"
+      ],
+      "visits": [
+        {
+          "host": "my.freshbooks.com",
+          "seconds": 897,
+          "paths": [
+            "/"
+          ],
+          "label": "focused",
+          "reason": "FreshBooks: creating and sending invoices."
+        },
+        {
+          "host": "track.toggl.com",
+          "seconds": 421,
+          "paths": [
+            "/reports/summary/4471902"
+          ],
+          "label": "supportive",
+          "reason": "Toggl summary report: billable hours for invoices."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 302,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "unknown",
+          "reason": "Five minutes in Gmail could be sending invoices or routine mail."
+        },
+        {
+          "host": "wise.com",
+          "seconds": 238,
+          "paths": [
+            "/balances"
+          ],
+          "label": "unknown",
+          "reason": "Wise balances check: payment status or routine look; unclear."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000015",
+      "intention": "research competitors for the meal-kit pitch",
+      "outcome": "no",
+      "localHour": 15,
+      "workSites": [],
+      "blockedDomains": [
+        "youtube.com"
+      ],
+      "visits": [
+        {
+          "host": "google.com",
+          "seconds": 604,
+          "paths": [
+            "/search"
+          ],
+          "label": "focused",
+          "reason": "Search at start of competitor research session: doing the research."
+        },
+        {
+          "host": "hellofresh.com",
+          "seconds": 482,
+          "paths": [
+            "/plans",
+            "/pages/how-it-works"
+          ],
+          "label": "focused",
+          "reason": "HelloFresh plans and how-it-works: competitor research."
+        },
+        {
+          "host": "reddit.com",
+          "seconds": 1211,
+          "paths": [
+            "/r/mealkits/comments/1c3ab9z/honest_comparison_after_6_months/",
+            "/r/mealkits/",
+            "/r/popular/"
+          ],
+          "label": "drift",
+          "reason": "Relevant thread slid into r/mealkits then r/popular, 20 min; outcome no."
+        },
+        {
+          "host": "statista.com",
+          "seconds": 298,
+          "paths": [
+            "/outlook/cmo/food/meal-kits/worldwide"
+          ],
+          "label": "focused",
+          "reason": "Statista meal-kit market outlook: competitor/market research."
+        },
+        {
+          "host": "amazon.com",
+          "seconds": 896,
+          "paths": [
+            "/s",
+            "/dp/B0CFICT123",
+            "/gp/cart/view.html"
+          ],
+          "label": "drift",
+          "reason": "Product search, item page and cart: shopping."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000016",
+      "intention": "write the cover letter for the UX role at Halden",
+      "outcome": "yes",
+      "localHour": 18,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [
+        "instagram.com"
+      ],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 1497,
+          "paths": [
+            "/document/d/1CvrLtrFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Cover letter doc: writing it."
+        },
+        {
+          "host": "linkedin.com",
+          "seconds": 603,
+          "paths": [
+            "/jobs/view/4012345678/",
+            "/company/halden-design/"
+          ],
+          "label": "supportive",
+          "reason": "Job posting and Halden company page: reference for letter."
+        },
+        {
+          "host": "halden.design",
+          "seconds": 297,
+          "paths": [
+            "/about",
+            "/work"
+          ],
+          "label": "supportive",
+          "reason": "Halden about and work pages: company research for letter."
+        },
+        {
+          "host": "chatgpt.com",
+          "seconds": 482,
+          "paths": [
+            "/c/68f3c9d4-7b10-8001-a2f6-0e5d3c7b9a14"
+          ],
+          "label": "supportive",
+          "reason": "ChatGPT conversation: drafting aid."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000017",
+      "intention": "clean up the client's shopify product tags",
+      "outcome": "no",
+      "localHour": 22,
+      "workSites": [
+        "admin.shopify.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "admin.shopify.com",
+          "seconds": 1203,
+          "paths": [
+            "/store/fern-and-fable/products",
+            "/store/fern-and-fable/products/8812345678901"
+          ],
+          "label": "focused",
+          "reason": "Shopify products admin: cleaning up tags."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 2412,
+          "paths": [
+            "/watch",
+            "/watch",
+            "/watch"
+          ],
+          "label": "drift",
+          "reason": "40 min of videos at 10pm, then Twitch; outcome no."
+        },
+        {
+          "host": "twitch.tv",
+          "seconds": 1797,
+          "paths": [
+            "/directory/following",
+            "/kaelplaysfict"
+          ],
+          "label": "drift",
+          "reason": "Twitch following and a streamer: 30 min of streams."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000018",
+      "intention": "study for the CPA audit section, chapter 5 questions",
+      "outcome": "no",
+      "localHour": 7,
+      "workSites": [
+        "online.becker.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "online.becker.com",
+          "seconds": 1504,
+          "paths": [
+            "/cpa/aud/mcq/practice"
+          ],
+          "label": "focused",
+          "reason": "Becker AUD practice MCQs: studying."
+        },
+        {
+          "host": "quizlet.com",
+          "seconds": 902,
+          "paths": [
+            "/412345678/aud-chapter-5-flash-cards/"
+          ],
+          "label": "focused",
+          "reason": "AUD chapter 5 flashcards: studying the chapter."
+        },
+        {
+          "host": "chatgpt.com",
+          "seconds": 297,
+          "paths": [
+            "/c/68f4a1b3-2c44-8002-b7e9-1d2c3b4a5f60"
+          ],
+          "label": "supportive",
+          "reason": "ChatGPT conversation: help with study questions."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 604,
+          "paths": [
+            "/",
+            "/reels/"
+          ],
+          "label": "drift",
+          "reason": "Instagram home and reels for 10 min; outcome no."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000019",
+      "intention": "edit the wedding film highlight reel",
+      "outcome": "yes",
+      "localHour": 13,
+      "workSites": [
+        "app.frame.io"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "app.frame.io",
+          "seconds": 1196,
+          "paths": [
+            "/projects/8f1cfict/files",
+            "/reviews/2a9dfict"
+          ],
+          "label": "focused",
+          "reason": "Frame.io project files and review: working on the edit."
+        },
+        {
+          "host": "artlist.io",
+          "seconds": 903,
+          "paths": [
+            "/royalty-free-music/genre/cinematic",
+            "/song/delicate-light/112233"
+          ],
+          "label": "supportive",
+          "reason": "Artlist cinematic track: music for the reel."
+        },
+        {
+          "host": "drive.google.com",
+          "seconds": 241,
+          "paths": [
+            "/drive/folders/1WdngFootageFict"
+          ],
+          "label": "supportive",
+          "reason": "Wedding footage folder: source media."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 598,
+          "paths": [
+            "/watch"
+          ],
+          "label": "unknown",
+          "reason": "Single ten-minute video, no channel or context."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000020",
+      "intention": "write the monthly newsletter for the yoga studio",
+      "outcome": "yes",
+      "localHour": 8,
+      "workSites": [
+        "us14.admin.mailchimp.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "us14.admin.mailchimp.com",
+          "seconds": 1807,
+          "paths": [
+            "/campaigns/edit",
+            "/campaigns/wizard/neapolitan"
+          ],
+          "label": "focused",
+          "reason": "Mailchimp campaign editor: writing the newsletter."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 481,
+          "paths": [
+            "/stillwateryogastudio/",
+            "/p/Cz9fictPost/"
+          ],
+          "label": "supportive",
+          "reason": "Studio's own profile and a post: content for the newsletter."
+        },
+        {
+          "host": "canva.com",
+          "seconds": 602,
+          "paths": [
+            "/design/DAGnlOctFict/edit"
+          ],
+          "label": "supportive",
+          "reason": "Canva design: newsletter graphic."
+        },
+        {
+          "host": "calendar.google.com",
+          "seconds": 117,
+          "paths": [
+            "/calendar/u/0/r/month"
+          ],
+          "label": "supportive",
+          "reason": "Month calendar view: dates for a monthly newsletter."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000021",
+      "intention": "plan the team offsite agenda",
+      "outcome": "no",
+      "localHour": 16,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 598,
+          "paths": [
+            "/document/d/1OffsiteFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Offsite agenda doc: planning it."
+        },
+        {
+          "host": "airbnb.com",
+          "seconds": 1512,
+          "paths": [
+            "/s/Big-Sur--CA/homes",
+            "/rooms/51234567",
+            "/rooms/48765432"
+          ],
+          "label": "unknown",
+          "reason": "Big Sur Airbnb listings: offsite lodging or personal trip; can't tell."
+        },
+        {
+          "host": "zillow.com",
+          "seconds": 1206,
+          "paths": [
+            "/homedetails/123-Fict-Ln-Oakland-CA/99887766_zpid/",
+            "/homes/for_sale/"
+          ],
+          "label": "drift",
+          "reason": "Oakland home listing and homes for sale: house hunting."
+        },
+        {
+          "host": "calendar.google.com",
+          "seconds": 303,
+          "paths": [
+            "/calendar/u/0/r/week"
+          ],
+          "label": "supportive",
+          "reason": "Week calendar view: dates for the offsite plan."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000022",
+      "intention": "fix typos flagged in the client's site copy",
+      "outcome": "yes",
+      "localHour": 11,
+      "workSites": [
+        "webflow.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "webflow.com",
+          "seconds": 1203,
+          "paths": [
+            "/design/lumen-coaching"
+          ],
+          "label": "focused",
+          "reason": "Webflow designer on client site: fixing the typos."
+        },
+        {
+          "host": "lumen-coaching.webflow.io",
+          "seconds": 298,
+          "paths": [
+            "/",
+            "/about",
+            "/services"
+          ],
+          "label": "supportive",
+          "reason": "Live client site pages: checking copy."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 243,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "unknown",
+          "reason": "Four minutes in Gmail: flagged list or routine mail; not visible."
+        },
+        {
+          "host": "app.grammarly.com",
+          "seconds": 421,
+          "paths": [
+            "/ddocs/2198376451"
+          ],
+          "label": "supportive",
+          "reason": "Grammarly doc: checking copy for errors."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000023",
+      "intention": "catch up on email and clear the inbox",
+      "outcome": "yes",
+      "localHour": 9,
+      "workSites": [
+        "mail.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "mail.google.com",
+          "seconds": 2402,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "focused",
+          "reason": "Gmail for 40 min: clearing the inbox."
+        },
+        {
+          "host": "calendar.google.com",
+          "seconds": 297,
+          "paths": [
+            "/calendar/u/0/r"
+          ],
+          "label": "neutral",
+          "reason": "Brief calendar check."
+        },
+        {
+          "host": "docs.google.com",
+          "seconds": 418,
+          "paths": [
+            "/document/d/1MtgNotesFict/edit"
+          ],
+          "label": "unknown",
+          "reason": "Meeting notes doc: could be for an email reply; unclear."
+        },
+        {
+          "host": "nytimes.com",
+          "seconds": 603,
+          "paths": [
+            "/2026/09/25/business/fict-rate-decision.html"
+          ],
+          "label": "drift",
+          "reason": "News article on rate decision: reading news."
+        },
+        {
+          "host": "amazon.com",
+          "seconds": 302,
+          "paths": [
+            "/gp/your-account/order-details"
+          ],
+          "label": "unknown",
+          "reason": "Order details: could be following up an email; unclear."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000024",
+      "intention": "write the grant report narrative",
+      "outcome": "no",
+      "localHour": 14,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 902,
+          "paths": [
+            "/document/d/1GrantRptFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Grant report doc: writing it."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 2703,
+          "paths": [
+            "/watch"
+          ],
+          "label": "drift",
+          "reason": "45 min on a video; outcome no."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 1497,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "unknown",
+          "reason": "25 min in Gmail: grant mail or inbox; contents not visible."
+        },
+        {
+          "host": "portal.harbourfoundation.org",
+          "seconds": 301,
+          "paths": [
+            "/applications/2026/report"
+          ],
+          "label": "supportive",
+          "reason": "Funder portal report page: requirements/submission for the report."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000025",
+      "intention": "debug the webhook signature error",
+      "outcome": "yes",
+      "localHour": 23,
+      "workSites": [
+        "github.com",
+        "dashboard.stripe.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "dashboard.stripe.com",
+          "seconds": 898,
+          "paths": [
+            "/test/webhooks/we_1Pfict",
+            "/test/events"
+          ],
+          "label": "focused",
+          "reason": "Stripe test webhooks and events: debugging the error."
+        },
+        {
+          "host": "docs.stripe.com",
+          "seconds": 603,
+          "paths": [
+            "/webhooks/signature",
+            "/webhooks/quickstart"
+          ],
+          "label": "supportive",
+          "reason": "Stripe webhook signature docs: reference."
+        },
+        {
+          "host": "github.com",
+          "seconds": 597,
+          "paths": [
+            "/pellucid-dev/billing-api/blob/main/src/webhooks.ts"
+          ],
+          "label": "focused",
+          "reason": "webhooks.ts source: the code being debugged."
+        },
+        {
+          "host": "localhost",
+          "seconds": 302,
+          "paths": [
+            "/api/webhooks/stripe"
+          ],
+          "label": "focused",
+          "reason": "Local webhook endpoint: testing the fix."
+        },
+        {
+          "host": "chatgpt.com",
+          "seconds": 903,
+          "paths": [
+            "/c/68f5d2e7-9f01-8005-c3a8-7b6e5d4c3b21"
+          ],
+          "label": "supportive",
+          "reason": "ChatGPT conversation: debugging aid."
+        },
+        {
+          "host": "reddit.com",
+          "seconds": 598,
+          "paths": [
+            "/r/webdev/comments/1ex9pq3/stripe_webhook_signature_always_fails/"
+          ],
+          "label": "supportive",
+          "reason": "Thread on Stripe signature failures: reference."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 1204,
+          "paths": [
+            "/@lofiloungefict",
+            "/watch"
+          ],
+          "label": "neutral",
+          "reason": "Lofi channel video at 11pm: background music."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000026",
+      "intention": "write the listing descriptions for the three rentals",
+      "outcome": "yes",
+      "localHour": 12,
+      "workSites": [
+        "airbnb.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "airbnb.com",
+          "seconds": 1803,
+          "paths": [
+            "/hosting/listings/editor/51234567/details/description",
+            "/hosting/listings/editor/51298765/details/description",
+            "/hosting/listings/editor/51311122/details/description"
+          ],
+          "label": "focused",
+          "reason": "Airbnb listing description editors for three rentals: the task."
+        },
+        {
+          "host": "vrbo.com",
+          "seconds": 602,
+          "paths": [
+            "/search",
+            "/4412873"
+          ],
+          "label": "supportive",
+          "reason": "VRBO search and a listing: comparison copy."
+        },
+        {
+          "host": "docs.google.com",
+          "seconds": 597,
+          "paths": [
+            "/document/d/1RentalCopyFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Rental copy doc: drafting the descriptions."
+        },
+        {
+          "host": "facebook.com",
+          "seconds": 903,
+          "paths": [
+            "/",
+            "/watch/"
+          ],
+          "label": "drift",
+          "reason": "Facebook home and watch for 15 min."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000027",
+      "intention": "record and upload this week's coaching video",
+      "outcome": "yes",
+      "localHour": 17,
+      "workSites": [
+        "studio.youtube.com",
+        "youtube.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "studio.youtube.com",
+          "seconds": 1198,
+          "paths": [
+            "/channel/UCfict2xBrightPath/videos/upload",
+            "/video/fictVid01aB/edit"
+          ],
+          "label": "focused",
+          "reason": "YouTube Studio upload and edit: uploading the video."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 601,
+          "paths": [
+            "/@brightpathcoaching",
+            "/watch"
+          ],
+          "label": "supportive",
+          "reason": "Own channel page and a video: checking the upload."
+        },
+        {
+          "host": "web.descript.com",
+          "seconds": 904,
+          "paths": [
+            "/projects/8812fict"
+          ],
+          "label": "focused",
+          "reason": "Descript project: producing the video."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000028",
+      "intention": "read the two papers for tomorrow's seminar",
+      "outcome": "no",
+      "localHour": 20,
+      "workSites": [
+        "arxiv.org"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "arxiv.org",
+          "seconds": 1203,
+          "paths": [
+            "/abs/2409.01234",
+            "/pdf/2409.01234",
+            "/abs/2408.05678"
+          ],
+          "label": "focused",
+          "reason": "arXiv abstracts and PDF: reading the papers."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 897,
+          "paths": [
+            "/watch"
+          ],
+          "label": "unknown",
+          "reason": "Single 15-min video, no channel; could be explainer or break."
+        },
+        {
+          "host": "reddit.com",
+          "seconds": 1508,
+          "paths": [
+            "/r/MachineLearning/comments/1f3xk9q/d_thoughts_on_the_sparse_routing_paper/",
+            "/r/MachineLearning/",
+            "/r/all/"
+          ],
+          "label": "drift",
+          "reason": "Paper thread slid into r/MachineLearning then r/all, 25 min; outcome no."
+        },
+        {
+          "host": "semanticscholar.org",
+          "seconds": 302,
+          "paths": [
+            "/paper/Sparse-Routing-Fict/abcd1234ef"
+          ],
+          "label": "supportive",
+          "reason": "Semantic Scholar paper page: context for the reading."
+        },
+        {
+          "host": "x.com",
+          "seconds": 603,
+          "paths": [
+            "/home"
+          ],
+          "label": "drift",
+          "reason": "X home feed for 10 min."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000029",
+      "intention": "write the thank-you letter to the donor",
+      "outcome": "yes",
+      "localHour": 10,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 1202,
+          "paths": [
+            "/document/d/1DnrThanksFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Thank-you letter doc: writing it."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 243,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "unknown",
+          "reason": "Four minutes in Gmail: sending letter or routine; unclear."
+        },
+        {
+          "host": "crm.bloomerang.co",
+          "seconds": 302,
+          "paths": [
+            "/constituents/88213fict"
+          ],
+          "label": "supportive",
+          "reason": "Donor record in CRM: details for the letter."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000030",
+      "intention": "research venues for the spring gala",
+      "outcome": "no",
+      "localHour": 10,
+      "workSites": [],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "google.com",
+          "seconds": 298,
+          "paths": [
+            "/search",
+            "/maps/place/The+Fict+Hall"
+          ],
+          "label": "focused",
+          "reason": "Search and map place for a hall: venue research."
+        },
+        {
+          "host": "peerspace.com",
+          "seconds": 1204,
+          "paths": [
+            "/s/",
+            "/pages/listings/5f1fict"
+          ],
+          "label": "focused",
+          "reason": "Peerspace listings: venue research."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 903,
+          "paths": [
+            "/thefictlofts/",
+            "/reels/"
+          ],
+          "label": "drift",
+          "reason": "Venue profile then global reels feed, 15 min; outcome no."
+        },
+        {
+          "host": "docs.google.com",
+          "seconds": 297,
+          "paths": [
+            "/spreadsheets/d/1GalaVenuesFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Gala venues spreadsheet: recording the research."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000031",
+      "intention": "update the portfolio with the rebrand case study",
+      "outcome": "no",
+      "localHour": 21,
+      "workSites": [
+        "cargo.site"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "cargo.site",
+          "seconds": 604,
+          "paths": [
+            "/edit/fict-portfolio"
+          ],
+          "label": "focused",
+          "reason": "Cargo portfolio editor: updating it."
+        },
+        {
+          "host": "behance.net",
+          "seconds": 1198,
+          "paths": [
+            "/gallery/201234567/Fict-Rebrand",
+            "/search/projects"
+          ],
+          "label": "unknown",
+          "reason": "Rebrand gallery then project search, 20 min: reference or browsing."
+        },
+        {
+          "host": "dribbble.com",
+          "seconds": 897,
+          "paths": [
+            "/shots/popular"
+          ],
+          "label": "drift",
+          "reason": "Dribbble popular shots: general browsing."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 1203,
+          "paths": [
+            "/explore/",
+            "/reels/"
+          ],
+          "label": "drift",
+          "reason": "Instagram explore and reels for 20 min; outcome no."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000032",
+      "intention": "file the quarterly sales tax return",
+      "outcome": "yes",
+      "localHour": 15,
+      "workSites": [
+        "onlineservices.cdtfa.ca.gov"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "onlineservices.cdtfa.ca.gov",
+          "seconds": 1203,
+          "paths": [
+            "/",
+            "/return/filing"
+          ],
+          "label": "focused",
+          "reason": "CDTFA filing: filing the return."
+        },
+        {
+          "host": "quickbooks.intuit.com",
+          "seconds": 602,
+          "paths": [
+            "/app/salestax"
+          ],
+          "label": "supportive",
+          "reason": "QuickBooks sales tax: figures for the return."
+        },
+        {
+          "host": "google.com",
+          "seconds": 183,
+          "paths": [
+            "/search"
+          ],
+          "label": "unknown",
+          "reason": "Three-minute search, query not recorded."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 478,
+          "paths": [
+            "/results",
+            "/watch"
+          ],
+          "label": "unknown",
+          "reason": "Search then video: could be how-to or break; not shown."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000033",
+      "intention": "prepare the discovery-call questions for the new client",
+      "outcome": "yes",
+      "localHour": 9,
+      "workSites": [
+        "notion.so"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "notion.so",
+          "seconds": 902,
+          "paths": [
+            "/hollis-coaching/Discovery-Ortega-1b7c"
+          ],
+          "label": "focused",
+          "reason": "Discovery-call doc in Notion: writing the questions."
+        },
+        {
+          "host": "linkedin.com",
+          "seconds": 481,
+          "paths": [
+            "/in/fict-marisol-ortega/",
+            "/company/ortega-landscaping-fict/"
+          ],
+          "label": "supportive",
+          "reason": "Client LinkedIn profile and company: research for questions."
+        },
+        {
+          "host": "ortegalandscaping.com",
+          "seconds": 298,
+          "paths": [
+            "/",
+            "/services"
+          ],
+          "label": "supportive",
+          "reason": "Client website pages: research for questions."
+        },
+        {
+          "host": "calendly.com",
+          "seconds": 121,
+          "paths": [
+            "/event_types/user/me"
+          ],
+          "label": "neutral",
+          "reason": "Brief Calendly event-types page: scheduling admin."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000034",
+      "intention": "translate the brochure into Spanish",
+      "outcome": "yes",
+      "localHour": 14,
+      "workSites": [
+        "docs.google.com",
+        "deepl.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 1804,
+          "paths": [
+            "/document/d/1BrochureEsFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Brochure doc: writing the translation."
+        },
+        {
+          "host": "deepl.com",
+          "seconds": 903,
+          "paths": [
+            "/translator"
+          ],
+          "label": "supportive",
+          "reason": "DeepL translator: tool used to draft the translation."
+        },
+        {
+          "host": "wordreference.com",
+          "seconds": 298,
+          "paths": [
+            "/es/translation.asp"
+          ],
+          "label": "supportive",
+          "reason": "WordReference: vocabulary lookup."
+        },
+        {
+          "host": "spanishdict.com",
+          "seconds": 241,
+          "paths": [
+            "/translate/presupuesto"
+          ],
+          "label": "supportive",
+          "reason": "SpanishDict lookup for presupuesto: vocabulary."
+        },
+        {
+          "host": "web.whatsapp.com",
+          "seconds": 602,
+          "paths": [
+            "/"
+          ],
+          "label": "unknown",
+          "reason": "Ten minutes on WhatsApp, content not visible."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000035",
+      "intention": "finish the React form validation for the signup page",
+      "outcome": "no",
+      "localHour": 22,
+      "workSites": [
+        "github.com",
+        "localhost"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "localhost",
+          "seconds": 903,
+          "paths": [
+            "/signup"
+          ],
+          "label": "focused",
+          "reason": "Local signup page: building the validation."
+        },
+        {
+          "host": "github.com",
+          "seconds": 298,
+          "paths": [
+            "/pellucid-dev/web/pull/233"
+          ],
+          "label": "focused",
+          "reason": "PR on the web repo: the validation work."
+        },
+        {
+          "host": "react.dev",
+          "seconds": 302,
+          "paths": [
+            "/reference/react-dom/components/form"
+          ],
+          "label": "supportive",
+          "reason": "React form docs: reference."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 1807,
+          "paths": [
+            "/@fireshipfict",
+            "/watch",
+            "/shorts/Lx9fictA1",
+            "/shorts/Mw2fictB7"
+          ],
+          "label": "drift",
+          "reason": "30 min of videos and Shorts; outcome no."
+        },
+        {
+          "host": "reddit.com",
+          "seconds": 1203,
+          "paths": [
+            "/r/reactjs/",
+            "/r/ProgrammerHumor/",
+            "/r/popular/"
+          ],
+          "label": "drift",
+          "reason": "r/reactjs into ProgrammerHumor and r/popular; outcome no."
+        },
+        {
+          "host": "discord.com",
+          "seconds": 597,
+          "paths": [
+            "/channels/@me"
+          ],
+          "label": "unknown",
+          "reason": "Discord DMs for 10 min, content not visible."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000036",
+      "intention": "book travel for the Lisbon conference",
+      "outcome": "yes",
+      "localHour": 12,
+      "workSites": [],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "google.com",
+          "seconds": 603,
+          "paths": [
+            "/travel/flights/search",
+            "/search"
+          ],
+          "label": "focused",
+          "reason": "Flight search: booking travel."
+        },
+        {
+          "host": "flytap.com",
+          "seconds": 902,
+          "paths": [
+            "/en-us/booking/flights",
+            "/en-us/booking/payment"
+          ],
+          "label": "focused",
+          "reason": "TAP booking and payment: booking flights."
+        },
+        {
+          "host": "booking.com",
+          "seconds": 1204,
+          "paths": [
+            "/searchresults.html",
+            "/hotel/pt/fict-alfama-guesthouse.html"
+          ],
+          "label": "focused",
+          "reason": "Booking.com hotel: booking lodging."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 182,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "unknown",
+          "reason": "Three minutes in Gmail: confirmations or routine; unclear."
+        },
+        {
+          "host": "tripadvisor.com",
+          "seconds": 598,
+          "paths": [
+            "/Restaurants-g189158-Lisbon_Lisbon_District_Central_Portugal.html"
+          ],
+          "label": "neutral",
+          "reason": "Lisbon restaurants after bookings done; trip-adjacent, didn't displace task."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000037",
+      "intention": "write 3 LinkedIn posts for the recruiter client",
+      "outcome": "yes",
+      "localHour": 10,
+      "workSites": [
+        "linkedin.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "linkedin.com",
+          "seconds": 1802,
+          "paths": [
+            "/feed/",
+            "/in/dana-fict-recruits/recent-activity/all/",
+            "/feed/"
+          ],
+          "label": "unknown",
+          "reason": "Client's activity amid feed visits: reference or browsing; unclear."
+        },
+        {
+          "host": "docs.google.com",
+          "seconds": 902,
+          "paths": [
+            "/document/d/1LiPostsFict/edit"
+          ],
+          "label": "focused",
+          "reason": "LinkedIn posts doc: writing the posts."
+        },
+        {
+          "host": "chatgpt.com",
+          "seconds": 603,
+          "paths": [
+            "/c/68f6e3f8-0a12-8006-d4b9-8c7f6e5d4c32"
+          ],
+          "label": "supportive",
+          "reason": "ChatGPT conversation: drafting aid."
+        },
+        {
+          "host": "hemingwayapp.com",
+          "seconds": 181,
+          "paths": [
+            "/"
+          ],
+          "label": "supportive",
+          "reason": "Hemingway app: editing the posts."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000038",
+      "intention": "review the client's analytics before the 2pm call",
+      "outcome": "yes",
+      "localHour": 13,
+      "workSites": [
+        "analytics.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "analytics.google.com",
+          "seconds": 1203,
+          "paths": [
+            "/analytics/web/"
+          ],
+          "label": "focused",
+          "reason": "Google Analytics: reviewing the analytics."
+        },
+        {
+          "host": "search.google.com",
+          "seconds": 598,
+          "paths": [
+            "/search-console/performance/search-analytics"
+          ],
+          "label": "focused",
+          "reason": "Search Console performance: reviewing client analytics."
+        },
+        {
+          "host": "espn.com",
+          "seconds": 903,
+          "paths": [
+            "/nfl/scoreboard",
+            "/nfl/story/_/id/41234567/fict-week-3-takeaways"
+          ],
+          "label": "drift",
+          "reason": "NFL scoreboard and story, 15 min."
+        },
+        {
+          "host": "zoom.us",
+          "seconds": 122,
+          "paths": [
+            "/j/81234567890"
+          ],
+          "label": "neutral",
+          "reason": "Zoom join: the call itself, not the review."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000039",
+      "intention": "design the logo concepts for the coffee roaster",
+      "outcome": "no",
+      "localHour": 16,
+      "workSites": [
+        "figma.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "figma.com",
+          "seconds": 1497,
+          "paths": [
+            "/design/Rst3fictLogo/Ember-Roasters-logo"
+          ],
+          "label": "focused",
+          "reason": "Logo file in Figma: designing concepts."
+        },
+        {
+          "host": "fonts.google.com",
+          "seconds": 603,
+          "paths": [
+            "/specimen/Fraunces",
+            "/"
+          ],
+          "label": "supportive",
+          "reason": "Fraunces font specimen: type choice for logo."
+        },
+        {
+          "host": "pinterest.com",
+          "seconds": 1206,
+          "paths": [
+            "/search/pins/",
+            "/pin/801234567890123456/",
+            "/pin/801234567890123999/",
+            "/"
+          ],
+          "label": "unknown",
+          "reason": "Pin search ending on home feed: moodboard or browsing."
+        },
+        {
+          "host": "etsy.com",
+          "seconds": 902,
+          "paths": [
+            "/c/home-and-living",
+            "/listing/1498765432/ceramic-pour-over-set"
+          ],
+          "label": "drift",
+          "reason": "Etsy home-and-living browsing and a product: shopping."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 297,
+          "paths": [
+            "/watch"
+          ],
+          "label": "unknown",
+          "reason": "Single five-minute video, no context."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000040",
+      "intention": "update the budget spreadsheet for the renovation",
+      "outcome": "no",
+      "localHour": 20,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 902,
+          "paths": [
+            "/spreadsheets/d/1RenoBudgetFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Renovation budget spreadsheet: updating it."
+        },
+        {
+          "host": "homedepot.com",
+          "seconds": 1203,
+          "paths": [
+            "/b/Bath-Bathroom-Vanities/N-5yc1vZcfv",
+            "/p/Fict-36-in-Vanity/3151234"
+          ],
+          "label": "supportive",
+          "reason": "Home Depot vanity listing: prices for the budget."
+        },
+        {
+          "host": "houzz.com",
+          "seconds": 1502,
+          "paths": [
+            "/photos/bathroom-ideas-phbr0-bp~t_712"
+          ],
+          "label": "drift",
+          "reason": "25 min browsing bathroom idea photos, not budgeting; outcome no."
+        },
+        {
+          "host": "reddit.com",
+          "seconds": 603,
+          "paths": [
+            "/r/HomeImprovement/comments/1g2fict/vanity_install_cost/"
+          ],
+          "label": "supportive",
+          "reason": "Thread on vanity install cost: a figure for the budget."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 602,
+          "paths": [
+            "/reels/"
+          ],
+          "label": "drift",
+          "reason": "Instagram reels feed for 10 min."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000041",
+      "intention": "grade the 28 essays for period 3",
+      "outcome": "yes",
+      "localHour": 19,
+      "workSites": [
+        "classroom.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "classroom.google.com",
+          "seconds": 3003,
+          "paths": [
+            "/c/NjEyfict/a/Nzg1fict/submissions/by-status/and-sort-last-name/all",
+            "/g/tg/NjEyfict/Nzg1fict"
+          ],
+          "label": "focused",
+          "reason": "Classroom grader and submissions: grading."
+        },
+        {
+          "host": "docs.google.com",
+          "seconds": 1502,
+          "paths": [
+            "/document/d/1EssayRubricFict/edit",
+            "/document/d/1StudentEssayFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Rubric and student essay docs: grading."
+        },
+        {
+          "host": "turnitin.com",
+          "seconds": 298,
+          "paths": [
+            "/viewer/submissions/oid:1234fict"
+          ],
+          "label": "supportive",
+          "reason": "Turnitin viewer: checking a submission."
+        },
+        {
+          "host": "open.spotify.com",
+          "seconds": 1803,
+          "paths": [
+            "/playlist/37i9dQZF1DXfictFocus"
+          ],
+          "label": "neutral",
+          "reason": "Focus playlist: background music."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000042",
+      "intention": "reply to reviews on the google business profile",
+      "outcome": "yes",
+      "localHour": 11,
+      "workSites": [
+        "business.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "business.google.com",
+          "seconds": 903,
+          "paths": [
+            "/reviews/l/08123fict"
+          ],
+          "label": "focused",
+          "reason": "GBP reviews page: replying to reviews."
+        },
+        {
+          "host": "google.com",
+          "seconds": 297,
+          "paths": [
+            "/maps/place/Crumb+and+Coal+Bakery"
+          ],
+          "label": "supportive",
+          "reason": "Bakery's Maps listing: viewing the reviews."
+        },
+        {
+          "host": "yelp.com",
+          "seconds": 602,
+          "paths": [
+            "/biz/crumb-and-coal-fict"
+          ],
+          "label": "unknown",
+          "reason": "Bakery's Yelp page: cross-check or other replies; unclear."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 904,
+          "paths": [
+            "/crumbandcoalbakery/",
+            "/reels/",
+            "/explore/"
+          ],
+          "label": "drift",
+          "reason": "Profile then reels and explore feeds, 15 min."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000043",
+      "intention": "write the unit tests for the parser",
+      "outcome": "yes",
+      "localHour": 10,
+      "workSites": [
+        "github.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "github.com",
+          "seconds": 603,
+          "paths": [
+            "/pellucid-dev/ledger-parse/blob/main/src/parse.py",
+            "/pellucid-dev/ledger-parse/pull/41"
+          ],
+          "label": "focused",
+          "reason": "Parser source and PR: writing the tests."
+        },
+        {
+          "host": "docs.python.org",
+          "seconds": 482,
+          "paths": [
+            "/3/library/unittest.html",
+            "/3/library/re.html"
+          ],
+          "label": "supportive",
+          "reason": "unittest and re docs: reference."
+        },
+        {
+          "host": "regex101.com",
+          "seconds": 601,
+          "paths": [
+            "/r/fictAb3"
+          ],
+          "label": "supportive",
+          "reason": "regex101: testing patterns for tests."
+        },
+        {
+          "host": "chatgpt.com",
+          "seconds": 298,
+          "paths": [
+            "/c/68f7f4a9-1b23-8007-e5ca-9d8a7f6e5d43"
+          ],
+          "label": "supportive",
+          "reason": "ChatGPT conversation: coding aid."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 1502,
+          "paths": [
+            "/watch",
+            "/watch"
+          ],
+          "label": "unknown",
+          "reason": "Two videos, 25 min, no channel; can't tell music, tutorial, or break."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000044",
+      "intention": "schedule the gym client's reels for next week",
+      "outcome": "yes",
+      "localHour": 15,
+      "workSites": [
+        "instagram.com",
+        "later.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "later.com",
+          "seconds": 1203,
+          "paths": [
+            "/app/calendar/week",
+            "/app/media"
+          ],
+          "label": "focused",
+          "reason": "Later calendar and media: scheduling the reels."
+        },
+        {
+          "host": "instagram.com",
+          "seconds": 1507,
+          "paths": [
+            "/ironhousegymfict/",
+            "/reels/",
+            "/reels/audio/1872345098765432/",
+            "/explore/"
+          ],
+          "label": "supportive",
+          "reason": "Gym profile and reels audio page: researching audio for reels."
+        },
+        {
+          "host": "capcut.com",
+          "seconds": 902,
+          "paths": [
+            "/editor/7412fict"
+          ],
+          "label": "supportive",
+          "reason": "CapCut editor: preparing the reels."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000045",
+      "intention": "draft the proposal for the Arbor Health website redesign",
+      "outcome": "no",
+      "localHour": 11,
+      "workSites": [
+        "docs.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "docs.google.com",
+          "seconds": 1101,
+          "paths": [
+            "/document/d/1ArborPropFict/edit"
+          ],
+          "label": "focused",
+          "reason": "Proposal doc: drafting it."
+        },
+        {
+          "host": "mail.google.com",
+          "seconds": 1804,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "unknown",
+          "reason": "30 min in Gmail: client mail or inbox; contents not visible."
+        },
+        {
+          "host": "arborhealth.org",
+          "seconds": 482,
+          "paths": [
+            "/",
+            "/locations",
+            "/patients/billing"
+          ],
+          "label": "supportive",
+          "reason": "Arbor Health site pages: research for the redesign proposal."
+        },
+        {
+          "host": "google.com",
+          "seconds": 241,
+          "paths": [
+            "/search"
+          ],
+          "label": "unknown",
+          "reason": "Four-minute search, query not recorded."
+        },
+        {
+          "host": "web.whatsapp.com",
+          "seconds": 603,
+          "paths": [
+            "/"
+          ],
+          "label": "unknown",
+          "reason": "Ten minutes on WhatsApp, content not visible."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000046",
+      "intention": "work",
+      "outcome": "no",
+      "localHour": 14,
+      "workSites": [],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "mail.google.com",
+          "seconds": 903,
+          "paths": [
+            "/mail/u/0/"
+          ],
+          "label": "unknown",
+          "reason": "Intention 'work' gives nothing to judge Gmail against."
+        },
+        {
+          "host": "docs.google.com",
+          "seconds": 602,
+          "paths": [
+            "/document/d/1MiscFict/edit"
+          ],
+          "label": "unknown",
+          "reason": "Intention 'work' gives nothing to judge this doc against."
+        },
+        {
+          "host": "youtube.com",
+          "seconds": 1204,
+          "paths": [
+            "/watch"
+          ],
+          "label": "unknown",
+          "reason": "Intention 'work' gives nothing to judge the video against."
+        },
+        {
+          "host": "news.ycombinator.com",
+          "seconds": 481,
+          "paths": [
+            "/"
+          ],
+          "label": "unknown",
+          "reason": "Intention 'work' gives nothing to judge HN against."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000047",
+      "intention": "sort the stock photos into client folders",
+      "outcome": "yes",
+      "localHour": 16,
+      "workSites": [
+        "drive.google.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "drive.google.com",
+          "seconds": 2103,
+          "paths": [
+            "/drive/folders/1StockAllFict",
+            "/drive/folders/1ClientAFict",
+            "/drive/folders/1ClientBFict"
+          ],
+          "label": "focused",
+          "reason": "Drive folders: sorting the photos."
+        },
+        {
+          "host": "podcasts.apple.com",
+          "seconds": 1802,
+          "paths": [
+            "/us/podcast/the-fict-hour/id1512345678"
+          ],
+          "label": "neutral",
+          "reason": "Podcast episode alongside sorting: background listening."
+        },
+        {
+          "host": "unsplash.com",
+          "seconds": 303,
+          "paths": [
+            "/@fictphotog"
+          ],
+          "label": "supportive",
+          "reason": "Photographer's Unsplash profile: source of stock photos."
+        }
+      ]
+    },
+    {
+      "id": "e7a1c0de-0000-4000-8000-000000000048",
+      "intention": "apply to two freelance projects on upwork",
+      "outcome": "yes",
+      "localHour": 12,
+      "workSites": [
+        "upwork.com"
+      ],
+      "blockedDomains": [],
+      "visits": [
+        {
+          "host": "upwork.com",
+          "seconds": 1504,
+          "paths": [
+            "/nx/find-work/best-matches",
+            "/jobs/~01fictAbC123",
+            "/ab/proposals/job/~01fictAbC123/apply/"
+          ],
+          "label": "focused",
+          "reason": "Upwork job and proposal apply page: applying."
+        },
+        {
+          "host": "behance.net",
+          "seconds": 302,
+          "paths": [
+            "/fict-designer"
+          ],
+          "label": "supportive",
+          "reason": "Own Behance profile: portfolio for proposals."
+        },
+        {
+          "host": "chatgpt.com",
+          "seconds": 481,
+          "paths": [
+            "/c/68f8a5b0-2c34-8008-f6db-0e9b8a7f6e54"
+          ],
+          "label": "supportive",
+          "reason": "ChatGPT conversation: drafting proposals."
+        },
+        {
+          "host": "linkedin.com",
+          "seconds": 897,
+          "paths": [
+            "/feed/"
+          ],
+          "label": "drift",
+          "reason": "LinkedIn feed for 15 min, not part of applying."
+        }
+      ]
+    }
+  ]
+}
