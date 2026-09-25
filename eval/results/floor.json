@@ -1,0 +1,128 @@
+{
+  "from": "judge-dev",
+  "minPrecision": 0.8,
+  "minRendered": 20,
+  "floor": 0.85,
+  "sweep": [
+    {
+      "floor": 0,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.05,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.1,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.15,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.2,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.25,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.3,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.35,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.4,
+      "rendered": 102,
+      "correct": 74,
+      "precision": 0.7254901960784313
+    },
+    {
+      "floor": 0.45,
+      "rendered": 100,
+      "correct": 74,
+      "precision": 0.74
+    },
+    {
+      "floor": 0.5,
+      "rendered": 100,
+      "correct": 74,
+      "precision": 0.74
+    },
+    {
+      "floor": 0.55,
+      "rendered": 99,
+      "correct": 74,
+      "precision": 0.7474747474747475
+    },
+    {
+      "floor": 0.6,
+      "rendered": 99,
+      "correct": 74,
+      "precision": 0.7474747474747475
+    },
+    {
+      "floor": 0.65,
+      "rendered": 95,
+      "correct": 74,
+      "precision": 0.7789473684210526
+    },
+    {
+      "floor": 0.7,
+      "rendered": 95,
+      "correct": 74,
+      "precision": 0.7789473684210526
+    },
+    {
+      "floor": 0.75,
+      "rendered": 81,
+      "correct": 64,
+      "precision": 0.7901234567901234
+    },
+    {
+      "floor": 0.8,
+      "rendered": 79,
+      "correct": 63,
+      "precision": 0.7974683544303798
+    },
+    {
+      "floor": 0.85,
+      "rendered": 62,
+      "correct": 51,
+      "precision": 0.8225806451612904
+    },
+    {
+      "floor": 0.9,
+      "rendered": 52,
+      "correct": 43,
+      "precision": 0.8269230769230769
+    },
+    {
+      "floor": 0.95,
+      "rendered": 22,
+      "correct": 22,
+      "precision": 1
+    }
+  ]
+}
