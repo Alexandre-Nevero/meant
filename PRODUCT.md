@@ -55,9 +55,33 @@
 
 ---
 
-## Status — what is actually built (2026-09-16)
+## Status — what is actually built (2026-09-25)
 
 Read this before treating any feature below as shipped.
+
+**Status refreshed 2026-09-25 (ADR-0079 to ADR-0088). This block supersedes the older status notes
+below wherever they disagree.**
+
+- **Three model calls exist, all Groq (ADR-0072).** The coach (`app/api/coach/chat`,
+  `openai/gpt-oss-120b`, ADR-0079); the judge (`app/api/judge/analyze`, same model, ADR-0080); and
+  the intention-preset classifier (`app/api/presets/classify`, `openai/gpt-oss-20b`, ADR-0083),
+  which runs only when no keyword matches.
+- **The judge is built, measured, and hidden.** It failed its eval (ADR-0085, ADR-0086): on the
+  held-out split of a 48-session synthetic set (`eval/judge-cases.json`) it beat the no-model
+  baseline on accuracy (0.544 against 0.369), but only 44 of the 60 verdicts it would have shown
+  were right (0.733 against a 0.80 bar). The popup's "Try the judge" is built behind
+  `JUDGE_RENDERS = false` (`extension/lib/judge-view.js`), so nothing calls the route from the
+  shipped UI. Re-run with `npm run eval:judge`.
+- **Memory is written** from the companion's tap (`app/api/events`) and, when the judge runs, from
+  its verdicts (ADR-0078). Those verdicts are still filtered at the unmeasured 0.70 floor, which
+  ADR-0086 flags.
+- **Every AI feature can be switched off** in `/settings` (companion, judge, coach; ADR-0087).
+  **Forget what you know about me** and **Delete my account** exist (PRD-F15, ADR-0087).
+- **Every feature is free** (ADR-0075). **MEANT is not deployed**: it runs locally as the
+  reference build (ADR-0088).
+- One session can hold several tasks (ADR-0084), the intention pre-fills what to block (ADR-0083),
+  and the popup opens itself to ask at the end (ADR-0082).
+
 
 - **No model call exists anywhere in the product.** Verified by grep across `app`, `lib`,
   `extension`, `package.json`: zero matches for any gateway or provider SDK. The judge, memory-as-

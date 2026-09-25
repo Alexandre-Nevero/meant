@@ -33,8 +33,9 @@ Chrome/Edge MV3 extension (`extension/`, plain ES modules — no bundler, no Typ
 React) plus a Next.js 16 web app (`app/`) on Vercel, with Neon Postgres + Neon Auth and
 inference via Vercel AI Gateway (not yet wired to any product code — see Stack currency).
 **Corrected 2026-09-21 (ADR-0072): Groq with Zero Data Retention.**
-**Status as of 2026-09-16: the entire AI stack (plan, judge, memory, coach — PRD §6) is
-unbuilt.** ~~The companion's drift signal is a mechanical hostname-category check standing in
+~~**Status as of 2026-09-16: the entire AI stack (plan, judge, memory, coach — PRD §6) is
+unbuilt.**~~ **Corrected 2026-09-25: the coach, the judge and the preset classifier all call Groq;
+the judge failed its eval and renders nothing (ADR-0086); see `PRODUCT.md` Status.** ~~The companion's drift signal is a mechanical hostname-category check standing in
 for the judge (ADR-0025).~~ **Corrected 2026-09-16: that signal was deleted (ADR-0057).** The
 companion signals nothing; it **takes one tap** meaning *"this isn't the work"* (ADR-0058).
 Attention is still recorded live and silently; the judge, when it exists, will run **after** the
