@@ -1,7 +1,7 @@
 import { sql } from '@/lib/db'
 import { requestUserId } from '@/lib/device-auth'
 import { buildCases, type EventRow, type SessionRow, type PathEntry } from '@/lib/judge/corpus'
-import { LABELS, schemaFor, buildMessages } from '@/lib/judge/prompt'
+import { JUDGE_MODEL, judgeRequestBody, parseVerdicts } from '@/lib/judge/request'
 import { costOf } from '@/lib/inference-cost'
 import {
   DAILY_ANALYSIS_CAP,
@@ -15,9 +15,9 @@ import { tally, classify, upgradeTally, type Tally } from '@/lib/memory-accumula
 
 export const dynamic = 'force-dynamic'
 
-// ADR-0080. Matches the judge spike's measured (synthetic) winner. Shares no rate limit with
-// the coach despite the same model string — see the session_ids predicate below.
-const JUDGE_MODEL = 'openai/gpt-oss-120b'
+// ADR-0080: JUDGE_MODEL shares no rate limit with the coach despite the same model string —
+// see the session_ids predicate below. The request itself lives in lib/judge/request.ts so the
+// eval (ADR-0085) sends byte-for-byte what this route sends.
 
 type Verdict = { sessionId: string; host: string; label: string; confidence: number }
 
@@ -143,12 +143,7 @@ export async function POST(req: Request) {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          model: JUDGE_MODEL,
-          temperature: 0.1,
-          messages: buildMessages(c),
-          response_format: { type: 'json_schema', json_schema: schemaFor() },
-        }),
+        body: JSON.stringify(judgeRequestBody(c)),
       })
       if (!res.ok) {
         // Never print the body: on some errors it echoes the request, which carries paths.
@@ -158,16 +153,9 @@ export async function POST(req: Request) {
       const data = await res.json()
       inputTokens += data.usage?.prompt_tokens ?? 0
       outputTokens += data.usage?.completion_tokens ?? 0
-      let parsed
-      try {
-        parsed = JSON.parse(data.choices[0].message.content)
-      } catch {
-        continue
-      }
-      for (const v of parsed.visits ?? []) {
-        if (!LABELS.includes(v.label)) continue
-        allVerdicts.push({ sessionId: c.sessionId, host: v.host, label: v.label, confidence: v.confidence })
-      }
+      const parsed = parseVerdicts(data.choices?.[0]?.message?.content)
+      if (!parsed) continue
+      for (const v of parsed) allVerdicts.push({ sessionId: c.sessionId, ...v })
     }
 
     // A total Groq failure (every call non-ok, or every response unparseable) must stay

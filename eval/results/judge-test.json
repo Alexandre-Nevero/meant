@@ -1,0 +1,632 @@
+{
+  "split": "test",
+  "model": "openai/gpt-oss-120b",
+  "ranAt": "2026-09-25T09:00:19.597Z",
+  "sessions": 24,
+  "visits": 103,
+  "uncoveredSessions": [],
+  "tokens": {
+    "input": 14360,
+    "output": 9268
+  },
+  "predictions": [
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000001",
+      "host": "later.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000001",
+      "host": "instagram.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000001",
+      "host": "canva.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000001",
+      "host": "drive.google.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000001",
+      "host": "mail.google.com",
+      "label": "neutral",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000002",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000002",
+      "host": "instagram.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000002",
+      "host": "pinterest.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000003",
+      "host": "instagram.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000003",
+      "host": "business.facebook.com",
+      "label": "focused",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000003",
+      "host": "notion.so",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000006",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000006",
+      "host": "etsy.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000006",
+      "host": "thesaurus.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000006",
+      "host": "music.youtube.com",
+      "label": "supportive",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000006",
+      "host": "chatgpt.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000015",
+      "host": "google.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000015",
+      "host": "hellofresh.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000015",
+      "host": "reddit.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000015",
+      "host": "statista.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000015",
+      "host": "amazon.com",
+      "label": "drift",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000030",
+      "host": "google.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000030",
+      "host": "peerspace.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000030",
+      "host": "instagram.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000030",
+      "host": "docs.google.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000031",
+      "host": "cargo.site",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000031",
+      "host": "behance.net",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000031",
+      "host": "dribbble.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000031",
+      "host": "instagram.com",
+      "label": "drift",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000032",
+      "host": "onlineservices.cdtfa.ca.gov",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000032",
+      "host": "quickbooks.intuit.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000032",
+      "host": "google.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000032",
+      "host": "youtube.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000033",
+      "host": "notion.so",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000033",
+      "host": "linkedin.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000033",
+      "host": "ortegalandscaping.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000033",
+      "host": "calendly.com",
+      "label": "neutral",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000034",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000034",
+      "host": "deepl.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000034",
+      "host": "wordreference.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000034",
+      "host": "spanishdict.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000034",
+      "host": "web.whatsapp.com",
+      "label": "drift",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000035",
+      "host": "localhost",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000035",
+      "host": "github.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000035",
+      "host": "react.dev",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000035",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000035",
+      "host": "reddit.com",
+      "label": "drift",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000035",
+      "host": "discord.com",
+      "label": "drift",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000036",
+      "host": "google.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000036",
+      "host": "flytap.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000036",
+      "host": "booking.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000036",
+      "host": "mail.google.com",
+      "label": "neutral",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000036",
+      "host": "tripadvisor.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000037",
+      "host": "linkedin.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000037",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000037",
+      "host": "chatgpt.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000037",
+      "host": "hemingwayapp.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000038",
+      "host": "analytics.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000038",
+      "host": "search.google.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000038",
+      "host": "espn.com",
+      "label": "drift",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000038",
+      "host": "zoom.us",
+      "label": "supportive",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000039",
+      "host": "figma.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000039",
+      "host": "fonts.google.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000039",
+      "host": "pinterest.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000039",
+      "host": "etsy.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000039",
+      "host": "youtube.com",
+      "label": "neutral",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000040",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000040",
+      "host": "homedepot.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000040",
+      "host": "houzz.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000040",
+      "host": "reddit.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000040",
+      "host": "instagram.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000041",
+      "host": "classroom.google.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000041",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000041",
+      "host": "turnitin.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000041",
+      "host": "open.spotify.com",
+      "label": "drift",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000042",
+      "host": "business.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000042",
+      "host": "google.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000042",
+      "host": "yelp.com",
+      "label": "drift",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000042",
+      "host": "instagram.com",
+      "label": "drift",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000043",
+      "host": "github.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000043",
+      "host": "docs.python.org",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000043",
+      "host": "regex101.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000043",
+      "host": "chatgpt.com",
+      "label": "supportive",
+      "confidence": 0.75
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000043",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000044",
+      "host": "later.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000044",
+      "host": "instagram.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000044",
+      "host": "capcut.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000045",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000045",
+      "host": "mail.google.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000045",
+      "host": "arborhealth.org",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000045",
+      "host": "google.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000045",
+      "host": "web.whatsapp.com",
+      "label": "drift",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000046",
+      "host": "mail.google.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000046",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000046",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000046",
+      "host": "news.ycombinator.com",
+      "label": "supportive",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000047",
+      "host": "drive.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000047",
+      "host": "podcasts.apple.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000047",
+      "host": "unsplash.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000048",
+      "host": "upwork.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000048",
+      "host": "behance.net",
+      "label": "neutral",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000048",
+      "host": "chatgpt.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000048",
+      "host": "linkedin.com",
+      "label": "neutral",
+      "confidence": 0.7
+    }
+  ]
+}

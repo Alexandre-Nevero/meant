@@ -1,0 +1,19 @@
+{
+  "split": "test",
+  "sessions": 24,
+  "visits": 103,
+  "fillNeutral": {
+    "correct": 27,
+    "total": 103,
+    "uncovered": 0,
+    "accuracy": 0.2621359223300971
+  },
+  "fillUnknown": {
+    "correct": 38,
+    "total": 103,
+    "uncovered": 0,
+    "accuracy": 0.36893203883495146
+  },
+  "stronger": "unknown",
+  "accuracy": 0.36893203883495146
+}

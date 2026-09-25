@@ -1,0 +1,21 @@
+{
+  "floor": 0.85,
+  "a": {
+    "judge": 0.5436893203883495,
+    "baseline": 0.36893203883495146,
+    "correct": 56,
+    "total": 103,
+    "uncovered": 0,
+    "pass": true
+  },
+  "b": {
+    "rendered": 60,
+    "correct": 44,
+    "precision": 0.7333333333333333,
+    "pass": false
+  },
+  "pass": false,
+  "sessions": 24,
+  "visits": 103,
+  "uncoveredSessions": 0
+}
