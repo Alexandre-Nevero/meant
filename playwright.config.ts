@@ -16,7 +16,7 @@ import { testDatabaseUrlFrom } from './lib/db-guard.ts'
 const DATABASE_URL = testDatabaseUrlFrom(
   fs.existsSync('.env.test') ? fs.readFileSync('.env.test', 'utf8') : '',
 )
-const PORT = 3100
+const PORT = Number(process.env.E2E_PORT ?? 3100) // distinct ports let separate worktrees run the suite at once
 
 // Headless by default (Playwright's own chromium channel supports loading an unpacked
 // extension headless — no visible window). No webServer block: the dev server is assumed
