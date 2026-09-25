@@ -630,9 +630,9 @@ async function idle() {
   })
 
   show(
-    header(mark), label,
+    header(mark), label, field, picker.row, picker.customRow, siteCluster, start,
     ...(queuedNotice ? [queuedNotice] : []),
-    field, picker.row, picker.customRow, siteCluster, start, disconnect,
+    disconnect,
   )
 }
 

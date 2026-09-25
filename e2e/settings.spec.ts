@@ -127,7 +127,7 @@ test.describe('settings — forget what you know about me', () => {
     await setupPage.goto('/settings')
     await setupPage.getByRole('button', { name: 'Forget what you know about me' }).click()
     await setupPage.getByRole('button', { name: 'Yes, forget it' }).click()
-    await expect(setupPage.getByText('Done — the record above is gone.')).toBeVisible()
+    await expect(setupPage.getByText('Done. MEANT has forgotten it.')).toBeVisible()
 
     // event.label cleared, but the event (and the session it belongs to) survives.
     const after = await db()`select label from event where session_id = ${sessionId}`
@@ -180,7 +180,7 @@ test.describe('settings — delete my account', () => {
 
     await page.goto('/settings')
     await page.getByRole('button', { name: 'Delete account' }).click()
-    await page.getByRole('button', { name: 'Yes, permanently delete my account' }).click()
+    await page.getByRole('button', { name: 'Delete for good' }).click()
     await page.waitForURL('**/')
 
     const judgmentAfter = await db()`select 1 from judgment where session_id = ${sessionId}`

@@ -7,9 +7,9 @@ type FeatureKey = 'companion' | 'judge' | 'coach'
 type FeatureSettings = Record<FeatureKey, boolean>
 
 const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
-  { key: 'companion', label: 'Companion', blurb: 'The presence that sits on pages while you browse.' },
-  { key: 'judge', label: 'Judge', blurb: "A batched, after-session read of a session's own attention." },
-  { key: 'coach', label: 'Coach', blurb: 'The chat in the dashboard and ledger.' },
+  { key: 'companion', label: 'Companion', blurb: 'The small mark that stays on the page while you work.' },
+  { key: 'judge', label: 'Judge', blurb: 'Looks back at a finished session and says which sites were the work.' },
+  { key: 'coach', label: 'Coach', blurb: 'The chat on your dashboard and ledger.' },
 ]
 
 // ADR-0087. Turning a feature off costs money too, at app/api/judge/analyze and
@@ -30,7 +30,7 @@ function FeatureToggle({
   return (
     <div data-feature={featureKey} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <span className="m-meta">
-        {label} — {blurb}
+        {label}. {blurb}
       </span>
       <div className="m-chip-row">
         <button
@@ -142,7 +142,7 @@ export default function Settings() {
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <h2 className="m-sentence" style={{ margin: 0 }}>Features</h2>
-        <p className="m-meta">Turn any of these off. It takes effect the next time it would run.</p>
+        <p className="m-meta">Turn any of these off. The change applies the next time it would run.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {FEATURES.map(({ key, label, blurb }) => (
             <FeatureToggle
@@ -174,8 +174,9 @@ export default function Settings() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <p className="m-meta">
-            Forget clears what the record has learned about you — memory, visit labels, and
-            every judgment — and can&rsquo;t be undone; your sessions and their outcomes stay.
+            Forget erases what MEANT has worked out about you: what it remembers about sites,
+            the sites you marked as not the work, and the judge&rsquo;s verdicts. Your sessions
+            and answers stay. This can&rsquo;t be undone.
           </p>
           {forgetStep === 'idle' && (
             <button type="button" className="m-btn" data-variant="quiet" onClick={() => setForgetStep('confirm')}>
@@ -192,13 +193,13 @@ export default function Settings() {
               </button>
             </div>
           )}
-          {forgetStep === 'done' && <p className="m-meta">Done — the record above is gone.</p>}
+          {forgetStep === 'done' && <p className="m-meta">Done. MEANT has forgotten it.</p>}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <p className="m-meta">
-            Delete removes your account and every row tied to it — sessions, events, memory,
-            everything — and can&rsquo;t be undone.
+            Delete erases your account and everything in it: every session, every answer, and
+            everything MEANT learned. This can&rsquo;t be undone.
           </p>
           {deleteStep === 'idle' && (
             <button type="button" className="m-btn" data-variant="quiet" onClick={() => setDeleteStep('confirm')}>
@@ -214,7 +215,7 @@ export default function Settings() {
                 disabled={deleteStep === 'working'}
                 onClick={confirmDelete}
               >
-                Yes, permanently delete my account
+                Delete for good
               </button>
               <button
                 type="button"
