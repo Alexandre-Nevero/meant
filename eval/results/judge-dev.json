@@ -1,0 +1,626 @@
+{
+  "split": "dev",
+  "model": "openai/gpt-oss-120b",
+  "ranAt": "2026-09-25T08:57:48.801Z",
+  "sessions": 24,
+  "visits": 102,
+  "uncoveredSessions": [],
+  "tokens": {
+    "input": 14411,
+    "output": 9764
+  },
+  "predictions": [
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000004",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000004",
+      "host": "scholar.google.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000004",
+      "host": "zotero.org",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000004",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000004",
+      "host": "reddit.com",
+      "label": "supportive",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000004",
+      "host": "mail.google.com",
+      "label": "neutral",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000005",
+      "host": "youtube.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000005",
+      "host": "ocw.mit.edu",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000005",
+      "host": "wolframalpha.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000005",
+      "host": "chatgpt.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000005",
+      "host": "music.youtube.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000007",
+      "host": "github.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000007",
+      "host": "localhost",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000007",
+      "host": "stackoverflow.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000007",
+      "host": "playwright.dev",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000007",
+      "host": "app.slack.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000008",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000008",
+      "host": "lookerstudio.google.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000008",
+      "host": "news.ycombinator.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000008",
+      "host": "x.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000008",
+      "host": "techcrunch.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000009",
+      "host": "quickbooks.intuit.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000009",
+      "host": "mail.google.com",
+      "label": "neutral",
+      "confidence": 0.4
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000009",
+      "host": "drive.google.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000009",
+      "host": "amazon.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000010",
+      "host": "canva.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000010",
+      "host": "unsplash.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000010",
+      "host": "netflix.com",
+      "label": "drift",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000011",
+      "host": "notion.so",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000011",
+      "host": "youtube.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000011",
+      "host": "open.spotify.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000011",
+      "host": "google.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000012",
+      "host": "app.intercom.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000012",
+      "host": "help.northwind.io",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000012",
+      "host": "dashboard.stripe.com",
+      "label": "supportive",
+      "confidence": 0.75
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000012",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000013",
+      "host": "youtube.com",
+      "label": "focused",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000013",
+      "host": "figma.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000013",
+      "host": "help.figma.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000013",
+      "host": "reddit.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000014",
+      "host": "my.freshbooks.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000014",
+      "host": "track.toggl.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000014",
+      "host": "mail.google.com",
+      "label": "supportive",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000014",
+      "host": "wise.com",
+      "label": "neutral",
+      "confidence": 0.5
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000016",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000016",
+      "host": "linkedin.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000016",
+      "host": "halden.design",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000016",
+      "host": "chatgpt.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000017",
+      "host": "admin.shopify.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000017",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000017",
+      "host": "twitch.tv",
+      "label": "drift",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000018",
+      "host": "online.becker.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000018",
+      "host": "quizlet.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000018",
+      "host": "chatgpt.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000018",
+      "host": "instagram.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000019",
+      "host": "app.frame.io",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000019",
+      "host": "artlist.io",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000019",
+      "host": "drive.google.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000019",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.4
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000020",
+      "host": "us14.admin.mailchimp.com",
+      "label": "focused",
+      "confidence": 0.92
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000020",
+      "host": "instagram.com",
+      "label": "supportive",
+      "confidence": 0.84
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000020",
+      "host": "canva.com",
+      "label": "supportive",
+      "confidence": 0.86
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000020",
+      "host": "calendar.google.com",
+      "label": "neutral",
+      "confidence": 0.78
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000021",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.96
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000021",
+      "host": "airbnb.com",
+      "label": "supportive",
+      "confidence": 0.94
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000021",
+      "host": "zillow.com",
+      "label": "supportive",
+      "confidence": 0.94
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000021",
+      "host": "calendar.google.com",
+      "label": "supportive",
+      "confidence": 0.93
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000022",
+      "host": "webflow.com",
+      "label": "focused",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000022",
+      "host": "lumen-coaching.webflow.io",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000022",
+      "host": "mail.google.com",
+      "label": "drift",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000022",
+      "host": "app.grammarly.com",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000023",
+      "host": "mail.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000023",
+      "host": "calendar.google.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000023",
+      "host": "docs.google.com",
+      "label": "neutral",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000023",
+      "host": "nytimes.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000023",
+      "host": "amazon.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000024",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000024",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000024",
+      "host": "mail.google.com",
+      "label": "supportive",
+      "confidence": 0.6
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000024",
+      "host": "portal.harbourfoundation.org",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000025",
+      "host": "dashboard.stripe.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000025",
+      "host": "docs.stripe.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000025",
+      "host": "github.com",
+      "label": "supportive",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000025",
+      "host": "localhost",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000025",
+      "host": "chatgpt.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000025",
+      "host": "reddit.com",
+      "label": "supportive",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000025",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000026",
+      "host": "airbnb.com",
+      "label": "focused",
+      "confidence": 0.96
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000026",
+      "host": "vrbo.com",
+      "label": "supportive",
+      "confidence": 0.84
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000026",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000026",
+      "host": "facebook.com",
+      "label": "drift",
+      "confidence": 0.93
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000027",
+      "host": "studio.youtube.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000027",
+      "host": "youtube.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000027",
+      "host": "web.descript.com",
+      "label": "supportive",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000028",
+      "host": "arxiv.org",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000028",
+      "host": "youtube.com",
+      "label": "drift",
+      "confidence": 0.8
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000028",
+      "host": "reddit.com",
+      "label": "drift",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000028",
+      "host": "semanticscholar.org",
+      "label": "focused",
+      "confidence": 0.9
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000028",
+      "host": "x.com",
+      "label": "drift",
+      "confidence": 0.85
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000029",
+      "host": "docs.google.com",
+      "label": "focused",
+      "confidence": 0.95
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000029",
+      "host": "mail.google.com",
+      "label": "supportive",
+      "confidence": 0.7
+    },
+    {
+      "sessionId": "e7a1c0de-0000-4000-8000-000000000029",
+      "host": "crm.bloomerang.co",
+      "label": "supportive",
+      "confidence": 0.7
+    }
+  ]
+}
