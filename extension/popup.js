@@ -10,6 +10,7 @@ import { MAX_TASKS, attendedSeconds } from './lib/block.js'
 import { queueStatusMessage } from './lib/queue-status.js'
 import { analyzeSessions } from './lib/judge-client.js'
 import { analysisIds, shouldOffer, readAnalysis, rowText, judgedKey } from './lib/judge-view.js'
+import { syncDeviceSettings } from './lib/device-settings.js'
 
 const root = document.getElementById('root')
 
@@ -1151,6 +1152,12 @@ async function outcomeMany(sessionIds) {
 }
 
 async function render() {
+  // ADR-0087. Fire-and-forget, never awaited: the popup animates nothing and opens dozens
+  // of times a day, so a slow or offline server must never delay this render. Pulls
+  // companionEnabled/judgeEnabled/coachEnabled and any newer forgetAt — the only way this
+  // device learns either, since ADR-0042 refused externally_connectable.
+  syncDeviceSettings().catch(() => {})
+
   const { token, session, unpairedReason, pendingReview, block } = await chrome.storage.local.get(['token', 'session', 'unpairedReason', 'pendingReview', 'block'])
   if (!token) {
     if (unpairedReason) await chrome.storage.local.remove('unpairedReason')
