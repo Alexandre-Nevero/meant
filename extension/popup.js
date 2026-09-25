@@ -7,6 +7,7 @@ import { MAX_CYCLES, clampCount, plannedMinutesFor, restoreCycle } from './lib/c
 import { PRESETS } from './blocklists.js'
 import { matchPreset, presetBlockSet } from './lib/presets.js'
 import { MAX_TASKS, attendedSeconds } from './lib/block.js'
+import { queueStatusMessage } from './lib/queue-status.js'
 
 const root = document.getElementById('root')
 
@@ -399,6 +400,17 @@ async function removeFromList(kind, domain) {
   await post('/api/lists', next, { method: 'PUT' })
 }
 
+/** #21. post() (api.js:33) queues a failed write silently — nothing told the user their
+ *  work might not be reaching the app. `queue` in chrome.storage.local is the same array
+ *  sw.js's flush() drains, so reading it here needs nothing new written anywhere. Returns
+ *  null (nothing rendered) when there is nothing waiting. No colour, no icon — just the
+ *  .m-meta line the rest of the popup already uses for plain status. */
+async function queueNotice() {
+  const { queue } = await chrome.storage.local.get('queue')
+  const message = queueStatusMessage(queue)
+  return message ? el('p', 'm-meta', message) : null
+}
+
 function unpaired(message) {
   const mark = el('p', 'm-mark', '')
   mark.dataset.state = 'idle'
@@ -452,9 +464,10 @@ async function idle() {
   field.placeholder = ''
   field.spellcheck = false
 
-  const [{ lastChoice }, lists] = await Promise.all([
+  const [{ lastChoice }, lists, queuedNotice] = await Promise.all([
     chrome.storage.local.get('lastChoice'),
     fetchLists(),
+    queueNotice(),
   ])
   const knownWorkSites = lists.workSites ?? []
   const distractSites = lists.distractSites ?? []
@@ -613,7 +626,11 @@ async function idle() {
     render()
   })
 
-  show(header(mark), label, field, picker.row, picker.customRow, siteCluster, start, disconnect)
+  show(
+    header(mark), label,
+    ...(queuedNotice ? [queuedNotice] : []),
+    field, picker.row, picker.customRow, siteCluster, start, disconnect,
+  )
 }
 
 // Pure computation, no chrome.* API — which phase (work/break) the elapsed time

@@ -53,3 +53,28 @@ test('starting a session offline does not hang, and syncs once back online', asy
     }, { timeout: 10_000, intervals: [1_000] })
     .toBe(200)
 })
+
+// #21. post() (extension/api.js:33) queues a failed write into chrome.storage.local's
+// `queue` and returns as if nothing happened — the popup said nothing about it, so an
+// offline user had no way to tell whether their work was being recorded. Seeding `queue`
+// directly (rather than actually going offline) isolates this from flush()'s own timing —
+// it drains the moment a request succeeds, including ones this test's own setup makes.
+test('the idle popup states plainly how many writes are waiting to sync', async ({ context, extensionId, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await pairAndOpenPopup(page, extensionId)
+
+  await page.evaluate(
+    () => new Promise<void>((resolve) => {
+      chrome.storage.local.set({
+        queue: [
+          { method: 'POST', path: '/api/events', body: {}, at: new Date().toISOString() },
+          { method: 'PATCH', path: '/api/sessions/x', body: {}, at: new Date().toISOString() },
+        ],
+      }, () => resolve())
+    }),
+  )
+  await page.reload()
+
+  await expect(page.getByText('2 updates are waiting. They will send next time MEANT reaches the app.')).toBeVisible()
+})
