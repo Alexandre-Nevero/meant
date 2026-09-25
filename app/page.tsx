@@ -106,12 +106,12 @@ export default async function Home() {
       </section>
 
       <section className="m-landing-prose">
-        <h2 className="m-landing-h2">It reads the page. It stores nothing.</h2>
+        <h2 className="m-landing-h2">It never reads the page.</h2>
         <p>
-          To tell your work from your drift it has to read the tab you are on, once, and decide.
-          What it keeps is the site name and one word: served, drifted, unclear. There is no
-          column for the text, no line in a log, nothing queued for later. Not a promise — there
-          is nowhere to put it.
+          It sees which site you are on and for how long, never the words or the title. Full
+          addresses stay on your computer for thirty days. They leave it only when you ask the
+          judge about a session, and MEANT keeps none of them. What it stores is the site, the
+          time, and one word: focused, supportive, neutral or drift.
         </p>
       </section>
 

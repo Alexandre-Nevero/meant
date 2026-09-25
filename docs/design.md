@@ -355,14 +355,12 @@ they don't quietly disappear:
   drawn. Either draw it, or record in `docs/adr/` that the shell is chrome that lives outside
   the canvas — but do not leave the canvas silently outranked by a `.tsx` file while §1 of this
   document says the canvas is visual truth.
-- **The landing page makes a privacy claim the product no longer honours, and it is the loudest
-  copy on the site.** `app/page.tsx:107` heads a whole section *"It reads the page. It stores
-  nothing,"* and the paragraph under it explains that it reads the tab once and keeps one word.
-  **ADR-0061 removed page reading entirely** — no text, no titles, ever. The claim is now wrong in
-  the direction that matters (it promises a smaller thing than the truth in one respect and a
-  larger capability in another), and what actually needs saying is ADR-0059's: **full visit paths
-  live on the device, and only `{domain, verdict, confidence}` ever leaves it.** Copy fix, owner's
-  wording, not a silent edit — but it is a public claim about privacy and it is stale.
+- ~~**The landing page makes a privacy claim the product no longer honours.**~~ **Fixed
+  2026-09-25.** `app/page.tsx` now heads the section *"It never reads the page."* and says what is
+  true under ADR-0059/0061/0080: the site name and time are stored, page text and titles are never
+  read, full addresses stay on the device for thirty days, and leave it once, unstored, only when
+  the user asks the judge about a session. Wording written by an agent at the owner's instruction;
+  the owner has not yet reviewed it.
 - **The landing hero asks for nothing** (issue #51). `Landing.dc.html` specifies a primary *"Add
   to Chrome"* in the hero. What ships has **no CTA in the hero at all** — the primary button is
   *"Sign in"*, in the header and again above the footer, and *"Add to Chrome"* is a secondary nav
