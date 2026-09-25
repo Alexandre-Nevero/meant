@@ -11,10 +11,12 @@ export function selectPathsForSessions(pathLog, sessionIds) {
 }
 
 /** Gathers this device's own path-log entries for the given sessions and asks the server to
- *  analyze them. No UI calls this yet — it exists so the backend is genuinely exercisable,
- *  not just unit-tested in isolation (ADR-0080, Task 6). */
+ *  analyze them. Called by the popup's "try the judge" (ADR-0086), behind JUDGE_RENDERS.
+ *
+ *  Never queued offline: post()'s offline queue would park the PATHS in chrome.storage and
+ *  replay an analysis nobody is waiting for. Offline is simply a failed ask. */
 export async function analyzeSessions(sessionIds) {
   const { pathLog } = await chrome.storage.local.get('pathLog')
   const paths = selectPathsForSessions(pathLog, sessionIds)
-  return post('/api/judge/analyze', { sessionIds, paths })
+  return post('/api/judge/analyze', { sessionIds, paths }, { queue: false })
 }
