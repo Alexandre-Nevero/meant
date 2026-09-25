@@ -2,6 +2,7 @@ import { post, apiBase } from './api.js'
 import { BLOCKLISTS } from './blocklists.js'
 import { advance, emptySlice, idleMode, IDLE_DETECTION_S } from './lib/attribution.js'
 import { appendVisit, purgeExpired } from './lib/path-log.js'
+import { syncDeviceSettings } from './lib/device-settings.js'
 import { labelCurrentVisit, labelsToEvents } from './lib/visit-label.js'
 import { MAX_TASKS, addTask, switchTask, closingEvents } from './lib/block.js'
 
@@ -588,6 +589,14 @@ chrome.runtime.onStartup.addListener(resyncBadge)
 // (e.g. the browser closed offline) would otherwise wait for the next session to sync.
 chrome.runtime.onStartup.addListener(flush)
 chrome.runtime.onInstalled.addListener(flush)
+
+// ADR-0087. Fire-and-forget, like every other startup listener here: a slow or offline
+// server must never delay anything else onInstalled/onStartup does. Pulls
+// companionEnabled/judgeEnabled/coachEnabled and applies any newer forgetAt against the
+// on-device path log (ADR-0059) — the only way either reaches this device, since
+// ADR-0042 refused externally_connectable.
+chrome.runtime.onStartup.addListener(() => syncDeviceSettings().catch(() => {}))
+chrome.runtime.onInstalled.addListener(() => syncDeviceSettings().catch(() => {}))
 
 // content_scripts only runs declaratively on a tab's own (re)load — it never re-fires for
 // a tab that was already open when the extension was reloaded/updated, or across a browser

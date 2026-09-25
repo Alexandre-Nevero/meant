@@ -56,3 +56,13 @@ export function purgeExpired(log, now, ttlMs = PATH_TTL_MS) {
   if (!Array.isArray(log)) return []
   return log.filter((entry) => now - entry.at < ttlMs)
 }
+
+/** ADR-0087, issue #20. "Forget what you know about me" (POST /api/me/forget) moves the
+ *  server's forgetAt forward; the device applies it by dropping any path recorded before
+ *  that moment. `forgetAt` is epoch ms, the same unit as `entry.at` — `null`/`undefined`
+ *  means the user has never asked to forget anything, so nothing is dropped. */
+export function purgeBefore(log, forgetAt) {
+  if (!Array.isArray(log)) return []
+  if (typeof forgetAt !== 'number' || !Number.isFinite(forgetAt)) return log
+  return log.filter((entry) => entry.at >= forgetAt)
+}
