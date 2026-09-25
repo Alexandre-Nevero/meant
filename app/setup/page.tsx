@@ -142,9 +142,14 @@ export default function Setup() {
   }
 
   const { lists } = state
+  const hasNothing = lists.workSites.length === 0 && lists.distractSites.length === 0
 
   return (
     <div data-surface="setup">
+      {/* #21. First run: nothing has been added yet. The two forms below are blank either
+          way — this says so, rather than leaving a beginner to wonder if the page loaded
+          wrong, and points at the same skip path the buttons below already offer. */}
+      {hasNothing && <p className="m-meta">You haven&rsquo;t added any sites yet. Add a few, or skip for now.</p>}
       <ListEditor
         question="Where do you work?"
         hint="The sites your actual work happens on."
