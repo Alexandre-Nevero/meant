@@ -72,24 +72,35 @@ export default async function Review({ params }: { params: Promise<{ sessionId: 
 
       {data.blockedAttempts > 0 && <p {...rise('m-meta')}>{data.blockedAttempts} blocked attempts</p>}
 
-      {/* ADR-0054. The served/not-served boundary is browser share, reported at runtime — so
-          a session we only partly watched says so rather than presenting a fragment as the
-          whole. Minutes, never a percentage (§3.1 bans percentages on every surface), and
-          spelled as a word to match the dashboard. Gated by share, not by a fixed number of
-          minutes: a fixed floor would shout on a short session and stay silent on a long one. */}
-      {/* Denominator is the whole session, so it must sum EVERY duration-bearing row —
-          topAttention is only the top three and would overstate the share. */}
-      {data.unrecordedSeconds >
-        (data.unrecordedSeconds +
-          data.rows
-            .filter((r) => r.kind === 'attention' || r.kind === 'away' || r.kind === 'break')
-            .reduce((t, r) => t + r.seconds, 0)) *
-          UNRECORDED_MIN_SHARE && (
-          <p {...rise('m-meta')}>
-            {toWords(minutes(data.unrecordedSeconds))} minutes of this session happened outside the
-            browser. This page cannot tell you about those.
-          </p>
-        )}
+      {/* #21. A session that ended with zero events said nothing at all — the band alone
+          (toBand's dashed 'remainder', lib/band.ts) reads as a rendering gap rather than a
+          deliberate state. Unconditional on rows.length, not on share: the unrecorded-share
+          line below already answers "how much of this session did we miss," but at zero rows
+          there is nothing to take a share OF, and a short session can floor unrecordedSeconds
+          to 0 (computeUnrecorded rounds to whole seconds) with no message reaching either
+          branch. */}
+      {data.rows.length === 0 ? (
+        <p {...rise('m-meta')}>Nothing was recorded for this session.</p>
+      ) : (
+        /* ADR-0054. The served/not-served boundary is browser share, reported at runtime — so
+            a session we only partly watched says so rather than presenting a fragment as the
+            whole. Minutes, never a percentage (§3.1 bans percentages on every surface), and
+            spelled as a word to match the dashboard. Gated by share, not by a fixed number of
+            minutes: a fixed floor would shout on a short session and stay silent on a long one. */
+        /* Denominator is the whole session, so it must sum EVERY duration-bearing row —
+            topAttention is only the top three and would overstate the share. */
+        data.unrecordedSeconds >
+          (data.unrecordedSeconds +
+            data.rows
+              .filter((r) => r.kind === 'attention' || r.kind === 'away' || r.kind === 'break')
+              .reduce((t, r) => t + r.seconds, 0)) *
+            UNRECORDED_MIN_SHARE && (
+            <p {...rise('m-meta')}>
+              {toWords(minutes(data.unrecordedSeconds))} minutes of this session happened outside the
+              browser. This page cannot tell you about those.
+            </p>
+          )
+      )}
 
       {/* ADR-0084. A task shares its session's clock, so time on the other tasks is accounted
           for, not missing — say where it went, in minutes spelled as words like the line above. */}
