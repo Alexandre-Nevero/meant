@@ -5,6 +5,7 @@ import { buildCoachContext } from '@/lib/coach-context'
 import { buildCoachMessages, type ChatTurn } from '@/lib/coach-prompt'
 import { costOf } from '@/lib/inference-cost'
 import { DAILY_COACH_TURNS } from '@/lib/thresholds'
+import { getFeatureSettings } from '@/lib/settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +34,13 @@ export async function POST(req: Request) {
   const userId = await currentUserId()
   if (!userId) {
     return Response.json({ error: 'not signed in' }, { status: 401 })
+  }
+
+  // ADR-0087, issue #19. The seam has to be exercised at the boundary that actually spends
+  // money, not just hidden in the UI that calls it.
+  const { coach } = await getFeatureSettings(userId)
+  if (!coach) {
+    return Response.json({ error: 'the coach is turned off in Settings' }, { status: 403 })
   }
 
   const key = process.env.GROQ_API_KEY

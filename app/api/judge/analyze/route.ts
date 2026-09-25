@@ -12,6 +12,7 @@ import {
   MEMORY_MIN_VERDICTS,
 } from '@/lib/thresholds'
 import { tally, classify, upgradeTally, type Tally } from '@/lib/memory-accumulate'
+import { getFeatureSettings } from '@/lib/settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,6 +61,13 @@ export async function POST(req: Request) {
   const userId = await requestUserId(req)
   if (!userId) {
     return Response.json({ error: 'not signed in' }, { status: 401 })
+  }
+
+  // ADR-0087, issue #19. The seam has to be exercised at the boundary that actually spends
+  // money, not just hidden in the UI that calls it.
+  const { judge } = await getFeatureSettings(userId)
+  if (!judge) {
+    return Response.json({ error: 'the judge is turned off in Settings' }, { status: 403 })
   }
 
   const body = await req.json().catch(() => null)
