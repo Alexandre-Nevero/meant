@@ -851,11 +851,22 @@ label:has(> .m-field) > .m-meta { color: var(--m-ink-2); }
   .m-shell { padding-left: 20px; padding-right: 20px; }
   .m-shell-left { gap: 16px; }
 }
+/* Settings stays reachable at phone width: it holds the switches and the erasure controls
+ * (ADR-0087). The wordmark goes instead; the mark alone still says MEANT. */
 @media (max-width: 520px) {
-  .m-shell-nav a[href="/pair"],
-  .m-shell-nav a[href="/settings"] { display: none; }
-  .m-shell-nav { gap: 12px; }
+  .m-shell-nav a[href="/pair"] { display: none; }
+  .m-shell-wordmark { display: none; }
+  .m-shell-left { gap: 8px; }
+  .m-shell-nav { gap: 2px; }
+  .m-shell-link { padding: 6px 8px; }
+  .m-shell-link, .m-shell-signout { white-space: nowrap; }
+  .m-shell-signout { padding: 6px 4px; }
   .m-companion-badge { display: none; }
+}
+@media (max-width: 360px) {
+  .m-shell { padding-left: 12px; padding-right: 12px; }
+  .m-shell-link { padding: 6px 5px; }
+  .m-shell-link, .m-shell-signout { font-size: 12px; }
 }
 
 /* ---------- [data-surface="dashboard"] — Rize Grammar, Cream Material (ADR-0068) ---------- */
