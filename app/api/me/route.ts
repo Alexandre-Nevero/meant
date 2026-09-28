@@ -1,4 +1,4 @@
-import { requestUserId } from '@/lib/device-auth'
+import { currentUserId } from '@/lib/auth/session'
 import { auth } from '@/lib/auth/server'
 import { sql } from '@/lib/db'
 
@@ -9,8 +9,10 @@ export const dynamic = 'force-dynamic'
 // judgment -> analysis is NO ACTION (judgment must go before analysis); event and judgment
 // both cascade from session, so deleting sessions clears events for free. Everything here
 // is scoped by user_id, so a forged id can only ever delete the caller's own rows.
+// Web session only, never the device token: erasure is offered only on the web page, and a
+// paired extension's token must not be able to erase the account it belongs to.
 export async function DELETE(req: Request) {
-  const userId = await requestUserId(req)
+  const userId = await currentUserId()
   if (!userId) return Response.json({ error: 'unauthorized' }, { status: 401 })
 
   const body = await req.json().catch(() => null)

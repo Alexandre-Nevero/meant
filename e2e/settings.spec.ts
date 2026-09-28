@@ -178,6 +178,20 @@ test.describe('settings — delete my account', () => {
     const before = await db()`select 1 from judgment where session_id = ${sessionId}`
     expect(before).toHaveLength(1)
 
+    // A paired device's token alone must not be able to erase the account: no cookie, only
+    // the Bearer token the extension holds.
+    const tokenOnly = await page.evaluate(async () => {
+      const { token, apiBase } = await chrome.storage.local.get(['token', 'apiBase'])
+      const res = await fetch(`${apiBase}/api/me`, {
+        method: 'DELETE',
+        credentials: 'omit',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ confirm: 'delete' }),
+      })
+      return res.status
+    })
+    expect(tokenOnly).toBe(401)
+
     await page.goto('/settings')
     await page.getByRole('button', { name: 'Delete account' }).click()
     await page.getByRole('button', { name: 'Delete for good' }).click()

@@ -1,4 +1,4 @@
-import { requestUserId } from '@/lib/device-auth'
+import { currentUserId } from '@/lib/auth/session'
 import { sql } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
@@ -7,8 +7,10 @@ export const dynamic = 'force-dynamic'
 // record has INFERRED about the user, but never the record of what they did. Session and
 // event rows survive untouched except for event.label, which is itself an inference (the
 // companion's one-tap self-report, ADR-0058) rather than an observation.
-export async function POST(req: Request) {
-  const userId = await requestUserId(req)
+// Web session only, never the device token: erasure is offered only on the web page, and a
+// paired extension's token must not be able to erase the account it belongs to.
+export async function POST() {
+  const userId = await currentUserId()
   if (!userId) return Response.json({ error: 'unauthorized' }, { status: 401 })
 
   try {
