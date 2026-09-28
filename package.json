@@ -11,7 +11,8 @@
     "prebuild": "npm run tokens",
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "eval:judge": "node --env-file-if-exists=.env.local scripts/eval/run.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",

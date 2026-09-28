@@ -32,6 +32,23 @@ const QUICK_PROMPTS = [
  * - Slide-over AI Coach Chat Drawer with real-time focus reflection and contextual insights
  */
 export function CompanionPet({ intention, onClick }: CompanionPetProps) {
+  // ADR-0087, issue #19. Defaults on (absent = on) so a slow or failed settings fetch never
+  // hides a feature nobody turned off; flips to hidden only once the server confirms coach
+  // is off. GET /api/settings works from the browser session this page already has.
+  const [coachEnabled, setCoachEnabled] = useState(true)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.coach === false) setCoachEnabled(false)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const [showDrawer, setShowDrawer] = useState(false)
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -120,11 +137,14 @@ export function CompanionPet({ intention, onClick }: CompanionPetProps) {
         throw new Error('API response not ok')
       }
     } catch {
-      // Fallback response if offline or cold compile
+      // Issue #70: this used to render a fabricated coaching claim ("Focus is strongest
+      // when you protect the first 40 minutes...") on ANY fetch failure, including a
+      // signed-out 401 — exactly the invented-number pattern ADR-0079 removed server-side.
+      // Honest instead, matching what the server itself says on its own error branches.
       const fallbackMsg: ChatMessage = {
         id: `coach-${Date.now()}`,
         role: 'coach',
-        content: `I'm tracking your attention for "${displayIntention}". Focus is strongest when you protect the first 40 minutes and keep away-tab drift to zero.`,
+        content: "I couldn't reach the coach just now — try again in a moment.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }
       setMessages((prev) => [...prev, fallbackMsg])
@@ -132,6 +152,10 @@ export function CompanionPet({ intention, onClick }: CompanionPetProps) {
       setIsTyping(false)
     }
   }
+
+  // ADR-0087, issue #19. After every hook above, never before — coach off means this
+  // entire surface (the tomato actor and the drawer it opens) does not mount.
+  if (!coachEnabled) return null
 
   return (
     <>

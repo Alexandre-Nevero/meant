@@ -41,8 +41,12 @@ export const DAILY_PRESET_CLASSIFY_CAP = 50
  *  candidate" on SYNTHETIC data, and explicitly warned not to trust the specific number.
  *  This is that placeholder, applied only when PRESENTING a result — judgment.label and
  *  judgment.confidence always store the model's raw output, unfiltered, so re-deriving the
- *  real floor later is a config change, never a re-run. Re-derive against a real,
- *  human-labelled eval before trusting this number for anything real.
+ *  real floor later is a config change, never a re-run.
+ *
+ *  ADR-0086 measured it: the dev split's floor was 0.85, and the judge still FAILED the
+ *  ADR-0085 gate on test at that floor. No floor is licensed, so this stays a placeholder
+ *  and nothing renders (JUDGE_RENDERS in extension/lib/judge-view.js). Replace it only
+ *  with a floor from an eval that passes.
  *
  *  Deliberately not named "*_CONFIDENCE" + "_FLOOR" concatenated: test/companion-state.test.js
  *  asserts that joined string never reappears in this file, since it names ADR-0057's

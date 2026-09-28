@@ -158,6 +158,21 @@ test('the review page never shows an extension-ID-shaped domain in its per-domai
   await expect(reviewPage.getByText('emnalgngpciahekjdcgpbgnhmkpjhlhi')).toHaveCount(0)
 })
 
+// #21. A session that ended with zero events said nothing about it — the band's dashed
+// 'remainder' segment (lib/band.ts) alone reads as a rendering gap, not a deliberate state.
+test('a session with zero events says nothing was recorded, plainly', async ({ endedSession, context }) => {
+  const sessionId = await endedSession({ intention: 'zero events test', events: [] })
+
+  const page = await context.newPage()
+  await page.goto(`/review/${sessionId}`)
+
+  const surface = page.locator('[data-surface="review"]')
+  await expect(surface.getByText('Nothing was recorded for this session.')).toBeVisible()
+  // The unrecorded-share line answers a different question ("how much of a partly-watched
+  // session did we miss") and must not also fire here — one deliberate line, not two.
+  await expect(surface.getByText(/happened outside the browser/)).toHaveCount(0)
+})
+
 // #47. The most important write in the product, and it was unchecked.
 test('a failed outcome write re-enables both buttons, says so, and retries on the same two', async ({ context, endedSession }) => {
   const sessionId = await endedSession({ intention: 'outcome failure test' })

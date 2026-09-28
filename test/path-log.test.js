@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { appendVisit, purgeExpired, PATH_TTL_MS } from '../extension/lib/path-log.js'
+import { appendVisit, purgeExpired, purgeBefore, PATH_TTL_MS } from '../extension/lib/path-log.js'
 
 // ADR-0059. Paths live in chrome.storage.local and NEVER in Postgres. The rule they do not
 // break is lib/migrations/002-drift.sql:24 — a title or text column is release-blocking —
@@ -78,4 +78,27 @@ test('the TTL is time-based, and 30 days', () => {
   // ADR-0059: a free-tier user gets tracking and no analysis, so "purge after analysis"
   // would never fire for them and the log would grow without bound.
   assert.equal(PATH_TTL_MS, 30 * 24 * 60 * 60 * 1000)
+})
+
+// ADR-0087, issue #20. "Forget what you know about me" moves forget_at forward server-side;
+// the device applies it locally by dropping any path recorded before that moment.
+test('purgeBefore drops entries recorded before forgetAt and keeps entries at or after it', () => {
+  const log = [
+    { sessionId: 's1', host: 'a.com', path: '/', at: 1000 },
+    { sessionId: 's2', host: 'b.com', path: '/', at: 2000 },
+    { sessionId: 's3', host: 'c.com', path: '/', at: 2000 },
+  ]
+  const kept = purgeBefore(log, 2000)
+  assert.deepEqual(kept.map((e) => e.host), ['b.com', 'c.com'])
+})
+
+test('purgeBefore with no cutoff (never forgotten) keeps everything', () => {
+  const log = [{ sessionId: 's1', host: 'a.com', path: '/', at: 1000 }]
+  assert.deepEqual(purgeBefore(log, null), log)
+  assert.deepEqual(purgeBefore(log, undefined), log)
+})
+
+test('purgeBefore tolerates a missing or non-array log', () => {
+  assert.deepEqual(purgeBefore(undefined, 1), [])
+  assert.deepEqual(purgeBefore(null, 1), [])
 })

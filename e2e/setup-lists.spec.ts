@@ -1,5 +1,23 @@
 import { test, expect } from './fixtures'
 
+// #21. A brand-new account has added nothing yet — the two list forms below are blank
+// either way, so without this the page just looks unfinished, not deliberately empty.
+test('a first run with no sites says so, and the line clears once one is added', async ({ context, freshAccount }) => {
+  const page = await context.newPage()
+  await freshAccount(page)
+  await page.goto('/setup')
+
+  const surface = page.locator('[data-surface="setup"]')
+  const emptyLine = surface.getByText('You haven’t added any sites yet. Add a few, or skip for now.')
+  await expect(emptyLine).toBeVisible()
+
+  const work = page.locator('section', { hasText: 'Where do you work?' })
+  await work.getByPlaceholder('add a site and press enter').fill('github.com')
+  await work.getByPlaceholder('add a site and press enter').press('Enter')
+
+  await expect(emptyLine).toHaveCount(0)
+})
+
 // Case A — resolves the one ambiguous finding from the earlier automated pass: was
 // /setup's chip-persistence check actually authenticated? Here, yes, for real.
 test('setup lists persist across reload, authenticated', async ({ context, freshAccount }) => {
