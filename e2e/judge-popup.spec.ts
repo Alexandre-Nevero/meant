@@ -42,8 +42,6 @@ async function pairPopup(page: Page, extensionId: string) {
 const send = (page: Page, message: object) => page.evaluate((m) => chrome.runtime.sendMessage(m), message) as Promise<any>
 const storage = (page: Page, key: string) =>
   page.evaluate((k) => new Promise<any>((r) => chrome.storage.local.get(k, (v: any) => r(v[k] ?? null))), key)
-const setStorage = (page: Page, value: object) =>
-  page.evaluate((v) => new Promise<void>((r) => chrome.storage.local.set(v, () => r())), value)
 const START = { plannedMinutes: 60, blockedDomains: [], blocklists: [], workSites: [], cycle: null }
 
 /** Start, optionally add tasks, stop; returns every task's session id once each row has ended. */
@@ -109,7 +107,7 @@ base('the shipped extension never offers the judge (ADR-0086)', async ({ context
   await expect(page.getByRole('button', { name: 'Try the judge' })).toHaveCount(0)
 })
 
-judgeOn('behind the switch: rows, frozen reopen, nothing, cap, error, offline, switched off, many tasks', async ({ context, extensionId, freshAccount }) => {
+judgeOn('behind the switch: rows, frozen reopen, nothing, cap, error, offline, switched off, many tasks', async ({ context, extensionId, freshAccount, baseURL }) => {
   judgeOn.setTimeout(120_000) // one account walked through every state, to keep auth users few
   const mock = await mockAnalyze(context)
   const page = await context.newPage()
@@ -165,12 +163,20 @@ judgeOn('behind the switch: rows, frozen reopen, nothing, cap, error, offline, s
   expect(await storage(page, 'queue')).toBeNull() // an analysis is never queued for later, paths least of all
   await shot(page, 'offline')
 
-  // The settings switch writes judgeEnabled: false; absent means on.
-  await setStorage(page, { judgeEnabled: false })
-  await page.reload()
+  // The switch lives on the server (ADR-0087). Every popup open pulls it into judgeEnabled,
+  // so a local-only write would be overwritten; flip it where Settings does, wait for the
+  // pull to land, then reopen. Until the pull lands, one open can still offer the button,
+  // and the route refuses (403) if it is pressed.
+  const flipJudge = async (on: boolean) => {
+    expect((await context.request.put(`${baseURL}/api/settings`, { data: { judge: on } })).ok()).toBe(true)
+    await page.reload()
+    await expect.poll(() => storage(page, 'judgeEnabled')).toBe(on)
+    await page.reload()
+  }
+  await flipJudge(false)
   await expect(page.getByRole('button', { name: 'Done' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Try the judge' })).toHaveCount(0)
-  await page.evaluate(() => new Promise<void>((r) => chrome.storage.local.remove('judgeEnabled', () => r())))
+  await flipJudge(true)
 
   // ADR-0084: one block, several tasks, one analysis for all of them, rows under each task.
   await page.getByRole('button', { name: 'Done' }).click()
